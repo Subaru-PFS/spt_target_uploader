@@ -1,0 +1,42 @@
+[project]
+name = "pfs_target_uploader"
+dynamic = ["version"]
+description = "Target uploader for PFS openuse"
+authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
+dependencies = [
+    "panel>=1.2.1",
+    "logzero>=1.7.0",
+    "pandas>=2.0.3",
+    "myst-parser>=2.0.0",
+    "markdown-it-py>=3.0.0",
+    "setuptools==56.1.0",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+mkdocs = [
+    "mkdocs>=1.4.3",
+    "mkdocs-material>=9.1.14",
+    "mkdocs-macros-plugin>=0.7.0",
+    "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
+    # "mkdocs-video>=1.5.0",
+]
+
+[project.scripts]
+pfs_validate_targetlist = "pfs_target_uploader.cli.validate_targetlist:main"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "pfs_target_uploader.__version__" }
+
+[tool.pdm.dev-dependencies]
+dev = ["pip>=23.2.1", "ipython>=8.14.0"]
