@@ -6,6 +6,19 @@ import panel as pn
 from logzero import logger
 
 
+class UploadNoteWidgets:
+    def __init__(self, message):
+        self.floatpanel = pn.layout.FloatPanel(
+            pn.pane.Markdown(message),
+            name="Info",
+            contained=False,
+            position="center",
+            # theme="none",
+            theme="#3A7D7E",
+            width=600,
+        )
+
+
 class DocLinkWidgets:
     def __init__(self):
         # self.doc = pn.pane.HTML(
@@ -394,6 +407,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.info_text_str,
             self.info_text_vals,
             self.info_text_dups,
+            # height=200,
         )
 
     def reset(self):

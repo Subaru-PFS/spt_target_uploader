@@ -324,6 +324,8 @@ def check_unique(df, logger=logger):
 def validate_input(df, logger=logger):
     validation_status = {}
 
+    validation_status["status"] = False
+
     # check mandatory columns
     logger.info("[STAGE 1] Checking column names")
     dict_required_keys, dict_optional_keys = check_keys(df)
@@ -374,7 +376,5 @@ def validate_input(df, logger=logger):
         and validation_status["unique"]["status"]
     ):
         validation_status["status"] = True
-    else:
-        validation_status["status"] = False
 
     return validation_status

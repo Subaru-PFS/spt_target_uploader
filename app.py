@@ -4,6 +4,7 @@ import panel as pn
 from pfs_target_uploader.pn_app import target_uploader_app
 
 pn.extension(
+    "floatpanel",
     "mathjax",
     "tabulator",
     notifications=True,

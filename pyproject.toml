@@ -10,6 +10,8 @@ dependencies = [
     "myst-parser>=2.0.0",
     "markdown-it-py>=3.0.0",
     "setuptools==56.1.0",
+    "python-dotenv>=1.0.0",
+    "astropy>=5.3.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"
@@ -40,3 +42,8 @@ version = { attr = "pfs_target_uploader.__version__" }
 
 [tool.pdm.dev-dependencies]
 dev = ["pip>=23.2.1", "ipython>=8.14.0"]
+
+# [tool.black]
+# line-length = 120
+# target-version = ["py39", "py310", "py311"]
+# target-version = ["py311"]
