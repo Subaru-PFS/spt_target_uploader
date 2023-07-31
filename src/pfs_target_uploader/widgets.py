@@ -11,51 +11,20 @@ class UploadNoteWidgets:
         self.floatpanel = pn.layout.FloatPanel(
             pn.pane.Markdown(message),
             name="Info",
+            # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
             contained=False,
             position="center",
             # theme="none",
             theme="#3A7D7E",
-            width=600,
+            margin=20,
+            width=720,
         )
 
 
 class DocLinkWidgets:
     def __init__(self):
-        # self.doc = pn.pane.HTML(
-        #     "<i class='fa-sharp fa-solid fa-book' ></i> <a href='/docs/index.html' target='_blank'>Manual</a>",
-        #     width=80,
-        #     height=26,
-        #     styles={
-        #         "display": "inline-block",
-        #         "padding": "3px 0px 0px 5px",
-        #         "margin": "4px 0px 0px 6px",
-        #         # "background-color": "#4CAF50",
-        #         # "background-color": "#f3f3f3",
-        #         # "border-radius": "5px",
-        #         # "border-style": "solid",
-        #         # "border-color": "#000000",
-        #         "text-align": "left",
-        #         "text-decoration": "none",
-        #         "font-size": "110%",
-        #     },
-        # )
-        #         self.doc = pn.pane.HTML(
-        #             """<div class="alert alert-light" role="alert">
-        #   A simple light alert—check it out!
-        # </div>"""
-        #         )
-
-        # self.doc = pn.pane.Alert(
-        #     "<font size='5'><i class='fa-sharp fa-solid fa-book' ></i> <a href='/docs/index.html' target='_blank'>Manual</a></font>",
-        #     alert_type="light",
-        #     # height=50,
-        #     # styles={"text-align": "left"},
-        # )
-
         self.doc = pn.pane.Markdown(
             "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='/docs/index.html' target='_blank'>Documentation</a></font>",
-            # alert_type="light",
-            # height=50,
             styles={"text-align": "right"},
         )
         self.pane = pn.Column(self.doc)

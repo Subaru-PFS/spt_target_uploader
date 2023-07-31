@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
-
+import glob
+import os
 import re
+import secrets
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
+from astropy import units as u
+from astropy.table import Table
 from logzero import logger
 
 # import panel as pn
@@ -378,3 +383,84 @@ def validate_input(df, logger=logger):
         validation_status["status"] = True
 
     return validation_status
+
+
+def upload_file(df, origname=None, outdir="."):
+    # convert pandas.DataFrame to astropy.Table
+    tb = Table.from_pandas(df)
+
+    # use the current UTC time and random hash string to construct an output filename
+    uploaded_time = datetime.now(timezone.utc)
+    secret_token = secrets.token_hex(8)
+
+    # add metadata
+    tb.meta["original_filename"] = origname
+    tb.meta["upload_id"] = secret_token
+    tb.meta["upload_at"] = uploaded_time.isoformat(timespec="seconds")
+
+    # filename = f"{uploaded_time.strftime('%Y%m%d-%H%M%S')}_{secret_token}.ecsv"
+    filename = (
+        f"targets_{uploaded_time.isoformat(timespec='seconds')}_{secret_token}.ecsv"
+    )
+
+    logger.info(f"File `{filename}` was saved under `{outdir}`")
+
+    # save the table in the output directory as an ECSV file
+    tb.write(os.path.join(outdir, filename), delimiter=",", format="ascii.ecsv")
+
+    return filename, uploaded_time, secret_token
+
+
+def load_file_properties(dir=".", ext="ecsv"):
+    files_in_dir = glob.glob(f"{dir}/*.{ext}")
+    n_files = len(files_in_dir)
+    filenames = np.zeros(n_files, dtype=object)
+    fullpath = np.zeros(n_files, dtype=object)
+    orignames = np.zeros(n_files, dtype=object)
+    upload_ids = np.zeros(n_files, dtype=object)
+    timestamps = np.zeros(n_files, dtype="datetime64[s]")
+    filesizes = np.zeros(n_files, dtype=float)
+    n_obj = np.empty(n_files, dtype=int)
+    t_exp = np.empty(n_files, dtype=float)
+    links = np.zeros(n_files, dtype=object)
+
+    for i, f in enumerate(files_in_dir):
+        if ext == "ecsv":
+            tb = Table.read(f)
+            fullpath[i] = f
+            filenames[i] = os.path.basename(f)
+            filesizes[i] = (os.path.getsize(f) * u.byte).to(u.kbyte).value
+            links[i] = f"<a href='{f}'><i class='fa-solid fa-download'></i></a>"
+
+            try:
+                orignames[i] = tb.meta["original_filename"]
+            except:
+                orignames[i] = None
+
+            try:
+                upload_ids[i] = tb.meta["upload_id"]
+            except:
+                upload_ids[i] = None
+
+            try:
+                timestamps[i] = tb.meta["upload_at"]
+            except:
+                timestamps[i] = None
+
+            n_obj[i] = tb["ob_code"].size
+            t_exp[i] = np.sum(tb["exptime"]) / 3600.0
+
+    df = pd.DataFrame(
+        {
+            "upload_id": upload_ids,
+            "filename": filenames,
+            "n_obj": n_obj,
+            "t_exp": t_exp,
+            "origname": orignames,
+            "filesize": filesizes,
+            "timestamp": timestamps,
+            "link": links,
+            "fullpath": fullpath,
+        }
+    )
+    return df.sort_values("timestamp", ascending=False, ignore_index=True)

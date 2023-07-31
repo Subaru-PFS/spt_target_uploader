@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
+import glob
 import os
 import secrets
 import time
 from datetime import datetime, timezone
 from io import BytesIO
 
+import numpy as np
 import pandas as pd
 import panel as pn
 from astropy.table import Table
+from bokeh.models.widgets.tables import HTMLTemplateFormatter
 from dotenv import dotenv_values
 from logzero import logger
 
-from .utils import load_input, validate_input
+from .utils import load_file_properties, load_input, upload_file, validate_input
 from .widgets import (
     ButtonWidgets,
     DocLinkWidgets,
@@ -45,31 +48,6 @@ def _validate_file(panel_input):
     validation_status = validate_input(df_input)
 
     return df_input, validation_status
-
-
-def _upload_file(df, origname=None, outdir="."):
-    # convert pandas.DataFrame to astropy.Table
-    tb = Table.from_pandas(df)
-
-    # use the current UTC time and random hash string to construct an output filename
-    uploaded_time = datetime.now(timezone.utc)
-    secret_token = secrets.token_hex(8)
-
-    # add metadata
-    tb.meta["original_filename"] = origname
-    tb.meta["upload_at"] = uploaded_time.isoformat(timespec="seconds")
-
-    # filename = f"{uploaded_time.strftime('%Y%m%d-%H%M%S')}_{secret_token}.ecsv"
-    filename = (
-        f"targets_{uploaded_time.isoformat(timespec='seconds')}_{secret_token}.ecsv"
-    )
-
-    logger.info(f"File `{filename}` was saved under `{outdir}`")
-
-    # save the table in the output directory as an ECSV file
-    tb.write(os.path.join(outdir, filename), delimiter=",", format="ascii.ecsv")
-
-    return filename, uploaded_time, secret_token
 
 
 def target_uploader_app():
@@ -124,18 +102,15 @@ def target_uploader_app():
     template.sidebar.append(sidebar_column)
     template.main.append(main_column)
 
-    # main_column.visible = False
-    # panel_results.pane.visible = False
-    # panel_targets.pane.visible = False
-
     tab_panels.visible = False
 
     # define on_click callback for the "validate" button
     def cb_validate(event):
-        try:
-            del placeholder_floatpanel.objects[-1]
-        except:
-            pass
+        # try:
+        #     del placeholder_floatpanel.objects[-1]
+        # except:
+        #     pass
+        placeholder_floatpanel.objects = []
         panel_buttons.submit.disabled = True
         tab_panels.visible = False
         panel_status.reset()
@@ -159,10 +134,11 @@ def target_uploader_app():
         tab_panels.visible = True
 
     def cb_submit(event):
-        try:
-            del placeholder_floatpanel.objects[-1]
-        except:
-            pass
+        # try:
+        #     del placeholder_floatpanel.objects[-1]
+        # except:
+        #     pass
+        placeholder_floatpanel.objects = []
         # placeholder_floatpanel = pn.Column(height=0, width=0)
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
@@ -191,18 +167,19 @@ def target_uploader_app():
                 tab_panels.visible = True
                 return
 
-        outfile, uploaded_time, secret_token = _upload_file(
+        outfile, uploaded_time, secret_token = upload_file(
             df_input,
             outdir=config["OUTPUT_DIR"],
             origname=panel_input.file_input.filename,
         )
         panel_notes = UploadNoteWidgets(
-            f"""<font size='4'>The target list has been uploaded successfully!</font>
+            f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
 
-<font size='4'>Upload ID: </font><font size='6'>**{secret_token}**</font>
+<font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
 
+<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
 
-Please keep the `Upload ID`.
+Please keep the Upload ID for the observation planning.
             """
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
@@ -217,5 +194,88 @@ Please keep the `Upload ID`.
     # def set_height(index):
     #     tab = tab_panels[index]
     #     tab_panels.height = tab.height
+
+    return app
+
+
+def list_files_app():
+    config = dotenv_values(".env.shared")
+
+    logger.info(f"config params from dotenv: {config}")
+
+    if not os.path.exists(config["OUTPUT_DIR"]):
+        logger.error(f"{config['OUTPUT_DIR']} does not exist.")
+        raise ValueError
+
+    template = pn.template.VanillaTemplate(
+        title="PFS Target Lists",
+        collapsed_sidebar=True,
+        header_background="#3A7D7E",
+        busy_indicator=None,
+        favicon="docs/site/assets/images/favicon.png",
+    )
+
+    df_files = load_file_properties(config["OUTPUT_DIR"], ext="ecsv")
+
+    editors = {}
+    for c in df_files.columns:
+        editors[c] = None
+
+    # setup panel components
+    table_files = pn.widgets.Tabulator(
+        df_files,
+        page_size=500,
+        theme="bootstrap",
+        # theme_classes=["table-striped", "table-sm"],
+        theme_classes=["table-striped"],
+        frozen_columns=["index"],
+        pagination="remote",
+        header_filters=True,
+        editors=editors,
+        # bokeh_formatters=bokeh_formatters,
+        titles={
+            "upload_id": "Upload ID",
+            "filenames": "File",
+            "n_obj": "N(object)",
+            "t_exp": "Fiberhour (h)",
+            "origname": "Original filename",
+            "filesize": "Size (kB)",
+            "timestamp": "Timestamp",
+        },
+        hidden_columns=["fullpath", "link"],
+        buttons={"download": "<i class='fa-solid fa-download'></i>"},
+        # buttons={
+        #     "download": lambda e: f"<a href='{os.path.join(config['OUTPUT_DIR'], e.filenames!r)}'><i class='fa-solid fa-download'></i></a>"
+        # },
+        layout="fit_data_table",
+    )
+
+    # Open a file by clicking the download buttons
+    # https://discourse.holoviz.org/t/how-to-make-a-dynamic-link-in-panel/2137
+    js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
+
+    def execute_javascript(script):
+        # print("js executed")
+        script = f'<script type="text/javascript">{script}</script>'
+        js_panel.object = script
+        js_panel.object = ""
+
+    def open_panel_download(event):
+        if event.column == "download":
+            href = f"/data/{df_files['filename'][event.row]}"
+            # c.f. https://www.w3schools.com/jsref/met_win_open.asp
+            script = f"window.open('{href}', '_blank')"
+            # print(href)
+            execute_javascript(script)
+
+    table_files.on_click(open_panel_download)
+
+    main_column = pn.Column(table_files, js_panel)
+
+    # put them into the template
+    # template.sidebar.append(sidebar_column)
+    template.main.append(main_column)
+
+    app = template.servable()
 
     return app
