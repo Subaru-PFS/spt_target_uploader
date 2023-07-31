@@ -340,7 +340,7 @@ def validate_input(df, logger=logger):
         validation_status["str"] = {"status": None}
         validation_status["values"] = {"status": None}
         validation_status["unique"] = {"status": None}
-        return df, validation_status
+        return validation_status
 
     # check string values
     logger.info("[STAGE 2] Checking string values")
@@ -350,7 +350,7 @@ def validate_input(df, logger=logger):
     if not dict_str["status"]:
         validation_status["values"] = {"status": None}
         validation_status["unique"] = {"status": None}
-        return df, validation_status
+        return validation_status
 
     # check value against allowed ranges
     logger.info("[STAGE 3] Checking wheter values are in allowed ranges")
@@ -359,7 +359,7 @@ def validate_input(df, logger=logger):
     validation_status["values"] = dict_values
     if not dict_values["status"]:
         validation_status["unique"] = {"status": None}
-        return df, validation_status
+        return validation_status
 
     # check unique constraint for `ob_code`
     logger.info("[STAGE 4] Checking whether all ob_code are unique")
@@ -367,4 +367,14 @@ def validate_input(df, logger=logger):
     logger.info(f"[STAGE 4] status: {dict_unique['status']} (Success if True)")
     validation_status["unique"] = dict_unique
 
-    return df, validation_status
+    if (
+        validation_status["required_keys"]["status"]
+        and validation_status["str"]["status"]
+        and validation_status["values"]["status"]
+        and validation_status["unique"]["status"]
+    ):
+        validation_status["status"] = True
+    else:
+        validation_status["status"] = False
+
+    return validation_status

@@ -8,7 +8,14 @@ import panel as pn
 from logzero import logger
 
 from .utils import load_input, validate_input
-from .widgets import ButtonWidgets, FileInputWidgets, ResultWidgets, StatusWidgets
+from .widgets import (
+    ButtonWidgets,
+    DocLinkWidgets,
+    FileInputWidgets,
+    ResultWidgets,
+    StatusWidgets,
+    TargetWidgets,
+)
 
 
 def target_uploader_app():
@@ -23,10 +30,12 @@ def target_uploader_app():
     )
 
     # setup panel components
+    panel_doc = DocLinkWidgets()
     panel_input = FileInputWidgets()
     panel_buttons = ButtonWidgets()
     panel_status = StatusWidgets()
     panel_results = ResultWidgets()
+    panel_targets = TargetWidgets()
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
@@ -36,19 +45,30 @@ def target_uploader_app():
     )
 
     # bundle panel(s) in the main area
-    main_column = pn.Column(panel_results.pane)
-
-    panel_results.pane.visible = False
+    tab_panels = pn.Tabs(
+        ("Results", panel_results.pane),
+        ("Inputs", panel_targets.pane),
+    )
+    main_column = pn.Column(panel_doc.pane, tab_panels)
 
     # put them into the template
     template.sidebar.append(sidebar_column)
     template.main.append(main_column)
 
+    # main_column.visible = False
+    # panel_results.pane.visible = False
+    # panel_targets.pane.visible = False
+
+    tab_panels.visible = False
+
     # define on_click callback for the "validate" button
     def cb_validate(event):
+        # panel_results.pane.visible = False
+        panel_buttons.submit.disabled = True
+        tab_panels.visible = False
         panel_status.reset()
         panel_results.reset()
-        time.sleep(0.25)
+        time.sleep(0.1)  # may be removed
         pn.state.notifications.clear()
         if panel_input.file_input.filename is not None:
             logger.info(f"{panel_input.file_input.filename} is selected.")
@@ -68,16 +88,27 @@ def target_uploader_app():
             pn.state.notifications.error("Please select a CSV file.")
             return None
 
-        df, validation_status = validate_input(df_input)
-        panel_status.show_results(df, validation_status)
-        panel_results.show_results(df, validation_status)
-        panel_results.pane.visible = True
+        validation_status = validate_input(df_input)
 
-    # def on_click_submit(event):
-    #     pass
+        panel_status.show_results(df_input, validation_status)
+        panel_results.show_results(df_input, validation_status)
+        panel_targets.show_results(df_input)
+
+        # activate submit button when no error is detected
+        if validation_status["status"]:
+            panel_buttons.submit.disabled = False
+
+        # panel_results.pane.visible = True
+        # panel_targets.pane.visible = True
+        tab_panels.visible = True
+
+    def cb_submit(event):
+        # logger.info(f"""\n{df_input}\n{panel_input.file_input.filename}""")
+        logger.info("Submit button clicked. (did nothing.)")
+        pass
 
     # set callback to the "validate" click
     panel_buttons.validate.on_click(cb_validate)
-    # panel_buttons.submit.on_click(on_click_submit)
+    panel_buttons.submit.on_click(cb_submit)
 
     return template.servable()

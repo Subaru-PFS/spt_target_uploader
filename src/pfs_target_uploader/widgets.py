@@ -6,6 +6,48 @@ import panel as pn
 from logzero import logger
 
 
+class DocLinkWidgets:
+    def __init__(self):
+        # self.doc = pn.pane.HTML(
+        #     "<i class='fa-sharp fa-solid fa-book' ></i> <a href='/docs/index.html' target='_blank'>Manual</a>",
+        #     width=80,
+        #     height=26,
+        #     styles={
+        #         "display": "inline-block",
+        #         "padding": "3px 0px 0px 5px",
+        #         "margin": "4px 0px 0px 6px",
+        #         # "background-color": "#4CAF50",
+        #         # "background-color": "#f3f3f3",
+        #         # "border-radius": "5px",
+        #         # "border-style": "solid",
+        #         # "border-color": "#000000",
+        #         "text-align": "left",
+        #         "text-decoration": "none",
+        #         "font-size": "110%",
+        #     },
+        # )
+        #         self.doc = pn.pane.HTML(
+        #             """<div class="alert alert-light" role="alert">
+        #   A simple light alert—check it out!
+        # </div>"""
+        #         )
+
+        # self.doc = pn.pane.Alert(
+        #     "<font size='5'><i class='fa-sharp fa-solid fa-book' ></i> <a href='/docs/index.html' target='_blank'>Manual</a></font>",
+        #     alert_type="light",
+        #     # height=50,
+        #     # styles={"text-align": "left"},
+        # )
+
+        self.doc = pn.pane.Markdown(
+            "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='/docs/index.html' target='_blank'>Documentation</a></font>",
+            # alert_type="light",
+            # height=50,
+            styles={"text-align": "right"},
+        )
+        self.pane = pn.Column(self.doc)
+
+
 class FileInputWidgets:
     def __init__(self):
         self.file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
@@ -17,15 +59,17 @@ class ButtonWidgets:
         self.validate = pn.widgets.Button(
             name="Validate",
             button_style="outline",
-            button_type="success",
+            # button_type="success",
+            button_type="primary",
             icon="stethoscope",
         )
         self.submit = pn.widgets.Button(
             name="Submit",
-            button_style="outline",
-            button_type="success",
+            # button_style="outline",
+            button_type="primary",
             icon="send",
             disabled=True,
+            # stylesheets=[":host { --design-background-color: red; }"],
         )
         self.pane = pn.Row(self.validate, self.submit, height=40)
 
@@ -185,10 +229,33 @@ class StatusWidgets:
             self.summary_table.value = df_summary
             self.summary_table.editors = {"priority": None, "N": None, "Texp (h)": None}
             self.summary_table.visible = True
-            print("hre")
-            print(df_summary)
         except:
             pass
+
+
+class TargetWidgets:
+    def __init__(self):
+        self.table_all = pn.widgets.Tabulator(
+            pd.DataFrame(),
+            page_size=500,
+            theme="bootstrap",
+            theme_classes=["table-striped", "table-sm"],
+            frozen_columns=["index"],
+            pagination="remote",
+            header_filters=True,
+            visible=False,
+            layout="fit_data_table",
+        )
+
+        self.pane = pn.Column(self.table_all)
+
+    def show_results(self, df):
+        tabulator_editors = {}
+        for c in df.columns:
+            tabulator_editors[c] = None
+        self.table_all.value = df
+        self.table_all.editors = tabulator_editors
+        self.table_all.visible = True
 
 
 class ResultWidgets:
@@ -459,6 +526,4 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             and validation_status["values"]["status"]
             and validation_status["unique"]["status"]
         ):
-            self.error_text_success.object += (
-                "\n<font size='3'>No error is found. Congratulations.</font>\n"
-            )
+            self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
