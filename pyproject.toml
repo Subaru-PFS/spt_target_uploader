@@ -43,6 +43,10 @@ version = { attr = "pfs_target_uploader.__version__" }
 [tool.pdm.dev-dependencies]
 dev = ["pip>=23.2.1", "ipython>=8.14.0"]
 
+[tool.pdm.scripts]
+serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
+build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
+
 # [tool.black]
 # line-length = 120
 # target-version = ["py39", "py310", "py311"]

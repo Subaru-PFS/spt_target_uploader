@@ -112,6 +112,7 @@ def target_uploader_app():
         #     pass
         placeholder_floatpanel.objects = []
         panel_buttons.submit.disabled = True
+        tab_panels.active = 0
         tab_panels.visible = False
         panel_status.reset()
         panel_results.reset()
@@ -211,6 +212,15 @@ def list_files_app():
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
     )
+    # template = pn.template.BootstrapTemplate(
+    #     title="PFS Target Lists",
+    #     collapsed_sidebar=True,
+    #     # header_background="#3A7D7E",
+    #     # header_background="#C71585",  # mediumvioletred
+    #     header_background="#dc143c",  # crimson
+    #     busy_indicator=None,
+    #     favicon="docs/site/assets/images/favicon.png",
+    # )
 
     df_files = load_file_properties(config["OUTPUT_DIR"], ext="ecsv")
 
@@ -263,7 +273,14 @@ def list_files_app():
 
     table_files.on_click(open_panel_download)
 
-    main_column = pn.Column(table_files, js_panel)
+    main_column = pn.Column(
+        # pn.pane.Markdown(
+        #     "<font size='5' style='text-color: red;'>`PFS`</font>",
+        #     renderer="markdown-it",
+        # ),
+        table_files,
+        js_panel,
+    )
 
     # put them into the template
     # template.sidebar.append(sidebar_column)

@@ -4,6 +4,11 @@ Validation of a input target list is carried out in 4 stages.
 
 ## Stages
 
+<figure markdown>
+  ![Status indicators](images/status_indicators.png){ width="600" }
+  <!-- <figcaption>Status indicators</figcaption> -->
+</figure>
+
 ### Stage 0
 
 At **Stage 0**, whether a proper readable CSV file is provided is checked.
@@ -72,6 +77,12 @@ Press "Validation" button to start the validation process.
 
 #### <u>Stage indicators</u>
 
+<figure markdown>
+  ![Status indicators](images/status_indicators.png){ width="600" }
+  <figcaption>Status indicators shows the results for each stage. The above image tells that Stage 1 returned with warnings, Stage 2 finished successfully, Stage 3 finished with errors, and Stage 4 was not carried out.</figcaption>
+</figure>
+
+
 Circles show the status of each stage. Meaning of each color is the following.
 
 **White**
@@ -80,7 +91,7 @@ Circles show the status of each stage. Meaning of each color is the following.
 <span style="color: darkorange;">**Yellow**</span>
 : Validation at **Stage** ended with warnings.
 
-<span style="color: darkgreen;">**Green**</span>
+<span style="color: teal;">**Green**</span>
 : Validation at **Stage** was successful without errors and warnings.
 
 #### <u>Number of objects</u>
