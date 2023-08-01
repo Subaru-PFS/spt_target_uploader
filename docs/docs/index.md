@@ -13,9 +13,10 @@ The PFS Target Uploader is a web app to validate and submit the target list supp
 - [Validation stages](validation.md#stages)
 - [Understand the results](validation.md#results)
 
-## Submission
+## [Submission](submission.md)
 
-TBD
+- [Submit](submission.md#submit-the-target-list)
+
 
 ## [Contact](contact.md)
 

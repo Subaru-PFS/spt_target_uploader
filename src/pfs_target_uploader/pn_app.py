@@ -190,11 +190,6 @@ Please keep the Upload ID for the observation planning.
 
     app = template.servable()
 
-    # @pn.depends(tab_panels.param.active, watch=True)
-    # def set_height(index):
-    #     tab = tab_panels[index]
-    #     tab_panels.height = tab.height
-
     return app
 
 
@@ -232,7 +227,6 @@ def list_files_app():
         pagination="remote",
         header_filters=True,
         editors=editors,
-        # bokeh_formatters=bokeh_formatters,
         titles={
             "upload_id": "Upload ID",
             "filenames": "File",
@@ -242,11 +236,8 @@ def list_files_app():
             "filesize": "Size (kB)",
             "timestamp": "Timestamp",
         },
-        hidden_columns=["fullpath", "link"],
+        hidden_columns=["index", "fullpath", "link"],
         buttons={"download": "<i class='fa-solid fa-download'></i>"},
-        # buttons={
-        #     "download": lambda e: f"<a href='{os.path.join(config['OUTPUT_DIR'], e.filenames!r)}'><i class='fa-solid fa-download'></i></a>"
-        # },
         layout="fit_data_table",
     )
 
