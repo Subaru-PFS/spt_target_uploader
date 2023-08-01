@@ -205,7 +205,9 @@ def list_files_app():
     template = pn.template.VanillaTemplate(
         title="PFS Target Lists",
         collapsed_sidebar=True,
-        header_background="#3A7D7E",
+        # header_background="#3A7D7E",
+        # header_background="#C71585",  # mediumvioletred
+        header_background="#dc143c",  # crimson
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
     )
