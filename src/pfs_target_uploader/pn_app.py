@@ -209,7 +209,7 @@ def list_files_app():
         raise ValueError
 
     template = pn.template.VanillaTemplate(
-        title="PFS Target Lists",
+        title="PFS Uploaded Target Lists",
         collapsed_sidebar=True,
         # header_background="#3A7D7E",
         # header_background="#C71585",  # mediumvioletred
@@ -279,10 +279,9 @@ def list_files_app():
     table_files.on_click(open_panel_download)
 
     main_column = pn.Column(
-        # pn.pane.Markdown(
-        #     "<font size='5' style='text-color: red;'>`PFS`</font>",
-        #     renderer="markdown-it",
-        # ),
+        pn.pane.Alert(
+            "<font size='5'>**You are in the admin area**</font>", alert_type="danger"
+        ),
         table_files,
         js_panel,
     )
