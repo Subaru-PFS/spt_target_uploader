@@ -174,15 +174,20 @@ def target_uploader_app():
             origname=panel_input.file_input.filename,
         )
         panel_notes = UploadNoteWidgets(
-            f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
-
-<font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
-
-<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
-
-Please keep the Upload ID for the observation planning.
-            """
+            uploaded_time,
+            secret_token,
         )
+        #         panel_notes = UploadNoteWidgets(
+        #             f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
+
+        # <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
+
+        # <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
+
+        # Please keep the Upload ID for the observation planning.
+        #             """,
+        #             secret_token,
+        #         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
     # set callback to the "validate" click
