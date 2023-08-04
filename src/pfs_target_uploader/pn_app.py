@@ -64,7 +64,8 @@ def target_uploader_app():
     template = pn.template.VanillaTemplate(
         title="PFS Target Uploader",
         sidebar_width=400,
-        header_background="#3A7D7E",
+        # header_background="#3A7D7E",
+        header_background="#449285",  # same as the documentation
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
     )
