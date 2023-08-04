@@ -270,7 +270,7 @@ def list_files_app():
 
     def open_panel_download(event):
         if event.column == "download":
-            href = f"/data/{df_files['filename'][event.row]}"
+            href = f"/uploader-data/{df_files['filename'][event.row]}"
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{href}', '_blank')"
             # print(href)
