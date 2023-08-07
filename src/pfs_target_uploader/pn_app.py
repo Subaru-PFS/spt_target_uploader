@@ -281,7 +281,8 @@ def list_files_app():
 
     main_column = pn.Column(
         pn.pane.Alert(
-            "<font size='5'>**You are in the admin area**</font>", alert_type="danger"
+            "<font size='5'>**You are in the admin area**  ([logout](/logout_admin))</font> ",
+            alert_type="danger",
         ),
         table_files,
         js_panel,
