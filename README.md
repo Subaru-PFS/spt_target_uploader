@@ -31,7 +31,9 @@ cd ..
 ### Run the app
 
 ```sh
-panel serve ./app.py ./admin.py --autoreload --static-dirs docs=./docs/site data=./data/target_lists
+panel serve ./uploader.py ./uploader-admin.py \
+    --autoreload \
+    --static-dirs uploader-docs=./docs/site uploader-data=./data/target_lists
 ```
 
-Open the target uploader at [http://localhost:5006/app] and the admin page at [http://localhost:5006/admin]. Uploaded files will be stored under `data/target_list`. This parameter can be controlled by editing `OUTPUT_DIR` environment variable in `.env.shared`.
+Open the target uploader at [http://localhost:5006/uploader] and the admin page at [http://localhost:5006/uploader-admin]. Uploaded files will be stored under `data/target_list`. This parameter can be controlled by editing `OUTPUT_DIR` environment variable in `.env.shared`.
