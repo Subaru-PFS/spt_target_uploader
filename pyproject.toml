@@ -41,7 +41,12 @@ include-package-data = true
 version = { attr = "pfs_target_uploader.__version__" }
 
 [tool.pdm.dev-dependencies]
-dev = ["pip>=23.2.1", "ipython>=8.14.0"]
+dev = [
+    "pip>=23.2.1",
+    "ipython>=8.14.0",
+    "black>=23.7.0",
+    "flake8>=6.1.0",
+]
 
 [tool.pdm.scripts]
 serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }

@@ -1,0 +1,25 @@
+# %ECSV 1.0
+# ---
+# datatype:
+# - {name: resolution, datatype: string}
+# - {name: N_ppc, datatype: float64}
+# - {name: Texp (h), datatype: float64}
+# - {name: Texp (fiberhour), datatype: float64}
+# - {name: Request time 1 (h), datatype: float64}
+# - {name: Request time 2 (h), datatype: float64}
+# - {name: Used fiber fraction (%), datatype: float64}
+# - {name: Fraction of PPC < 30% (%), datatype: float64}
+# - {name: P_all, datatype: float64}
+# - {name: P_0, datatype: float64}
+# - {name: P_3, datatype: float64}
+# - {name: P_9, datatype: float64}
+# delimiter: ','
+# meta: !!omap
+# - {original_filename: z4qso_t.csv}
+# - {upload_id: d743df613204c11f}
+# - {upload_at: '2023-09-07T08:39:47+00:00'}
+# schema: astropy-2.0
+resolution,N_ppc,Texp (h),Texp (fiberhour),Request time 1 (h),Request time 2 (h),Used fiber fraction (%),Fraction of PPC < 30% (%),P_all,P_0,P_3,P_9
+low,20.0,5.0,5.0,500.0,16.02777777777778,0.04177109440267335,100.0,100.0,100.0,100.0,
+medium,4.0,1.0,1.0,500.0,3.4055555555555554,0.04177109440267335,100.0,100.0,,,100.0
+Total,24.0,6.0,6.0,1000.0,19.433333333333334,,,,,,
