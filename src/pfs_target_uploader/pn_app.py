@@ -15,17 +15,25 @@ from bokeh.models.widgets.tables import HTMLTemplateFormatter
 from dotenv import dotenv_values
 from logzero import logger
 
-from .utils import load_file_properties, load_input, upload_file, validate_input, PPPrunStart, ppp_result, visibility_checker
+from .utils import (
+    PPPrunStart,
+    load_file_properties,
+    load_input,
+    ppp_result,
+    upload_file,
+    validate_input,
+    visibility_checker,
+)
 from .widgets import (
     ButtonWidgets1,
     ButtonWidgets2,
     DocLinkWidgets,
     FileInputWidgets,
+    PPPresultWidgets,
     ResultWidgets,
     StatusWidgets,
     TargetWidgets,
     UploadNoteWidgets,
-    PPPresultWidgets,
 )
 
 
@@ -200,59 +208,78 @@ Please keep the Upload ID for the observation planning.
         time.sleep(0.1)  # may be removed
         pn.state.notifications.clear()
 
-        gif_pane = pn.pane.GIF('https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif', width=20)
+        gif_pane = pn.pane.GIF(
+            "https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif",
+            width=20,
+        )
         panel_buttons2.PPPrunStats.append(gif_pane)
 
         df_input_ = _validate_file(panel_input)[0]
         df_input = Table.from_pandas(df_input_)
 
-        tgt_obs_ok = visibility_checker(df_input, 'B')
-        tgt_obs_no = np.where(tgt_obs_ok == False)[0]
-        tgt_obs_yes = np.where(tgt_obs_ok == True)[0]
-        
+        tgt_obs_ok = visibility_checker(df_input, "B")
+
+        # NOTE: It seems boolean comparison for a numpy array must not be done with "is"
+        # https://beta.ruff.rs/docs/rules/true-false-comparison/
+        tgt_obs_no = np.where(~tgt_obs_ok)[0]
+        tgt_obs_yes = np.where(tgt_obs_ok)[0]
+
         df_input_ = df_input[tgt_obs_yes]
 
-        weight_para = [4.02,0.01,0.01]
-        uS_L2, cR_L, cR_L_, sub_l, obj_allo_L_fin, uS_M2, cR_M, cR_M_, sub_m, obj_allo_M_fin = PPPrunStart( df_input_, weight_para)
-        res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2)
+        weight_para = [4.02, 0.01, 0.01]
+        (
+            uS_L2,
+            cR_L,
+            cR_L_,
+            sub_l,
+            obj_allo_L_fin,
+            uS_M2,
+            cR_M,
+            cR_M_,
+            sub_m,
+            obj_allo_M_fin,
+        ) = PPPrunStart(df_input_, weight_para)
+        res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
+            cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
+        )
 
-        if p_result_tab_.value.iloc[-1]['Request time 1 (h)'] > 10 * 5:
-            ppp_Alert=pn.pane.Alert(
-            """### Warnings
+        if p_result_tab_.value.iloc[-1]["Request time 1 (h)"] > 10 * 5:
+            ppp_Alert = pn.pane.Alert(
+                """### Warnings
 The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.
             """,
-            alert_type="danger",
+                alert_type="danger",
             )
             if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = ' '.join(df_input[tgt_obs_no]['ob_code'])
+                tgt_obs_no_id = " ".join(df_input[tgt_obs_no]["ob_code"])
                 ppp_Alert.object += f"""
-                
+
 The following targets are not observable during the semester. Please remove them.
     {tgt_obs_no_id}
                 """
 
         else:
             if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = ' '.join(df_input[tgt_obs_no]['ob_code'])
+                tgt_obs_no_id = " ".join(df_input[tgt_obs_no]["ob_code"])
                 ppp_Alert = pn.pane.Alert(
-                f"""### Warnings
+                    f"""### Warnings
 The following targets are not observable during the semester. Please remove them.
     {tgt_obs_no_id}
                 """,
-                alert_type="danger",
+                    alert_type="danger",
                 )
-            
+
             else:
                 ppp_Alert = pn.pane.Alert(
-                """### Success
+                    """### Success
 The total requested time is reasonable for normal program. All the input targets are observable in the semester.
                 """,
-                alert_type="success",
+                    alert_type="success",
                 )
-      
-        panel_buttons2.PPPrunStats.remove(gif_pane)   
-        panel_ppp.show_results(res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert)   
-        
+
+        panel_buttons2.PPPrunStats.remove(gif_pane)
+        panel_ppp.show_results(res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert)
+
         panel_buttons2.PPPsubmit.disabled = False
 
         def cb_PPP_submit(event):
@@ -291,6 +318,7 @@ The total requested time is reasonable for normal program. All the input targets
     app = template.servable()
 
     return app
+
 
 def list_files_app():
     config = dotenv_values(".env.shared")
@@ -362,7 +390,7 @@ def list_files_app():
         editors=editors,
         layout="fit_data_table",
         disabled=True,
-        buttons={"magnify":"<i class='fa-solid fa-magnifying-glass'></i>"},
+        buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>"},
         hidden_columns=["index"],
         width=1400,
     )
@@ -398,11 +426,18 @@ def list_files_app():
             script = f"window.open('{href}', '_blank')"
             # print(href)
             execute_javascript(script)
-    
+
     def open_panel_magnify(event):
         if event.column == "magnify":
-            table_ppc_t = Table.read(config["OUTPUT_DIR_ppc"]+'targets_'+df_files_psl.iloc[event.row]['Upload ID']+'.ecsv')
-            table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values("ppc_priority", ascending=True, ignore_index=True)
+            table_ppc_t = Table.read(
+                config["OUTPUT_DIR_ppc"]
+                + "targets_"
+                + df_files_psl.iloc[event.row]["Upload ID"]
+                + ".ecsv"
+            )
+            table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
+                "ppc_priority", ascending=True, ignore_index=True
+            )
             table_files_ppc.visible = True
 
     table_files_tgt.on_click(open_panel_download)
@@ -410,7 +445,7 @@ def list_files_app():
 
     tab_panels = pn.Tabs(
         ("Target list", pn.Column(table_files_tgt, js_panel)),
-        ("Proposal list", pn.Row(table_files_psl,table_files_ppc)),
+        ("Proposal list", pn.Row(table_files_psl, table_files_ppc)),
     )
 
     # put them into the template

@@ -20,6 +20,7 @@ class UploadNoteWidgets:
             width=720,
         )
 
+
 class DocLinkWidgets:
     def __init__(self):
         self.doc = pn.pane.Markdown(
@@ -32,8 +33,11 @@ class DocLinkWidgets:
 class FileInputWidgets:
     def __init__(self):
         self.file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
-        self.pane = pn.Column('''# Step 1: 
-## Upload target list''', self.file_input)
+        self.pane = pn.Column(
+            """# Step 1:
+## Upload target list""",
+            self.file_input,
+        )
 
 
 class ButtonWidgets1:
@@ -42,7 +46,7 @@ class ButtonWidgets1:
             name="Validate",
             button_style="outline",
             button_type="success",
-            #button_type="primary",
+            # button_type="primary",
             icon="stethoscope",
             width=70,
         )
@@ -55,8 +59,12 @@ class ButtonWidgets1:
             width=150,
             # stylesheets=[":host { --design-background-color: red; }"],
         )
-        self.pane = pn.Column('''# Step 2: 
-## Check the uploaded list''', pn.Row(self.validate,self.submit))
+        self.pane = pn.Column(
+            """# Step 2:
+## Check the uploaded list""",
+            pn.Row(self.validate, self.submit),
+        )
+
 
 class StatusWidgets:
     def __init__(self):
@@ -86,8 +94,8 @@ class StatusWidgets:
             nrows=1,
             # width=300,
         )
-        
-        '''self.summary_nobj_L = pn.indicators.Number(
+
+        """self.summary_nobj_L = pn.indicators.Number(
             name="Number of objects (low-resolution)",
             value=0,
             format="{value:d}",
@@ -96,7 +104,7 @@ class StatusWidgets:
             default_color="teal",
             visible=False,
         )
-        
+
         self.summary_fh = pn.indicators.Number(
             name="Fiberhours",
             value=0,
@@ -104,7 +112,7 @@ class StatusWidgets:
             title_size="15pt",
             font_size="15pt",
             default_color="teal",
-        )#'''
+        )#"""
 
         self.summary_table = pn.widgets.Tabulator(
             pd.DataFrame(),
@@ -120,7 +128,7 @@ class StatusWidgets:
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
         )
-        
+
         self.pane = pn.Column(
             # "# Status",
             self.status_grid,
@@ -132,9 +140,9 @@ class StatusWidgets:
         self.status_str.value = False
         self.status_vals.value = False
         self.status_dups.value = False
-        #self.summary_nobj_L.value = 0
-        #self.summary_nobj_M.value = 0
-        #self.summary_fh.value = 0
+        # self.summary_nobj_L.value = 0
+        # self.summary_nobj_M.value = 0
+        # self.summary_fh.value = 0
         self.summary_table.value = pd.DataFrame()
         self.summary_table.visible = False
 
@@ -186,17 +194,25 @@ class StatusWidgets:
                 self.status_dups.color = "danger"
 
         try:
-            unique_priority = np.arange(0,10,1)#np.unique(df["priority"])
+            unique_priority = np.arange(0, 10, 1)  # np.unique(df["priority"])
             number_priority_L = np.zeros_like(unique_priority, dtype=int)
             number_priority_M = np.zeros_like(unique_priority, dtype=int)
             exptime_priority_L = np.zeros_like(unique_priority, dtype=float)
             exptime_priority_M = np.zeros_like(unique_priority, dtype=float)
 
             for i, p in enumerate(unique_priority):
-                number_priority_L[i] = df.loc[(df["priority"] == p) & (df["resolution"] == 'L'), :].index.size
-                number_priority_M[i] = df.loc[(df["priority"] == p) & (df["resolution"] == 'M'), :].index.size
-                exptime_priority_L[i] = df.loc[(df["priority"] == p) & (df["resolution"] == 'L'), "exptime"].sum()
-                exptime_priority_M[i] = df.loc[(df["priority"] == p) & (df["resolution"] == 'M'), "exptime"].sum()
+                number_priority_L[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "L"), :
+                ].index.size
+                number_priority_M[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "M"), :
+                ].index.size
+                exptime_priority_L[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "L"), "exptime"
+                ].sum()
+                exptime_priority_M[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "M"), "exptime"
+                ].sum()
 
             df_summary = pd.DataFrame(
                 {
@@ -207,12 +223,24 @@ class StatusWidgets:
                     "Texp_M/h": exptime_priority_M / 3600,
                 }
             )
-            df_summary.loc[len(df_summary.index)] = ['total', sum(number_priority_L), sum(exptime_priority_L/3600), sum(number_priority_M), sum(exptime_priority_M / 3600)]
+            df_summary.loc[len(df_summary.index)] = [
+                "total",
+                sum(number_priority_L),
+                sum(exptime_priority_L / 3600),
+                sum(number_priority_M),
+                sum(exptime_priority_M / 3600),
+            ]
 
             self.summary_table.value = df_summary
-            self.summary_table.editors = {"priority": None, "N_L": None, "Texp_L": None, "N_M": None, "Texp_M": None}
+            self.summary_table.editors = {
+                "priority": None,
+                "N_L": None,
+                "Texp_L": None,
+                "N_M": None,
+                "Texp_M": None,
+            }
             self.summary_table.visible = True
-            
+
         except:
             pass
 
@@ -513,6 +541,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         ):
             self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
 
+
 class ButtonWidgets2:
     def __init__(self):
         self.PPPrun = pn.widgets.Button(
@@ -520,20 +549,26 @@ class ButtonWidgets2:
             button_style="outline",
             button_type="success",
             icon="player-play-filled",
-            width=200
+            width=200,
         )
         self.PPPsubmit = pn.widgets.Button(
             name="Submit to server",
             button_type="primary",
             icon="send",
             width=100,
-            disabled = True,
+            disabled=True,
         )
-        self.PPPrunStats = pn.Column('', width=100)
+        self.PPPrunStats = pn.Column("", width=100)
 
-        self.pane = pn.Column('''# Step 3: 
-## Estimate the total required time''', self.PPPrun, self.PPPsubmit, self.PPPrunStats)
-        
+        self.pane = pn.Column(
+            """# Step 3:
+## Estimate the total required time""",
+            self.PPPrun,
+            self.PPPsubmit,
+            self.PPPrunStats,
+        )
+
+
 class PPPresultWidgets:
     def __init__(self):
         self.ppp_title = pn.pane.Markdown(
@@ -541,8 +576,8 @@ class PPPresultWidgets:
             dedent=True,
         )
 
-        self.ppp_figure = pn.Column('')
-        
+        self.ppp_figure = pn.Column("")
+
         self.pane = pn.Column(
             # "# Status",
             self.ppp_title,
@@ -555,7 +590,12 @@ class PPPresultWidgets:
 
     def show_results(self, mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
         self.ppp_figure.append(ppp_Alert)
-        self.ppp_figure.append(pn.pane.Markdown(f"""## For the {mode:s} resolution mode:""",dedent=True,))
+        self.ppp_figure.append(
+            pn.pane.Markdown(
+                f"""## For the {mode:s} resolution mode:""",
+                dedent=True,
+            )
+        )
         self.ppp_figure.append(nppc)
         self.ppp_figure.append(p_result_tab)
         self.ppp_figure.append(p_result_fig)
