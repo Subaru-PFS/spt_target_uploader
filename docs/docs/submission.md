@@ -1,7 +1,7 @@
 # Submission
 
 ## Submit the target list
-Once the validation is finished without errors, the Submit button becomes active and you can click it to submit your target list.
+Once the validation is finished without errors, the <u>"Submit" button</u> becomes active and you can click it to submit your target list.
 
 <figure markdown>
   ![Validate Button](images/validate_button.png){ width="200" }
@@ -36,3 +36,11 @@ The `Upload ID` may be used for the following purposes.
 ### Errors
 
 When the Submission button is clicked, the validation process runs again. In a rare case, the validation fails and raises an error.
+
+## Submit the PPP outputs
+
+Once finishing running the online PPP, the <u>"Submit" button</u> becomes active and you can click it to submit the table in the main panel and list of pointings.
+
+When uploading the file to our storage is finished, a message panel containing the same `Upload ID` is shown to tell you about the successful submission.
+
+
