@@ -27,6 +27,8 @@ dependencies = [
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
     "astroplan>=0.9",
     "hvplot>=0.8.4",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
+    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -49,22 +51,19 @@ version = { attr = "pfs_target_uploader.__version__" }
 [tool.pdm.dev-dependencies]
 dev = [
     "-e git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
-    "-e git+https://github.com/Subaru-PFS/ics_cobraOps.git#egg=ics-cobraOps",
     "black>=23.7.0",
     "flake8>=6.1.0",
     "ipython>=8.14.0",
     "pip>=23.2.1",
-    "-e git+https://github.com/Subaru-PFS/ets_fiberalloc.git#egg=ets-fiber-assigner",
 ]
 
 [tool.pdm.scripts]
 serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
 build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
 
-[tool.pdm.options]
-add = ["--no-isolation", "--no-self"]
-install = ["--no-isolation", "--no-self"]
-
+# [tool.pdm.options]
+# add = ["--no-isolation", "--no-self"]
+# install = ["--no-isolation", "--no-self"]
 # add = ["--no-isolation"]
 # install = ["--no-isolation"]
 # lock = ["--no-cross-platform"]
