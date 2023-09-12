@@ -24,7 +24,7 @@ class UploadNoteWidgets:
 class DocLinkWidgets:
     def __init__(self):
         self.doc = pn.pane.Markdown(
-            "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='doc/index.html' target='_blank'>Documentation</a></font>",
+            "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='/docs/index.html' target='_blank'>Documentation</a></font>",
             styles={"text-align": "right"},
         )
         self.pane = pn.Column(self.doc)
@@ -218,9 +218,9 @@ class StatusWidgets:
                 {
                     "priority": unique_priority,
                     "N_L": number_priority_L,
-                    "Texp_L/h": exptime_priority_L / 3600,
+                    "Texp_L (FH)": exptime_priority_L / 3600,
                     "N_M": number_priority_M,
-                    "Texp_M/h": exptime_priority_M / 3600,
+                    "Texp_M (FH)": exptime_priority_M / 3600,
                 }
             )
             df_summary.loc[len(df_summary.index)] = [
