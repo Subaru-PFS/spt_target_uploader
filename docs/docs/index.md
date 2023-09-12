@@ -13,11 +13,17 @@ The PFS Target Uploader is a web app to validate and submit the target list supp
 - [Validation stages](validation.md#stages)
 - [Understand the results](validation.md#results)
 
+## [Total Exposure Time Estimate](PPP.md)
+
+- [Run](PPP.md#run)
+- [Understand the results](PPP.md#results)
+
 ## [Submission](submission.md)
 
-- [Submit](submission.md#submit-the-target-list)
+- [Submit target list](submission.md#submit-the-target-list)
+- [Submit PPP outputs](submission.md#submit-the-ppp-outputs)
 
 
 ## [Contact](contact.md)
 
-Any feedback is welcome. Please contact Masato Onodera (Subaru Telescope, NAOJ) via PFS Slack and/or email (<monodera@naoj.org>).
+Any feedback is welcome. Please contact Masato Onodera and Wanqiu He (Subaru Telescope, NAOJ) via PFS Slack and/or email (<monodera@naoj.org>, <wanqiu.he@nao.ac.jp>).
