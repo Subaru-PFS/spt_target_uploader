@@ -13,10 +13,10 @@ cd pfs_target_uploader
 ### Installing dependencies
 
 ```sh
-pip install -r requirements
+pip install -r requirements.txt
 pip install -e .
 
-mkdir -p data/target_lists
+mkdir -p data/target_lists data/psl_lists data/ppc_lists
 ```
 
 
@@ -31,7 +31,7 @@ cd ..
 ### Run the app
 
 ```sh
-panel serve ./app.py ./admin.py --autoreload --static-dirs docs=./docs/site data=./data/target_lists
+panel serve ./app.py ./app-admin.py --autoreload --static-dirs docs=./docs/site data=./data
 ```
 
-Open the target uploader at [http://localhost:5006/app] and the admin page at [http://localhost:5006/admin]. Uploaded files will be stored under `data/target_list`. This parameter can be controlled by editing `OUTPUT_DIR` environment variable in `.env.shared`.
+Open the target uploader at [http://localhost:5006/app] and the admin page at [http://localhost:5006/app-admin]. Uploaded files will be stored under `data/target_lists`, and the pointing lists will be stored under `data/ppc_lists`. This parameter can be controlled by editing `OUTPUT_DIR_data` and `OUTPUT_DIR_ppc` environment variable in `.env.shared`.
