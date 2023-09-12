@@ -6,7 +6,6 @@ authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
     "astropy>=5.3.1",
     "colorcet>=3.0.1",
-    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
     "holoviews>=1.17.1",
     "logzero>=1.7.0",
@@ -55,6 +54,7 @@ dev = [
     "flake8>=6.1.0",
     "ipython>=8.14.0",
     "pip>=23.2.1",
+    "-e git+https://github.com/Subaru-PFS/ets_fiberalloc.git#egg=ets-fiber-assigner",
 ]
 
 [tool.pdm.scripts]
