@@ -73,7 +73,7 @@ Press "Browse" button to select a CSV file to be validated.
 
 #### <u>"Validation" button</u>
 
-Press "Validation" button to start the validation process.
+Press "Validate" button to start the validation process.
 
 #### <u>Stage indicators</u>
 
