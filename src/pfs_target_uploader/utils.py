@@ -1620,7 +1620,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                     "N_ppc": [nppc_fin],
                     "Texp (h)": [hour_tot],
                     "Texp (fiberhour)": [Fhour_tot],
-                    "Request time 1 (h)": [500],
+                    "Request time 1 (h)": [Ttot_best],
                     "Request time 2 (h)": [Ttot_worst],
                     "Used fiber fraction (%)": [fib_eff_mean],
                     "Fraction of PPC < 30% (%)": [fib_eff_small],
