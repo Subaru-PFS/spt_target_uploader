@@ -63,7 +63,7 @@ build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
 
 [tool.pdm.options]
 add = ["--no-isolation", "--no-self"]
-install = ["--no-self"]
+install = ["--no-isolation", "--no-self"]
 
 # add = ["--no-isolation"]
 # install = ["--no-isolation"]
