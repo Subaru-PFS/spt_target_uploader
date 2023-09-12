@@ -390,7 +390,7 @@ def list_files_app():
         editors=editors,
         layout="fit_data_table",
         disabled=True,
-        buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>"},
+        buttons={"magnify":"<i class='fa-solid fa-magnifying-glass'></i>", "download": "<i class='fa-solid fa-download'></i>"},
         hidden_columns=["index"],
         width=1400,
     )
@@ -421,7 +421,7 @@ def list_files_app():
 
     def open_panel_download(event):
         if event.column == "download":
-            href = f"/data/{df_files_tgt['filename'][event.row]}"
+            href = f"/data/target_lists/{df_files_tgt['filename'][event.row]}"
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{href}', '_blank')"
             # print(href)
@@ -432,20 +432,27 @@ def list_files_app():
             table_ppc_t = Table.read(
                 config["OUTPUT_DIR_ppc"]
                 + "targets_"
-                + df_files_psl.iloc[event.row]["Upload ID"]
+                + df_files_psl['Upload ID'][event.row]
                 + ".ecsv"
             )
             table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
                 "ppc_priority", ascending=True, ignore_index=True
             )
             table_files_ppc.visible = True
+            
+        if event.column == "download":
+            href = f"/data/ppc_lists/targets_{df_files_psl['Upload ID'][event.row]}.ecsv"
+            # c.f. https://www.w3schools.com/jsref/met_win_open.asp
+            script = f"window.open('{href}', '_blank')"
+            #print(href)
+            execute_javascript(script)
 
     table_files_tgt.on_click(open_panel_download)
     table_files_psl.on_click(open_panel_magnify)
 
     tab_panels = pn.Tabs(
-        ("Target list", pn.Column(table_files_tgt, js_panel)),
-        ("Proposal list", pn.Row(table_files_psl, table_files_ppc)),
+        ("Target info", pn.Column(table_files_tgt, js_panel)),
+        ("Program info", pn.Row(table_files_psl, table_files_ppc)),
     )
 
     # put them into the template
