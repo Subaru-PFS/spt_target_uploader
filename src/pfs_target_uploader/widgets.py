@@ -7,72 +7,24 @@ from logzero import logger
 
 
 class UploadNoteWidgets:
-    def __init__(self, uploaded_time, secret_token):
+    def __init__(self, message):
         self.floatpanel = pn.layout.FloatPanel(
-            None,
+            pn.pane.Markdown(message),
             name="Info",
+            # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
             contained=False,
             position="center",
+            # theme="none",
             theme="#3A7D7E",
             margin=20,
             width=720,
         )
 
-        # JS on-click actions
-        # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-        # so far not working...
-        stylesheet = """
-        :host {
-            --font-size: 2.5em;
-            --color: darkcyan;
-        }
-        .bk-btn-light {
-            color: darkcyan;
-        }
-        """
-
-        self.copy_source_button = pn.widgets.Button(
-            name=f"{secret_token}",
-            icon="copy",
-            height=96,
-            icon_size="1.5em",
-            # button_style="outline",
-            button_type="light",
-            stylesheets=[stylesheet],
-        )
-
-        copy_source_code = "navigator.clipboard.writeText(source);"
-
-        self.copy_source_button.js_on_click(
-            args={"source": f"{secret_token}"},
-            code=copy_source_code,
-        )
-
-        messages = [
-            pn.pane.Markdown(
-                "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!   Your Upload ID is the following.</font>"
-            ),
-            self.copy_source_button,
-            pn.pane.Markdown(
-                f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
-            ),
-            pn.pane.Markdown(
-                """
-                - Please keep the Upload ID for the observation planning.
-                - You can copy the Upload ID to the clipboard by clicking it.
-                """
-            ),
-        ]
-
-        self.floatpanel.objects = []
-        for m in messages:
-            self.floatpanel.objects.append(m)
-
 
 class DocLinkWidgets:
     def __init__(self):
         self.doc = pn.pane.Markdown(
-            "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='/uploader-docs/index.html' target='_blank'>Documentation</a></font>",
+            "<font size='4'><i class='fa-solid fa-circle-info fa-lg' style='color: #3A7D7E;'></i> <a href='/docs/index.html' target='_blank'>Documentation</a></font>",
             styles={"text-align": "right"},
         )
         self.pane = pn.Column(self.doc)
@@ -81,27 +33,37 @@ class DocLinkWidgets:
 class FileInputWidgets:
     def __init__(self):
         self.file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
-        self.pane = pn.Column("# Input target list", self.file_input)
+        self.pane = pn.Column(
+            """# Step 1:
+## Upload target list""",
+            self.file_input,
+        )
 
 
-class ButtonWidgets:
+class ButtonWidgets1:
     def __init__(self):
         self.validate = pn.widgets.Button(
             name="Validate",
             button_style="outline",
-            # button_type="success",
-            button_type="primary",
+            button_type="success",
+            # button_type="primary",
             icon="stethoscope",
+            width=70,
         )
         self.submit = pn.widgets.Button(
-            name="Submit",
+            name="Submit your list to server",
             # button_style="outline",
             button_type="primary",
             icon="send",
             disabled=True,
+            width=150,
             # stylesheets=[":host { --design-background-color: red; }"],
         )
-        self.pane = pn.Row(self.validate, self.submit, height=40)
+        self.pane = pn.Column(
+            """# Step 2:
+## Check the uploaded list""",
+            pn.Row(self.validate, self.submit),
+        )
 
 
 class StatusWidgets:
@@ -133,34 +95,36 @@ class StatusWidgets:
             # width=300,
         )
 
-        self.summary_nobj = pn.indicators.Number(
-            name="Number of objects",
+        """self.summary_nobj_L = pn.indicators.Number(
+            name="Number of objects (low-resolution)",
             value=0,
             format="{value:d}",
-            title_size="24pt",
+            title_size="15pt",
+            font_size="15pt",
             default_color="teal",
+            visible=False,
         )
+
         self.summary_fh = pn.indicators.Number(
             name="Fiberhours",
             value=0,
-            format="{value} h",
-            title_size="24pt",
+            format="{value:.2f} h",
+            title_size="15pt",
+            font_size="15pt",
             default_color="teal",
-        )
-
-        self.summary_text = pn.pane.Markdown("")
+        )#"""
 
         self.summary_table = pn.widgets.Tabulator(
             pd.DataFrame(),
-            page_size=10,
+            page_size=11,
             theme="bootstrap",
             theme_classes=["table-sm"],
             pagination="remote",
             visible=False,
-            layout="fit_columns",
+            layout="fit_data_table",
             hidden_columns=["index"],
             selectable=False,
-            width=300,
+            width=350,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
         )
@@ -168,9 +132,6 @@ class StatusWidgets:
         self.pane = pn.Column(
             # "# Status",
             self.status_grid,
-            self.summary_nobj,
-            self.summary_fh,
-            self.summary_text,
             self.summary_table,
         )
 
@@ -179,9 +140,9 @@ class StatusWidgets:
         self.status_str.value = False
         self.status_vals.value = False
         self.status_dups.value = False
-        self.summary_nobj.value = 0
-        self.summary_fh.value = 0
-        self.summary_text.object = ""
+        # self.summary_nobj_L.value = 0
+        # self.summary_nobj_M.value = 0
+        # self.summary_fh.value = 0
         self.summary_table.value = pd.DataFrame()
         self.summary_table.visible = False
 
@@ -233,32 +194,53 @@ class StatusWidgets:
                 self.status_dups.color = "danger"
 
         try:
-            self.summary_nobj.value = df.index.size
-            self.summary_fh.value = df["exptime"].sum() / 3600.0
-
-            self.summary_text.object += """\n
-<font size='3'>Breakdown of fiberhours for each priority is listed below.</font>
-"""
-
-            unique_priority = np.unique(df["priority"])
-            number_priority = np.zeros_like(unique_priority, dtype=int)
-            exptime_priority = np.zeros_like(unique_priority, dtype=float)
+            unique_priority = np.arange(0, 10, 1)  # np.unique(df["priority"])
+            number_priority_L = np.zeros_like(unique_priority, dtype=int)
+            number_priority_M = np.zeros_like(unique_priority, dtype=int)
+            exptime_priority_L = np.zeros_like(unique_priority, dtype=float)
+            exptime_priority_M = np.zeros_like(unique_priority, dtype=float)
 
             for i, p in enumerate(unique_priority):
-                number_priority[i] = df.loc[df["priority"] == p, :].index.size
-                exptime_priority[i] = df.loc[df["priority"] == p, "exptime"].sum()
+                number_priority_L[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "L"), :
+                ].index.size
+                number_priority_M[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "M"), :
+                ].index.size
+                exptime_priority_L[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "L"), "exptime"
+                ].sum()
+                exptime_priority_M[i] = df.loc[
+                    (df["priority"] == p) & (df["resolution"] == "M"), "exptime"
+                ].sum()
 
             df_summary = pd.DataFrame(
                 {
                     "priority": unique_priority,
-                    "N": number_priority,
-                    "Texp (h)": exptime_priority / 3600,
+                    "N_L": number_priority_L,
+                    "Texp_L/h": exptime_priority_L / 3600,
+                    "N_M": number_priority_M,
+                    "Texp_M/h": exptime_priority_M / 3600,
                 }
             )
+            df_summary.loc[len(df_summary.index)] = [
+                "total",
+                sum(number_priority_L),
+                sum(exptime_priority_L / 3600),
+                sum(number_priority_M),
+                sum(exptime_priority_M / 3600),
+            ]
 
             self.summary_table.value = df_summary
-            self.summary_table.editors = {"priority": None, "N": None, "Texp (h)": None}
+            self.summary_table.editors = {
+                "priority": None,
+                "N_L": None,
+                "Texp_L": None,
+                "N_M": None,
+                "Texp_M": None,
+            }
             self.summary_table.visible = True
+
         except:
             pass
 
@@ -267,7 +249,7 @@ class TargetWidgets:
     def __init__(self):
         self.table_all = pn.widgets.Tabulator(
             pd.DataFrame(),
-            page_size=500,
+            page_size=50,
             theme="bootstrap",
             theme_classes=["table-striped", "table-sm"],
             frozen_columns=["index"],
@@ -558,3 +540,63 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             and validation_status["unique"]["status"]
         ):
             self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
+
+
+class ButtonWidgets2:
+    def __init__(self):
+        self.PPPrun = pn.widgets.Button(
+            name="Start (takes a few minutes ~ half hour)",
+            button_style="outline",
+            button_type="success",
+            icon="player-play-filled",
+            width=200,
+        )
+        self.PPPsubmit = pn.widgets.Button(
+            name="Submit to server",
+            button_type="primary",
+            icon="send",
+            width=100,
+            disabled=True,
+        )
+        self.PPPrunStats = pn.Column("", width=100)
+
+        self.pane = pn.Column(
+            """# Step 3:
+## Estimate the total required time""",
+            self.PPPrun,
+            self.PPPsubmit,
+            self.PPPrunStats,
+        )
+
+
+class PPPresultWidgets:
+    def __init__(self):
+        self.ppp_title = pn.pane.Markdown(
+            """# Results of PPP""",
+            dedent=True,
+        )
+
+        self.ppp_figure = pn.Column("")
+
+        self.pane = pn.Column(
+            # "# Status",
+            self.ppp_title,
+            self.ppp_figure,
+        )
+
+    def reset(self):
+        self.ppp_figure.clear()
+        self.ppp_figure.visible = False
+
+    def show_results(self, mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
+        self.ppp_figure.append(ppp_Alert)
+        self.ppp_figure.append(
+            pn.pane.Markdown(
+                f"""## For the {mode:s} resolution mode:""",
+                dedent=True,
+            )
+        )
+        self.ppp_figure.append(nppc)
+        self.ppp_figure.append(p_result_tab)
+        self.ppp_figure.append(p_result_fig)
+        self.ppp_figure.visible = True
