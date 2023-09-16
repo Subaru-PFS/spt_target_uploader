@@ -529,15 +529,15 @@ def load_file_properties(dir=".", ext="ecsv"):
                 tb = Table.read(f)
                 orignames[i] = tb.meta["original_filename"]
                 upload_ids[i] = tb.meta["upload_id"]
-                
+
                 tb_l = tb[tb["resolution"] == "low"]
                 tb_m = tb[tb["resolution"] == "medium"]
-                
+
                 if len(tb_l) > 0:
                     exp_sci_l[i] = tb_l["Texp (h)"]
                     exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
                     tot_time_l[i] = tb_l["Request time 1 (h)"]
-                    
+
                 if len(tb_m) > 0:
                     exp_sci_m[i] = tb_m["Texp (h)"]
                     exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
