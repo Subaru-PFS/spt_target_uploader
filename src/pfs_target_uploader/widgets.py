@@ -7,9 +7,11 @@ from logzero import logger
 
 
 class UploadNoteWidgets:
-    def __init__(self, message):
+    # def __init__(self, message):
+    def __init__(self, secret_token, uploaded_time):
         self.floatpanel = pn.layout.FloatPanel(
-            pn.pane.Markdown(message),
+            None,
+            # pn.pane.Markdown(message),
             name="Info",
             # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
             contained=False,
@@ -19,6 +21,67 @@ class UploadNoteWidgets:
             margin=20,
             width=720,
         )
+
+        # JS on-click actions
+        # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
+        # so far not working...
+        stylesheet = """
+        :host {
+            --font-size: 2.5em;
+            --color: darkcyan;
+        }
+        .bk-btn-light {
+            color: darkcyan;
+        }
+        """
+
+        self.copy_source_button = pn.widgets.Button(
+            name=f"{secret_token}",
+            icon="copy",
+            # width=500,
+            height=96,
+            icon_size="1.5em",
+            # button_style="outline",
+            button_type="light",
+            stylesheets=[stylesheet],
+        )
+
+        copy_source_code = "navigator.clipboard.writeText(source);"
+
+        self.copy_source_button.js_on_click(
+            args={"source": f"{secret_token}"},
+            code=copy_source_code,
+        )
+
+        messages = [
+            pn.pane.Markdown(
+                "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following.</font>"
+            ),
+            self.copy_source_button,
+            pn.pane.Markdown(
+                f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
+            ),
+            pn.pane.Markdown(
+                """
+                - Please keep the Upload ID for the observation planning.
+                - You can copy the Upload ID to the clipboard by clicking it.
+                """
+            ),
+        ]
+
+        self.floatpanel.objects = []
+        for m in messages:
+            self.floatpanel.objects.append(m)
+
+
+#         f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
+
+# <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
+
+# <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
+
+# Please keep the Upload ID for the observation planning.
+#             """
 
 
 class DocLinkWidgets:
