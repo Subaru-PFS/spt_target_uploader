@@ -35,7 +35,7 @@ class FileInputWidgets:
         self.file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
         self.pane = pn.Column(
             """# Step 1:
-## Upload target list""",
+## Select a target list""",
             self.file_input,
         )
 
