@@ -124,7 +124,6 @@ def target_uploader_app():
         # except:
         #     pass
         placeholder_floatpanel.objects = []
-        # panel_validate_button.submit.disabled = True
         tab_panels.active = 0
         tab_panels.visible = False
         panel_status.reset()
