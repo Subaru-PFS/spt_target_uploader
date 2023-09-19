@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 
-import glob
 import os
-import secrets
 import time
-from ast import Sub
 from datetime import datetime, timezone
 from io import BytesIO
 
 import numpy as np
-import pandas as pd
 import panel as pn
 from astropy.table import Table
-from bokeh.models.widgets.tables import HTMLTemplateFormatter
 from dotenv import dotenv_values
 from logzero import logger
 
@@ -26,8 +21,6 @@ from .utils import (
     visibility_checker,
 )
 from .widgets import (
-    # ButtonWidgets1,
-    # ButtonWidgets2,
     DocLinkWidgets,
     FileInputWidgets,
     PPPresultWidgets,
@@ -108,7 +101,7 @@ def target_uploader_app():
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
         ("Input list", panel_targets.pane),
-        ("Results of validating", panel_results.pane),
+        ("Results of validation", panel_results.pane),
         ("Results of PPP", panel_ppp.pane),
     )
 
