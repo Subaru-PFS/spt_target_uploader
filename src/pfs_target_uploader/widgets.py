@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import secrets
+
 import numpy as np
 import pandas as pd
 import panel as pn
+import param
 from logzero import logger
 
 
@@ -93,14 +96,20 @@ class DocLinkWidgets:
         self.pane = pn.Column(self.doc)
 
 
-class FileInputWidgets:
-    def __init__(self):
-        self.file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
-        self.pane = pn.Column(
-            """# Step 1:
+class FileInputWidgets(param.Parameterized):
+    file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
+    secret_token = None
+    pane = pn.Column(
+        """# Step 1:
 ## Select a target list""",
-            self.file_input,
-        )
+        file_input,
+    )
+
+    @pn.depends("file_input.value", watch=True)
+    def generate_secret_token(self):
+        st = secrets.token_hex(8)
+        logger.info(f"Secret Token Updated: {st}")
+        self.secret_token = st
 
 
 class ButtonWidgets1:
