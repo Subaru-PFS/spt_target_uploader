@@ -632,24 +632,13 @@ class ValidateButtonWidgets:
         self.validate = pn.widgets.Button(
             name="Validate",
             button_style="outline",
-            # button_type="success",
             button_type="primary",
             icon="stethoscope",
-            # width=70,
         )
-        # self.submit = pn.widgets.Button(
-        #     name="Submit your list to server",
-        #     # button_style="outline",
-        #     button_type="primary",
-        #     icon="send",
-        #     disabled=True,
-        #     width=150,
-        #     # stylesheets=[":host { --design-background-color: red; }"],
-        # )
         self.pane = pn.Column(
             """# Step 2:
 ## Check the uploaded list""",
-            pn.Row(self.validate),  ##, self.submit),
+            pn.Row(self.validate),
         )
 
 
@@ -660,22 +649,13 @@ class RunPppButtonWidgets:
             button_style="outline",
             button_type="primary",
             icon="player-play-filled",
-            # width=200,
         )
-        # self.PPPsubmit = pn.widgets.Button(
-        #     name="Submit to server",
-        #     button_type="primary",
-        #     icon="send",
-        #     width=100,
-        #     disabled=True,
-        # )
         self.PPPrunStats = pn.Column("", width=100)
 
         self.pane = pn.Column(
             """# Step 3:
 ## Estimate the total required time""",
             self.PPPrun,
-            # self.PPPsubmit,
             self.PPPrunStats,
         )
 

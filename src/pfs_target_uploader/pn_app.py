@@ -141,20 +141,14 @@ def target_uploader_app():
         panel_results.show_results(df_input, validation_status)
         panel_targets.show_results(df_input)
 
-        # activate submit button when no error is detected
-        # if validation_status["status"]:
-        #     panel_validate_button.submit.disabled = False
-
         tab_panels.visible = True
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
         placeholder_floatpanel.objects = []
-        # panel_validate_button.submit.disabled = True
         tab_panels.active = 0
         tab_panels.visible = False
         # panel_status.reset()
-        # panel_targets.reset()
         panel_results.reset()
         panel_ppp.reset()
         time.sleep(0.1)  # may be removed
@@ -278,28 +272,27 @@ The total requested time is reasonable for normal program. All the input targets
                     panel_status.show_results(df_input, validation_status)
                     panel_results.show_results(df_input, validation_status)
                     panel_targets.show_results(df_input)
-                    # panel_validate_button.submit.disabled = True
                     tab_panels.visible = True
                     return
 
             upload_time = datetime.now(timezone.utc)
             secret_token = panel_input.secret_token
 
-            outfile, _, _ = upload_file(
+            _, _, _ = upload_file(
                 df_input,
                 outdir=config["OUTPUT_DIR_data"],
                 origname=panel_input.file_input.filename,
                 secret_token=secret_token,
                 upload_time=upload_time,
             )
-            outfile, _, _ = upload_file(
+            _, _, _ = upload_file(
                 p_result_tab_.value,
                 outdir=config["OUTPUT_DIR_ppp"],
                 origname=panel_input.file_input.filename,
                 secret_token=secret_token,
                 upload_time=upload_time,
             )
-            outfile, _, _ = upload_file(
+            _, _, _ = upload_file(
                 p_result_ppc.value,
                 outdir=config["OUTPUT_DIR_ppc"],
                 origname=panel_input.file_input.filename,
@@ -316,7 +309,6 @@ The total requested time is reasonable for normal program. All the input targets
     # set callback to the "validate" click
     panel_validate_button.validate.on_click(cb_validate)
     panel_ppp_button.PPPrun.on_click(cb_PPP)
-    # panel_submit_button.submit.on_click(cb_submit)
 
     app = template.servable()
 
