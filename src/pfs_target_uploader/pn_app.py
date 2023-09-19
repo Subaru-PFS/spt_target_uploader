@@ -210,7 +210,7 @@ def target_uploader_app():
         tab_panels.active = 0
         tab_panels.visible = False
         panel_status.reset()
-        panel_targets.reset()
+        # panel_targets.reset()
         panel_results.reset()
         panel_ppp.reset()
         time.sleep(0.1)  # may be removed
