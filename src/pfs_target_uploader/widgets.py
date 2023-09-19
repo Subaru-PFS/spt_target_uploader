@@ -97,7 +97,11 @@ class DocLinkWidgets:
 
 
 class FileInputWidgets(param.Parameterized):
-    file_input = pn.widgets.FileInput(accept=".csv", multiple=False)
+    file_input = pn.widgets.FileInput(
+        accept=".csv",
+        multiple=False,
+        sizing_mode="stretch_width",
+    )
     secret_token = None
     pane = pn.Column(
         """# Step 1:
@@ -110,32 +114,6 @@ class FileInputWidgets(param.Parameterized):
         st = secrets.token_hex(8)
         logger.info(f"Secret Token Updated: {st}")
         self.secret_token = st
-
-
-class ButtonWidgets1:
-    def __init__(self):
-        self.validate = pn.widgets.Button(
-            name="Validate",
-            button_style="outline",
-            button_type="success",
-            # button_type="primary",
-            icon="stethoscope",
-            width=70,
-        )
-        self.submit = pn.widgets.Button(
-            name="Submit your list to server",
-            # button_style="outline",
-            button_type="primary",
-            icon="send",
-            disabled=True,
-            width=150,
-            # stylesheets=[":host { --design-background-color: red; }"],
-        )
-        self.pane = pn.Column(
-            """# Step 2:
-## Check the uploaded list""",
-            pn.Row(self.validate, self.submit),
-        )
 
 
 class StatusWidgets:
@@ -337,6 +315,8 @@ class TargetWidgets:
         tabulator_editors = {}
         for c in df.columns:
             tabulator_editors[c] = None
+        # for some reason, it need to be reset once.
+        self.table_all.value = pd.DataFrame()
         self.table_all.value = df
         self.table_all.editors = tabulator_editors
         self.table_all.visible = True
@@ -614,33 +594,6 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
 
 
-class ButtonWidgets2:
-    def __init__(self):
-        self.PPPrun = pn.widgets.Button(
-            name="Start (takes a few minutes ~ half hour)",
-            button_style="outline",
-            button_type="success",
-            icon="player-play-filled",
-            width=200,
-        )
-        self.PPPsubmit = pn.widgets.Button(
-            name="Submit to server",
-            button_type="primary",
-            icon="send",
-            width=100,
-            disabled=True,
-        )
-        self.PPPrunStats = pn.Column("", width=100)
-
-        self.pane = pn.Column(
-            """# Step 3:
-## Estimate the total required time""",
-            self.PPPrun,
-            self.PPPsubmit,
-            self.PPPrunStats,
-        )
-
-
 class PPPresultWidgets:
     def __init__(self):
         self.ppp_title = pn.pane.Markdown(
@@ -672,3 +625,51 @@ class PPPresultWidgets:
         self.ppp_figure.append(p_result_tab)
         self.ppp_figure.append(p_result_fig)
         self.ppp_figure.visible = True
+
+
+class ValidateButtonWidgets:
+    def __init__(self):
+        self.validate = pn.widgets.Button(
+            name="Validate",
+            button_style="outline",
+            button_type="primary",
+            icon="stethoscope",
+        )
+        self.pane = pn.Column(
+            """# Step 2:
+## Check the uploaded list""",
+            pn.Row(self.validate),
+        )
+
+
+class RunPppButtonWidgets:
+    def __init__(self):
+        self.PPPrun = pn.widgets.Button(
+            name="Start (takes a few minutes ~ half hour)",
+            button_style="outline",
+            button_type="primary",
+            icon="player-play-filled",
+        )
+        self.PPPrunStats = pn.Column("", width=100)
+
+        self.pane = pn.Column(
+            """# Step 3:
+## Estimate the total required time""",
+            self.PPPrun,
+            self.PPPrunStats,
+        )
+
+
+class SubmitButtonWidgets:
+    def __init__(self):
+        self.submit = pn.widgets.Button(
+            name="Submit Results",
+            button_type="primary",
+            icon="send",
+            disabled=True,
+        )
+        self.pane = pn.Column(
+            """# Step 4:
+## Submit results""",
+            self.submit,
+        )

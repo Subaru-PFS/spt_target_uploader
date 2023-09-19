@@ -425,17 +425,27 @@ def validate_input(df, logger=logger):
     return validation_status
 
 
-def upload_file(df, origname=None, outdir=".", secret_token=None):
+def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=None):
     # convert pandas.DataFrame to astropy.Table
     tb = Table.from_pandas(df)
 
+    if secret_token is None:
+        secret_token = secrets.token_hex(8)
+        logger.warning(
+            f"secret_token {secret_token} is newly generated as None is provided."
+        )
+
     # use the current UTC time and random hash string to construct an output filename
-    uploaded_time = datetime.now(timezone.utc)
+    if upload_time is None:
+        upload_time = datetime.now(timezone.utc)
+        logger.warning(
+            f"upload_time {upload_time.isoformat(timespec='seconds')} is newly generated as None is provided."
+        )
 
     # add metadata
     tb.meta["original_filename"] = origname
     tb.meta["upload_id"] = secret_token
-    tb.meta["upload_at"] = uploaded_time.isoformat(timespec="seconds")
+    tb.meta["upload_at"] = upload_time.isoformat(timespec="seconds")
 
     # filename = f"{uploaded_time.strftime('%Y%m%d-%H%M%S')}_{secret_token}.ecsv"
     filename = (
@@ -453,7 +463,7 @@ def upload_file(df, origname=None, outdir=".", secret_token=None):
         overwrite=True,
     )
 
-    return filename, uploaded_time, secret_token
+    return filename, upload_time, secret_token
 
 
 def load_file_properties(dir=".", ext="ecsv"):
