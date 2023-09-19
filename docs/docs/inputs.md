@@ -17,7 +17,7 @@ Mandatory fields are listed below.
 | dec        | float      | degree | Declination at the the reference epoch specified by `equinox`                                      |
 | equinox    | str        |        | Equinox string (e.g., J2000.0, J2016.0, etc.)                                                      |
 | exptime    | float      | second | Exposure time requested for the object                                                             |
-| priority   | float      |        | Priority for the object within the list. Smaller value for higher priority                         |
+| priority   | int        |        | Priority (0-9) for the object within the list. Smaller value for higher priority                   |
 | resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
 
 

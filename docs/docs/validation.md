@@ -48,7 +48,7 @@ At **Stage 3**, values are checked whether they are in allowed ranges.
 !!! note "Following checks are conducted and errors are raised when violations are detected"
 
     - $0 \le \mathrm{ra} \le 360$.
-    - $-90 \le \mathrm{dec} \le 360$.
+    - $-90 \le \mathrm{dec} \le 90$.
     - `equinox` must start with `J` (Julien epoch) or `B` (Besselian epoch) followed by string which can be converted to a float number. Note that down to the first digit after the decimal is considered.
     - `priority` must be positive.
     - `exptime`must be positive.

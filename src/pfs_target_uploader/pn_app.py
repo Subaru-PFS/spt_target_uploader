@@ -189,21 +189,29 @@ def target_uploader_app():
             origname=panel_input.file_input.filename,
             secret_token=secret_token_t,
         )
-        panel_notes = UploadNoteWidgets(
-            f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
+        panel_notes = UploadNoteWidgets(secret_token, uploaded_time)
 
-<font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
+        #         panel_notes = UploadNoteWidgets(
+        #             f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
 
-<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
+        # <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
 
-Please keep the Upload ID for the observation planning.
-            """
-        )
+        # <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
+
+        # Please keep the Upload ID for the observation planning.
+        #             """
+        #         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
         placeholder_floatpanel.objects = []
+        panel_buttons1.submit.disabled = True
+        tab_panels.active = 0
+        tab_panels.visible = False
+        panel_status.reset()
+        panel_targets.reset()
+        panel_results.reset()
         panel_ppp.reset()
         time.sleep(0.1)  # may be removed
         pn.state.notifications.clear()
@@ -214,17 +222,17 @@ Please keep the Upload ID for the observation planning.
         )
         panel_buttons2.PPPrunStats.append(gif_pane)
 
-        df_input_ = _validate_file(panel_input)[0]
-        df_input = Table.from_pandas(df_input_)
+        df_input_, validation_status = _validate_file(panel_input)
+        tb_input = Table.from_pandas(df_input_)
 
-        tgt_obs_ok = visibility_checker(df_input, "B")
+        tgt_obs_ok = visibility_checker(tb_input, "B")
 
         # NOTE: It seems boolean comparison for a numpy array must not be done with "is"
         # https://beta.ruff.rs/docs/rules/true-false-comparison/
         tgt_obs_no = np.where(~tgt_obs_ok)[0]
         tgt_obs_yes = np.where(tgt_obs_ok)[0]
 
-        df_input_ = df_input[tgt_obs_yes]
+        tb_input_ = tb_input[tgt_obs_yes]
 
         weight_para = [4.02, 0.01, 0.01]
         (
@@ -238,7 +246,7 @@ Please keep the Upload ID for the observation planning.
             cR_M_,
             sub_m,
             obj_allo_M_fin,
-        ) = PPPrunStart(df_input_, weight_para)
+        ) = PPPrunStart(tb_input_, weight_para)
         res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
             cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
         )
@@ -251,7 +259,7 @@ The total requested time exceeds the 5-night upper limit of normal program. Plea
                 alert_type="danger",
             )
             if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = " ".join(df_input[tgt_obs_no]["ob_code"])
+                tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
                 ppp_Alert.object += f"""
 
 The following targets are not observable during the semester. Please remove them.
@@ -260,7 +268,7 @@ The following targets are not observable during the semester. Please remove them
 
         else:
             if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = " ".join(df_input[tgt_obs_no]["ob_code"])
+                tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
                 ppp_Alert = pn.pane.Alert(
                     f"""### Warnings
 The following targets are not observable during the semester. Please remove them.
@@ -278,7 +286,15 @@ The total requested time is reasonable for normal program. All the input targets
                 )
 
         panel_buttons2.PPPrunStats.remove(gif_pane)
+
+        panel_status.show_results(df_input_, validation_status)
+        panel_results.show_results(df_input_, validation_status)
+        panel_targets.show_results(df_input_)
+
         panel_ppp.show_results(res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert)
+
+        tab_panels.visible = True
+        tab_panels.active = 2
 
         panel_buttons2.PPPsubmit.disabled = False
 
@@ -299,12 +315,12 @@ The total requested time is reasonable for normal program. All the input targets
                 secret_token=secret_token_t,
             )
             panel_notes = UploadNoteWidgets(
-                f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The PPP output has been uploaded successfully!</font>
-
-<font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
-
-<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
-                """
+                secret_token,
+                uploaded_time
+                #                 f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The PPP output has been uploaded successfully!</font>
+                # <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
+                # <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
+                #                 """
             )
             placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
@@ -390,7 +406,10 @@ def list_files_app():
         editors=editors,
         layout="fit_data_table",
         disabled=True,
-        buttons={"magnify":"<i class='fa-solid fa-magnifying-glass'></i>", "download": "<i class='fa-solid fa-download'></i>"},
+        buttons={
+            "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
+            "download": "<i class='fa-solid fa-download'></i>",
+        },
         hidden_columns=["index"],
         width=1400,
     )
@@ -432,19 +451,21 @@ def list_files_app():
             table_ppc_t = Table.read(
                 config["OUTPUT_DIR_ppc"]
                 + "targets_"
-                + df_files_psl['Upload ID'][event.row]
+                + df_files_psl["Upload ID"][event.row]
                 + ".ecsv"
             )
             table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
                 "ppc_priority", ascending=True, ignore_index=True
             )
             table_files_ppc.visible = True
-            
+
         if event.column == "download":
-            href = f"/data/ppc_lists/targets_{df_files_psl['Upload ID'][event.row]}.ecsv"
+            href = (
+                f"/data/ppc_lists/targets_{df_files_psl['Upload ID'][event.row]}.ecsv"
+            )
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{href}', '_blank')"
-            #print(href)
+            # print(href)
             execute_javascript(script)
 
     table_files_tgt.on_click(open_panel_download)
