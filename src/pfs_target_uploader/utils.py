@@ -425,7 +425,7 @@ def validate_input(df, logger=logger):
     return validation_status
 
 
-def upload_file(df, origname=None, outdir=".", secret_token=secrets.token_hex(8)):
+def upload_file(df, origname=None, outdir=".", secret_token=None):
     # convert pandas.DataFrame to astropy.Table
     tb = Table.from_pandas(df)
 

@@ -62,7 +62,6 @@ def _validate_file(panel_input):
 
 def target_uploader_app():
     config = dotenv_values(".env.shared")
-    secret_token_t = secrets.token_hex(8)
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -187,20 +186,9 @@ def target_uploader_app():
             df_input,
             outdir=config["OUTPUT_DIR_data"],
             origname=panel_input.file_input.filename,
-            secret_token=secret_token_t,
+            secret_token=panel_input.secret_token,
         )
         panel_notes = UploadNoteWidgets(secret_token, uploaded_time)
-
-        #         panel_notes = UploadNoteWidgets(
-        #             f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
-
-        # <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
-
-        # <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
-
-        # Please keep the Upload ID for the observation planning.
-        #             """
-        #         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
     # define on_click callback for the "PPP start" button
@@ -210,7 +198,7 @@ def target_uploader_app():
         tab_panels.active = 0
         tab_panels.visible = False
         panel_status.reset()
-        panel_targets.reset()
+        # panel_targets.reset()
         panel_results.reset()
         panel_ppp.reset()
         time.sleep(0.1)  # may be removed
@@ -306,22 +294,15 @@ The total requested time is reasonable for normal program. All the input targets
                 p_result_tab_.value,
                 outdir=config["OUTPUT_DIR_ppp"],
                 origname=panel_input.file_input.filename,
-                secret_token=secret_token_t,
+                secret_token=panel_input.secret_token,
             )
             outfile, uploaded_time, secret_token = upload_file(
                 p_result_ppc.value,
                 outdir=config["OUTPUT_DIR_ppc"],
                 origname=panel_input.file_input.filename,
-                secret_token=secret_token_t,
+                secret_token=panel_input.secret_token,
             )
-            panel_notes = UploadNoteWidgets(
-                secret_token,
-                uploaded_time
-                #                 f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The PPP output has been uploaded successfully!</font>
-                # <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
-                # <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
-                #                 """
-            )
+            panel_notes = UploadNoteWidgets(secret_token, uploaded_time)
             placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
         panel_buttons2.PPPsubmit.on_click(cb_PPP_submit)
