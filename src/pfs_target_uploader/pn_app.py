@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone
 from io import BytesIO
 
+import gurobipy
 import numpy as np
 import panel as pn
 from astropy.table import Table
@@ -178,68 +179,76 @@ def target_uploader_app():
         tb_input_ = tb_input[tgt_obs_yes]
 
         weight_para = [4.02, 0.01, 0.01]
-        (
-            uS_L2,
-            cR_L,
-            cR_L_,
-            sub_l,
-            obj_allo_L_fin,
-            uS_M2,
-            cR_M,
-            cR_M_,
-            sub_m,
-            obj_allo_M_fin,
-        ) = PPPrunStart(tb_input_, weight_para)
-        res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
-            cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
-        )
 
-        if p_result_tab_.value.iloc[-1]["Request time 1 (h)"] > 10 * 5:
-            ppp_Alert = pn.pane.Alert(
-                """### Warnings
+        try:
+            (
+                uS_L2,
+                cR_L,
+                cR_L_,
+                sub_l,
+                obj_allo_L_fin,
+                uS_M2,
+                cR_M,
+                cR_M_,
+                sub_m,
+                obj_allo_M_fin,
+            ) = PPPrunStart(tb_input_, weight_para)
+            res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
+                cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
+            )
+
+            if p_result_tab_.value.iloc[-1]["Request time 1 (h)"] > 10 * 5:
+                ppp_Alert = pn.pane.Alert(
+                    """### Warnings
 The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.
             """,
-                alert_type="danger",
-            )
-            if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                ppp_Alert.object += f"""
+                    alert_type="danger",
+                )
+                if len(tgt_obs_no) > 0:
+                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
+                    ppp_Alert.object += f"""
 
 The following targets are not observable during the semester. Please remove them.
     {tgt_obs_no_id}
                 """
 
-        else:
-            if len(tgt_obs_no) > 0:
-                tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                ppp_Alert = pn.pane.Alert(
-                    f"""### Warnings
+            else:
+                if len(tgt_obs_no) > 0:
+                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
+                    ppp_Alert = pn.pane.Alert(
+                        f"""### Warnings
 The following targets are not observable during the semester. Please remove them.
     {tgt_obs_no_id}
                 """,
-                    alert_type="danger",
-                )
+                        alert_type="danger",
+                    )
 
-            else:
-                ppp_Alert = pn.pane.Alert(
-                    """### Success
+                else:
+                    ppp_Alert = pn.pane.Alert(
+                        """### Success
 The total requested time is reasonable for normal program. All the input targets are observable in the semester.
                 """,
-                    alert_type="success",
-                )
+                        alert_type="success",
+                    )
+
+            panel_status.show_results(df_input_, validation_status)
+            panel_results.show_results(df_input_, validation_status)
+            panel_targets.show_results(df_input_)
+
+            panel_ppp.show_results(
+                res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert
+            )
+
+            tab_panels.visible = True
+            tab_panels.active = 2
+
+            panel_submit_button.submit.disabled = False
+
+        except gurobipy.GurobiError as e:
+            pn.state.notifications.error(f"{str(e)}", duration=0)
+            pass
 
         panel_ppp_button.PPPrunStats.remove(gif_pane)
-
-        panel_status.show_results(df_input_, validation_status)
-        panel_results.show_results(df_input_, validation_status)
-        panel_targets.show_results(df_input_)
-
-        panel_ppp.show_results(res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert)
-
-        tab_panels.visible = True
-        tab_panels.active = 2
-
-        panel_submit_button.submit.disabled = False
 
         def cb_submit(event):
             # try:
