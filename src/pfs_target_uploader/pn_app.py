@@ -58,6 +58,11 @@ def _validate_file(panel_input):
     return df_input, validation_status
 
 
+def _toggle_buttons(buttons: list, disabled: bool = True):
+    for b in buttons:
+        b.disabled = disabled
+
+
 def target_uploader_app():
     config = dotenv_values(".env.shared")
 
@@ -87,6 +92,12 @@ def target_uploader_app():
     panel_targets = TargetWidgets()
     panel_ppp = PPPresultWidgets()
     panel_submit_button = SubmitButtonWidgets()
+
+    button_set = [
+        panel_input.file_input,
+        panel_validate_button.validate,
+        panel_ppp_button.PPPrun,
+    ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
 
@@ -120,10 +131,9 @@ def target_uploader_app():
 
     # define on_click callback for the "validate" button
     def cb_validate(event):
-        # try:
-        #     del placeholder_floatpanel.objects[-1]
-        # except:
-        #     pass
+        # disable the buttons and input file widget while validation
+        _toggle_buttons(button_set, disabled=True)
+
         placeholder_floatpanel.objects = []
         tab_panels.active = 0
         tab_panels.visible = False
@@ -135,16 +145,22 @@ def target_uploader_app():
         df_input, validation_status = _validate_file(panel_input)
 
         if validation_status is None:
+            _toggle_buttons(button_set, disabled=False)
             return
 
         panel_status.show_results(df_input, validation_status)
         panel_results.show_results(df_input, validation_status)
         panel_targets.show_results(df_input)
 
+        _toggle_buttons(button_set, disabled=False)
+
         tab_panels.visible = True
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
+        _toggle_buttons(button_set, disabled=True)
+        panel_submit_button.submit.disabled = True
+
         placeholder_floatpanel.objects = []
         tab_panels.active = 0
         tab_panels.visible = False
@@ -158,14 +174,15 @@ def target_uploader_app():
             "https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif",
             width=20,
         )
-        panel_ppp_button.PPPrunStats.append(gif_pane)
 
         df_input_, validation_status = _validate_file(panel_input)
 
         if validation_status is None:
             time.sleep(0.1)
-            panel_ppp_button.PPPrunStats.remove(gif_pane)
+            _toggle_buttons(button_set, disabled=False)
             return
+
+        panel_ppp_button.PPPrunStats.append(gif_pane)
 
         tb_input = Table.from_pandas(df_input_)
 
@@ -250,13 +267,13 @@ The total requested time is reasonable for normal program. All the input targets
 
         panel_ppp_button.PPPrunStats.remove(gif_pane)
 
+        _toggle_buttons(button_set, disabled=False)
+
         def cb_submit(event):
-            # try:
-            #     del placeholder_floatpanel.objects[-1]
-            # except:
-            #     pass
+            panel_submit_button.submit.disabled = True
+
             placeholder_floatpanel.objects = []
-            # placeholder_floatpanel = pn.Column(height=0, width=0)
+
             logger.info("Submit button clicked.")
             logger.info("Validation before actually writing to the storage")
 
