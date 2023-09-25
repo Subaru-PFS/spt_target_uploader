@@ -141,8 +141,8 @@ class StatusWidgets:
             self.status_vals,
             self.status_dups,
             ncols=4,
-            nrows=1,
-            # width=300,
+            nrows=2,
+            height=120,
         )
 
         """self.summary_nobj_L = pn.indicators.Number(
@@ -183,6 +183,7 @@ class StatusWidgets:
             # "# Status",
             self.status_grid,
             self.summary_table,
+            # height=400,
         )
 
     def reset(self):
