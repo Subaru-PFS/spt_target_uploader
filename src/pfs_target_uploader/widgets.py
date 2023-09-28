@@ -105,7 +105,7 @@ class FileInputWidgets(param.Parameterized):
     secret_token = None
     pane = pn.Column(
         """# Step 1:
-## Select a target list""",
+## Select a target list ([example](doc/examples/example_targetlist.csv))""",
         file_input,
     )
 
