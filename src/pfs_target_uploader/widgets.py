@@ -504,7 +504,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.info_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
 
         for desc in validation_status["optional_keys"]["desc_success"]:
-            self.info_text_keys.object += f"\n<font size='4'>{desc}</font>\n"
+            self.info_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
 
         # Stage 2 results
         if validation_status["required_keys"]["status"]:
@@ -541,9 +541,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             elif validation_status["values"]["status"]:
                 pass
             elif not validation_status["values"]["status"]:
-                self.error_text_vals.object += """\n
-<font size='3'>Errors in values are detected for the following entries.</font>
-                """
+                self.error_text_vals.object += """\n<font size='3'>Errors in values are detected for the following entries (See [documentation](doc/validation.html#stage-3)). </font>"""
                 self.error_table_vals.value = df.loc[
                     ~validation_status["values"]["success"], :
                 ]
