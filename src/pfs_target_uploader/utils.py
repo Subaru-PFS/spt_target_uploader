@@ -2,6 +2,7 @@
 
 # import collections
 import glob
+import math
 import os
 import random
 import re
@@ -155,13 +156,15 @@ filter_names = [
 
 
 def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
-    def convert_to_int64(value):
-        if isinstance(value, float):
-            raise ValueError(f"Invalid integer value: {value} (float)")
+    def check_integer(value):
         try:
-            return np.int64(value)
-        except ValueError:
-            raise ValueError(f"Invalid integer value: {value}")
+            int_value = int(value)
+            if math.isclose(int_value, float(value)):
+                return int_value
+            else:
+                raise ValueError(f"Non integer value detected: {value}")
+        except (ValueError, TypeError):
+            raise ValueError(f"Non integer value detected {value}")
 
     if format == "csv":
         try:
@@ -169,7 +172,7 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
                 byte_string,
                 encoding="utf8",
                 dtype=dtype,
-                converters={"obj_id": convert_to_int64},
+                converters={"obj_id": check_integer, "priority": check_integer},
             )
             load_status = True
             load_error = None
@@ -294,7 +297,7 @@ def check_values(df, logger=logger):
     # - ra must be in 0 to 360
     # - dec must be in -90 to 90
     # - equinox must be up to seven character string starting with "J" or "B"
-    # - priority must be positive
+    # - [x] priority must be positive integer [0-9]
     # - exptime must be positive
     # - resolution must be 'L' or 'M'
     #
@@ -306,7 +309,7 @@ def check_values(df, logger=logger):
     is_ra = np.logical_and(df["ra"] >= 0.0, df["ra"] <= 360.0)
     is_dec = np.logical_and(df["dec"] >= -90.0, df["dec"] <= 90.0)
 
-    is_priority = df["priority"] >= 0.0
+    is_priority = np.logical_and(df["priority"] >= 0.0, df["priority"] <= 9.0)
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
 
