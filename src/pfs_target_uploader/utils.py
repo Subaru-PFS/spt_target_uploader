@@ -155,9 +155,22 @@ filter_names = [
 
 
 def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
+    def convert_to_int64(value):
+        if isinstance(value, float):
+            raise ValueError(f"Invalid integer value: {value} (float)")
+        try:
+            return np.int64(value)
+        except ValueError:
+            raise ValueError(f"Invalid integer value: {value}")
+
     if format == "csv":
         try:
-            df_input = pd.read_csv(byte_string, encoding="utf8", dtype=dtype)
+            df_input = pd.read_csv(
+                byte_string,
+                encoding="utf8",
+                dtype=dtype,
+                converters={"obj_id": convert_to_int64},
+            )
             load_status = True
             load_error = None
         except ValueError as e:
