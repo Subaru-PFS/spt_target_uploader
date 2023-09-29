@@ -103,17 +103,29 @@ class FileInputWidgets(param.Parameterized):
         sizing_mode="stretch_width",
     )
     secret_token = None
+
     pane = pn.Column(
         """# Step 1:
 ## Select a target list ([example](doc/examples/example_targetlist.csv))""",
         file_input,
     )
 
+    # FIXME:
+    # - This watcher function does not work for browser engines other than Gecko.
+    #   I don't know how to fix it...
+    # - The function is called multiple times when selecting a file. I don't know why.
     @pn.depends("file_input.value", watch=True)
     def generate_secret_token(self):
         st = secrets.token_hex(8)
         logger.info(f"Secret Token Updated: {st}")
         self.secret_token = st
+
+    # NOTE: When I put the `file_input` in `__init__(self)`, the watcher does not work.
+    #       The reset function is a sort of a workaround.
+    def reset(self):
+        self.file_input.filename = None
+        self.file_input.mime_type = None
+        self.file_input.value = None
 
 
 class StatusWidgets:
