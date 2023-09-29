@@ -93,6 +93,8 @@ def target_uploader_app():
     panel_ppp = PPPresultWidgets()
     panel_submit_button = SubmitButtonWidgets()
 
+    panel_input.reset()
+
     button_set = [
         panel_input.file_input,
         panel_validate_button.validate,
