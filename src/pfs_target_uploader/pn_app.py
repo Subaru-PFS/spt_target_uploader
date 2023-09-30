@@ -156,6 +156,9 @@ def target_uploader_app():
 
         _toggle_buttons(button_set, disabled=False)
 
+        if validation_status["status"] is True:
+            panel_submit_button.submit.disabled = False
+
         tab_panels.visible = True
 
     # define on_click callback for the "PPP start" button
@@ -271,47 +274,49 @@ The total requested time is reasonable for normal program. All the input targets
 
         _toggle_buttons(button_set, disabled=False)
 
-        def cb_submit(event):
-            panel_submit_button.submit.disabled = True
+    def cb_submit(event):
+        panel_submit_button.submit.disabled = True
 
-            placeholder_floatpanel.objects = []
+        placeholder_floatpanel.objects = []
 
-            logger.info("Submit button clicked.")
-            logger.info("Validation before actually writing to the storage")
+        logger.info("Submit button clicked.")
+        logger.info("Validation before actually writing to the storage")
 
-            # do the validation again (input file can be different)
-            # and I don't know how to implement to return value
-            # from callback to another function (sorry)
-            df_input, validation_status = _validate_file(panel_input)
+        # do the validation again (input file can be different)
+        # and I don't know how to implement to return value
+        # from callback to another function (sorry)
+        df_input, validation_status = _validate_file(panel_input)
 
-            if (validation_status is None) or (not validation_status["status"]):
+        if (validation_status is None) or (not validation_status["status"]):
+            logger.error("Validation failed for some reason")
+            tab_panels.visible = False
+            panel_status.reset()
+            panel_results.reset()
+            time.sleep(0.1)  # may be removed
+            pn.state.notifications.clear()
+
+            if validation_status is None:
+                return
+            else:
                 logger.error("Validation failed for some reason")
-                tab_panels.visible = False
-                panel_status.reset()
-                panel_results.reset()
-                time.sleep(0.1)  # may be removed
-                pn.state.notifications.clear()
+                panel_status.show_results(df_input, validation_status)
+                panel_results.show_results(df_input, validation_status)
+                panel_targets.show_results(df_input)
+                tab_panels.visible = True
+                return
 
-                if validation_status is None:
-                    return
-                else:
-                    logger.error("Validation failed for some reason")
-                    panel_status.show_results(df_input, validation_status)
-                    panel_results.show_results(df_input, validation_status)
-                    panel_targets.show_results(df_input)
-                    tab_panels.visible = True
-                    return
+        upload_time = datetime.now(timezone.utc)
+        secret_token = panel_input.secret_token
 
-            upload_time = datetime.now(timezone.utc)
-            secret_token = panel_input.secret_token
+        _, _, _ = upload_file(
+            df_input,
+            outdir=config["OUTPUT_DIR_data"],
+            origname=panel_input.file_input.filename,
+            secret_token=secret_token,
+            upload_time=upload_time,
+        )
 
-            _, _, _ = upload_file(
-                df_input,
-                outdir=config["OUTPUT_DIR_data"],
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
+        try:
             _, _, _ = upload_file(
                 p_result_tab_.value,
                 outdir=config["OUTPUT_DIR_ppp"],
@@ -326,12 +331,18 @@ The total requested time is reasonable for normal program. All the input targets
                 secret_token=secret_token,
                 upload_time=upload_time,
             )
-            panel_notes = UploadNoteWidgets(secret_token, upload_time)
-            placeholder_floatpanel[:] = [panel_notes.floatpanel]
+            with_ppp = True
+        except NameError as e:
+            logger.warning(
+                f"Target list was uploaded without a pointing simulation for the Upload ID {secret_token}"
+            )
+            with_ppp = False
+        panel_notes = UploadNoteWidgets(secret_token, upload_time, with_ppp=with_ppp)
+        placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
-            panel_submit_button.submit.disabled = True
+        panel_submit_button.submit.disabled = True
 
-        panel_submit_button.submit.on_click(cb_submit)
+    panel_submit_button.submit.on_click(cb_submit)
 
     # set callback to the "validate" click
     panel_validate_button.validate.on_click(cb_validate)

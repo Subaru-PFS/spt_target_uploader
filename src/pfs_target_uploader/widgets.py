@@ -11,16 +11,18 @@ from logzero import logger
 
 class UploadNoteWidgets:
     # def __init__(self, message):
-    def __init__(self, secret_token, uploaded_time):
+    def __init__(self, secret_token, uploaded_time, with_ppp=True):
+        base_color = "#3A7D7E" if with_ppp is True else "#e83929"
+
         self.floatpanel = pn.layout.FloatPanel(
             None,
             # pn.pane.Markdown(message),
-            name="Info",
+            name="Info" if with_ppp is True else "Warning: Step 3 was skipped!",
             # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
             contained=False,
             position="center",
             # theme="none",
-            theme="#3A7D7E",
+            theme=base_color,
             margin=20,
             width=720,
         )
@@ -28,14 +30,14 @@ class UploadNoteWidgets:
         # JS on-click actions
         # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
         # so far not working...
-        stylesheet = """
-        :host {
+        stylesheet = f"""
+        :host {{
             --font-size: 2.5em;
-            --color: darkcyan;
-        }
-        .bk-btn-light {
-            color: darkcyan;
-        }
+            --color: {base_color};
+        }}
+        .bk-btn-light {{
+            color: {base_color};
+        }}
         """
 
         self.copy_source_button = pn.widgets.Button(
@@ -56,10 +58,17 @@ class UploadNoteWidgets:
             code=copy_source_code,
         )
 
-        messages = [
-            pn.pane.Markdown(
+        if with_ppp is True:
+            message_1 = pn.pane.Markdown(
                 "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following.</font>"
-            ),
+            )
+        else:
+            message_1 = pn.pane.Markdown(
+                "<i class='fa-solid fa-circle-exclamation fa-2xl'></i><font size='4'>  Upload successful **without the pointing simulation**. Your **Upload ID** is the following.</font>"
+            )
+
+        messages = [
+            message_1,
             self.copy_source_button,
             pn.pane.Markdown(
                 f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
