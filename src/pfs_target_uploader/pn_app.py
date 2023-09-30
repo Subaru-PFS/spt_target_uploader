@@ -216,7 +216,7 @@ def target_uploader_app():
                 cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
             )
 
-            if p_result_tab_.value.iloc[-1]["Request time 1 (h)"] > 10 * 5:
+            if p_result_tab_.value.iloc[-1]["Request time (h)"] > 10 * 5:
                 ppp_Alert = pn.pane.Alert(
                     """### Warnings
 The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.

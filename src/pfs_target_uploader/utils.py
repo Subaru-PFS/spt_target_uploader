@@ -562,12 +562,12 @@ def load_file_properties(dir=".", ext="ecsv"):
                 if len(tb_l) > 0:
                     exp_sci_l[i] = tb_l["Texp (h)"]
                     exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
-                    tot_time_l[i] = tb_l["Request time 1 (h)"]
+                    tot_time_l[i] = tb_l["Request time (h)"]
 
                 if len(tb_m) > 0:
                     exp_sci_m[i] = tb_m["Texp (h)"]
                     exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
-                    tot_time_m[i] = tb_m["Request time 1 (h)"]
+                    tot_time_m[i] = tb_m["Request time (h)"]
 
         df = pd.DataFrame(
             {
@@ -1464,24 +1464,11 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
         )
         t_focus_tot = t_focus * n_focus
 
-        # maximal number of pointings for each night
-        n_sci_perNight = (10 * 3600 - t_calib - t_focus_tot) / (
-            t_exp_sci + t_overhead_misc + t_overhead_fiber
-        )
-
-        # the required number of night
-        n_sci_night = np.ceil(n_sci_frame / n_sci_perNight)
-
-        # total required time
-        Toverheads_tot_best = (t_calib + t_focus_tot) * n_sci_night + (
+        Toverheads_tot_best = (
             t_exp_sci + t_overhead_misc + t_overhead_fiber
         ) * n_sci_frame
 
-        Toverheads_tot_worst = (
-            t_overhead_fiber + t_calib + t_exp_sci + t_overhead_misc + t_overhead_fiber
-        ) * n_sci_frame + t_focus_tot * n_sci_night
-
-        return Toverheads_tot_best / 3600.0, Toverheads_tot_worst / 3600.0
+        return Toverheads_tot_best / 3600.0
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
         nppc = pn.widgets.IntSlider(
@@ -1634,7 +1621,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                 * 15.0
                 / 60.0
             )  # fiber_count*hour
-            Ttot_best, Ttot_worst = overheads(nppc_fin)
+            Ttot_best = overheads(nppc_fin)
             fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
             fib_eff_small = (
                 sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
@@ -1653,8 +1640,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                     "N_ppc": [nppc_fin],
                     "Texp (h)": [hour_tot],
                     "Texp (fiberhour)": [Fhour_tot],
-                    "Request time 1 (h)": [Ttot_best],
-                    "Request time 2 (h)": [Ttot_worst],
+                    "Request time (h)": [Ttot_best],
                     "Used fiber fraction (%)": [fib_eff_mean],
                     "Fraction of PPC < 30% (%)": [fib_eff_small],
                 },
