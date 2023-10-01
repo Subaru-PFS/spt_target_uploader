@@ -493,8 +493,8 @@ def load_file_properties(dir=".", ext="ecsv"):
         upload_ids = np.zeros(n_files, dtype=object)
         timestamps = np.zeros(n_files, dtype="datetime64[s]")
         filesizes = np.zeros(n_files, dtype=float)
-        n_obj = np.empty(n_files, dtype=int)
-        t_exp = np.empty(n_files, dtype=float)
+        n_obj = np.zeros(n_files, dtype=int)
+        t_exp = np.zeros(n_files, dtype=float)
         links = np.zeros(n_files, dtype=object)
 
         for i, f in enumerate(files_in_dir):
@@ -543,12 +543,12 @@ def load_file_properties(dir=".", ext="ecsv"):
         n_files = len(files_in_dir)
         orignames = np.zeros(n_files, dtype=object)
         upload_ids = np.zeros(n_files, dtype=object)
-        exp_sci_l = np.empty(n_files, dtype=float)
-        exp_sci_m = np.empty(n_files, dtype=float)
-        exp_sci_fh_l = np.empty(n_files, dtype=float)
-        exp_sci_fh_m = np.empty(n_files, dtype=float)
-        tot_time_l = np.empty(n_files, dtype=float)
-        tot_time_m = np.empty(n_files, dtype=float)
+        exp_sci_l = np.zeros(n_files, dtype=float)
+        exp_sci_m = np.zeros(n_files, dtype=float)
+        exp_sci_fh_l = np.zeros(n_files, dtype=float)
+        exp_sci_fh_m = np.zeros(n_files, dtype=float)
+        tot_time_l = np.zeros(n_files, dtype=float)
+        tot_time_m = np.zeros(n_files, dtype=float)
 
         for i, f in enumerate(files_in_dir):
             if ext == "ecsv":
