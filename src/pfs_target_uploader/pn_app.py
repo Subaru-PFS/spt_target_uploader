@@ -479,10 +479,11 @@ def list_files_app():
     def open_panel_magnify(event):
         if event.column == "magnify":
             table_ppc_t = Table.read(
-                os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppc"])
-                + "targets_"
-                + df_files_psl["Upload ID"][event.row]
-                + ".ecsv"
+                os.path.join(
+                    config["OUTPUT_DIR_PREFIX"],
+                    config["OUTPUT_DIR_ppc"],
+                    f"targets_{df_files_psl['Upload ID'][event.row]}.ecsv",
+                )
             )
             table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
                 "ppc_priority", ascending=True, ignore_index=True
