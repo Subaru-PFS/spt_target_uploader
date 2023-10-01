@@ -391,7 +391,7 @@ def list_files_app():
     df_files_tgt = load_file_properties(
         os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]), ext="ecsv"
     )
-    print(df_files_tgt)
+
     df_files_psl = load_file_properties(
         os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]), ext="ecsv"
     )
