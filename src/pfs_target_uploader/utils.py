@@ -484,7 +484,7 @@ def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=No
 
 def load_file_properties(dir=".", ext="ecsv"):
     config = dotenv_values(".env.shared")
-    if dir == config["OUTPUT_DIR_data"]:
+    if dir == os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]):
         files_in_dir = glob.glob(f"{dir}/*.{ext}")
         n_files = len(files_in_dir)
         filenames = np.zeros(n_files, dtype=object)
@@ -538,7 +538,7 @@ def load_file_properties(dir=".", ext="ecsv"):
         )
         return df.sort_values("timestamp", ascending=False, ignore_index=True)
 
-    elif dir == config["OUTPUT_DIR_ppp"]:
+    elif dir == os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]):
         files_in_dir = glob.glob(f"{dir}/*.{ext}")
         n_files = len(files_in_dir)
         orignames = np.zeros(n_files, dtype=object)
@@ -562,12 +562,18 @@ def load_file_properties(dir=".", ext="ecsv"):
                 if len(tb_l) > 0:
                     exp_sci_l[i] = tb_l["Texp (h)"]
                     exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
-                    tot_time_l[i] = tb_l["Request time (h)"]
+                    try:
+                        tot_time_l[i] = tb_l["Request time (h)"]
+                    except KeyError:
+                        tot_time_l[i] = tb_l["Request time 1 (h)"]
 
                 if len(tb_m) > 0:
                     exp_sci_m[i] = tb_m["Texp (h)"]
                     exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
-                    tot_time_m[i] = tb_m["Request time (h)"]
+                    try:
+                        tot_time_m[i] = tb_m["Request time (h)"]
+                    except KeyError:
+                        tot_time_m[i] = tb_m["Request time 1 (h)"]
 
         df = pd.DataFrame(
             {
