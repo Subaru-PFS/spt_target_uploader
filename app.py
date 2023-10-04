@@ -8,6 +8,8 @@ pn.extension(
     "mathjax",
     "tabulator",
     notifications=True,
+    loading_spinner="dots",
+    # loading_color="#6A589D",
     sizing_mode="stretch_width",
     # sizing_mode="scale_width",
     js_files={
