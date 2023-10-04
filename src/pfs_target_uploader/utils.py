@@ -166,11 +166,12 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
         except (ValueError, TypeError):
             raise ValueError(f"Non integer value detected {value}")
 
-    if format == "csv":
+    if format in ["csv", "ecsv"]:
         try:
             df_input = pd.read_csv(
                 byte_string,
                 encoding="utf8",
+                comment="#",
                 dtype=dtype,
                 converters={"obj_id": check_integer, "priority": check_integer},
             )

@@ -38,8 +38,12 @@ from .widgets import (
 def _validate_file(panel_input):
     if panel_input.file_input.filename is not None:
         logger.info(f"{panel_input.file_input.filename} is selected.")
+        file_format = os.path.splitext(panel_input.file_input.filename)[-1].replace(
+            ".", ""
+        )
         df_input, dict_load = load_input(
-            BytesIO(panel_input.file_input.value), format="csv"
+            BytesIO(panel_input.file_input.value),
+            format=file_format,
         )
         # if the input file cannot be read, raise a sticky error notifications
         if not dict_load["status"]:

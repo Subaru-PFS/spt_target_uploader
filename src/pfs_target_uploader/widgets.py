@@ -98,7 +98,7 @@ class DocLinkWidgets:
 
 class FileInputWidgets(param.Parameterized):
     file_input = pn.widgets.FileInput(
-        accept=".csv",
+        accept=".csv,.ecsv",
         multiple=False,
         sizing_mode="stretch_width",
     )
@@ -118,6 +118,8 @@ class FileInputWidgets(param.Parameterized):
     def generate_secret_token(self):
         st = secrets.token_hex(8)
         logger.info(f"Secret Token Updated: {st}")
+        logger.info(f"Filename: {self.file_input.filename}")
+        logger.info(f"MIME Type: {self.file_input.mime_type}")
         self.secret_token = st
 
     # NOTE: When I put the `file_input` in `__init__(self)`, the watcher does not work.
