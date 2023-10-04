@@ -164,6 +164,10 @@ def target_uploader_app():
 
         _toggle_buttons(button_set, disabled=False)
 
+        # if validation_status["status"] is False:
+        #     panel_input.file_input.file_name = None
+        #     panel_input.file_input.value = None
+
         tab_panels.visible = True
 
     # define on_click callback for the "PPP start" button
