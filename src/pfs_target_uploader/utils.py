@@ -182,8 +182,8 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
             load_status = False
             load_error = e
     else:
-        logger.error("Only CSV format is supported at this moment.")
-        return None, None, None
+        logger.error("Only CSV or ECSV format is supported at this moment.")
+        return None, dict(status=False, error="No CSV or ECSV file selected")
 
     dict_load = dict(status=load_status, error=load_error)
 
