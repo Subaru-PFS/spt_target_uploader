@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import secrets
+import time
 
 import numpy as np
 import pandas as pd
@@ -332,7 +333,9 @@ class TargetWidgets:
             tabulator_editors[c] = None
         # for some reason, it need to be reset once.
         self.table_all.value = pd.DataFrame()
+        time.sleep(0.1)
         self.table_all.value = df
+        time.sleep(0.2)
         self.table_all.editors = tabulator_editors
         self.table_all.visible = True
 
