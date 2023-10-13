@@ -63,8 +63,8 @@ serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server fo
 build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
 
 [tool.pdm.options]
-add = ["--no-isolation", "--no-self"]
-install = ["--no-self"]
+add = ["--no-isolation"]
+install = ["--no-isolation"]
 
 # [tool.pdm.options]
 # add = ["--no-isolation", "--no-self"]

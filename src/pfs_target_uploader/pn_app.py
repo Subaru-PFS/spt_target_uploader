@@ -12,15 +12,9 @@ from astropy.table import Table
 from dotenv import dotenv_values
 from logzero import logger
 
-from .utils import (
-    PPPrunStart,
-    load_file_properties,
-    load_input,
-    ppp_result,
-    upload_file,
-    validate_input,
-    visibility_checker,
-)
+from .utils.checker import validate_input, visibility_checker
+from .utils.io import load_file_properties, load_input, upload_file
+from .utils.ppp import PPPrunStart, ppp_result
 from .widgets import (
     DocLinkWidgets,
     FileInputWidgets,
