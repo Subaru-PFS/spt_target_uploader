@@ -2,10 +2,10 @@
 
 import argparse
 
-import pandas as pd
 from logzero import logger
 
-from ..utils import load_input, validate_input
+from ..utils.checker import validate_input
+from ..utils.io import load_input
 
 
 def main():
