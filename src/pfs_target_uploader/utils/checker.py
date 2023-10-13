@@ -13,111 +13,22 @@ from logzero import logger
 from qplan.entity import StaticTarget
 from qplan.util.site import site_subaru as observer
 
+from . import (
+    filter_category,
+    filter_keys,
+    optional_keys,
+    required_keys,
+    target_datatype,
+)
+
 warnings.filterwarnings("ignore")
 
 
-required_keys = [
-    "obj_id",
-    "ob_code",
-    "ra",
-    "dec",
-    "equinox",
-    "priority",
-    "exptime",
-    "resolution",
-]
-
-optional_keys = [
-    "pmra",
-    "pmdec",
-    "parallax",
-    "tract",
-    "patch",
-    # TODO: filters must be in the filter_name table in targetDB
-    "filter_g",
-    "filter_r",
-    "filter_i",
-    "filter_z",
-    "filter_y",
-    "filter_j",
-    # TODO: fluxes can be fiber, psf, total, etc.
-    "flux_g",
-    "flux_r",
-    "flux_i",
-    "flux_z",
-    "flux_y",
-    "flux_j",
-    "flux_error_g",
-    "flux_error_r",
-    "flux_error_i",
-    "flux_error_z",
-    "flux_error_y",
-    "flux_error_j",
-]
-
-target_datatype = {
-    # required keys
-    "ob_code": str,
-    "obj_id": np.int64,
-    "ra": float,
-    "dec": float,
-    "equinox": str,
-    "exptime": float,
-    "priority": float,
-    "resolution": str,
-    "dummy": float,
-    # optional keys
-    "pmra": float,
-    "pmdec": float,
-    "parallax": float,
-    "tract": int,
-    "patch": int,
-    "filter_g": str,
-    "filter_r": str,
-    "filter_i": str,
-    "filter_z": str,
-    "filter_y": str,
-    "filter_j": str,
-    "flux_g": float,
-    "flux_r": float,
-    "flux_i": float,
-    "flux_z": float,
-    "flux_y": float,
-    "flux_j": float,
-    "flux_error_g": float,
-    "flux_error_r": float,
-    "flux_error_i": float,
-    "flux_error_z": float,
-    "flux_error_y": float,
-    "flux_error_j": float,
-}
-
-filter_names = [
-    "g_hsc",
-    "r_old_hsc",
-    "r2_hsc",
-    "i_old_hsc",
-    "i2_hsc",
-    "z_hsc",
-    "y_hsc",
-    "g_ps1",
-    "r_ps1",
-    "i_ps1",
-    "z_ps1",
-    "y_ps1",
-    "bp_gaia",
-    "rp_gaia",
-    "g_gaia",
-    "u_sdss",
-    "g_sdss",
-    "r_sdss",
-    "i_sdss",
-    "z_sdss",
-]
-
-
 def check_keys(
-    df, required_keys=required_keys, optional_keys=optional_keys, logger=logger
+    df,
+    required_keys=required_keys,
+    optional_keys=optional_keys,
+    logger=logger,
 ):
     required_status = []
     optional_status = []
@@ -275,6 +186,61 @@ def check_values(df, logger=logger):
     return dict_values
 
 
+def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
+    # initialize filter/flux columns
+    logger.info("Initialize flux columns")
+    for band in filter_category.keys():
+        df[f"filter_{band}"] = None
+        df[f"flux_{band}"] = np.nan
+        df[f"flux_error_{band}"] = np.nan
+
+    is_found = np.zeros(df.index.size, dtype=bool)
+
+    def assign_filter_category(k):
+        for band in filter_category.keys():
+            if k in filter_category[band]:
+                return band
+            else:
+                return None
+
+    for i in range(df.index.size):
+        for c in df.columns:
+            b = assign_filter_category(c)
+            if b is not None:
+                if np.isfinite(df.loc[i, c]):
+                    flux = df.loc[i, c]
+                    logger.info(
+                        f"{b} band filter column ({c}) found for OB {df.loc[i, 'ob_code']} as {flux}"
+                    )
+                    is_found[i] = True
+                    df.loc[i, f"filter_{band}"] = c
+                    df.loc[i, f"flux_{band}"] = flux
+                    try:
+                        if np.isfinite(df.loc[i, f"{c}_error"]):
+                            flux_error = df.loc[i, f"{c}_error"]
+                            df.loc[i, f"flux_error_{band}"] = flux_error
+                            logger.info(
+                                f"{b} band flux error ({c}_error) found as {flux_error}"
+                            )
+                    except KeyError:
+                        pass
+
+    dict_flux = {}
+    dict_flux["success"] = is_found
+    # print(is_found)
+    if not np.all(is_found):
+        dict_flux["status"] = False
+        logger.error(
+            f"Flux columns are missing for objects: {df.loc[~is_found,'ob_code'].to_numpy()}"
+        )
+    else:
+        dict_flux["status"] = True
+
+    logger.info(f"{df}")
+
+    return dict_flux, df
+
+
 def check_unique(df, logger=logger):
     # if the dataframe is None or empty, skip validation
     if df is None or df.empty:
@@ -312,7 +278,17 @@ def check_unique(df, logger=logger):
 def validate_input(df, logger=logger):
     validation_status = {}
 
+    # Validation status
+    # - None: not reached to the step
+    # - True: success
+    # - False: fail
+
     validation_status["status"] = False
+
+    validation_status["str"] = {"status": None}
+    validation_status["values"] = {"status": None}
+    validation_status["flux"] = {"status": None}
+    validation_status["unique"] = {"status": None}
 
     # check mandatory columns
     logger.info("[STAGE 1] Checking column names")
@@ -327,9 +303,6 @@ def validate_input(df, logger=logger):
     validation_status["optional_keys"] = dict_optional_keys
 
     if not dict_required_keys["status"]:
-        validation_status["str"] = {"status": None}
-        validation_status["values"] = {"status": None}
-        validation_status["unique"] = {"status": None}
         return validation_status
 
     # check string values
@@ -338,17 +311,22 @@ def validate_input(df, logger=logger):
     logger.info(f"[STAGE 2] status: {dict_str['status']} (Success if True)")
     validation_status["str"] = dict_str
     if not dict_str["status"]:
-        validation_status["values"] = {"status": None}
-        validation_status["unique"] = {"status": None}
         return validation_status
 
     # check value against allowed ranges
-    logger.info("[STAGE 3] Checking wheter values are in allowed ranges")
+    logger.info("[STAGE 3] Checking whether values are in allowed ranges")
     dict_values = check_values(df)
     logger.info(f"[STAGE 3] status: {dict_values['status']} (Success if True)")
     validation_status["values"] = dict_values
     if not dict_values["status"]:
-        validation_status["unique"] = {"status": None}
+        return validation_status
+
+    # check columns for flux
+    logger.info("[TMP] Checking flux information")
+    dict_flux, df = check_fluxcolumns(df)
+    logger.info(f"[TMP] status: {dict_flux['status']} (Success if True)")
+    validation_status["flux"] = dict_flux
+    if not dict_flux["status"]:
         return validation_status
 
     # check unique constraint for `ob_code`
@@ -361,9 +339,13 @@ def validate_input(df, logger=logger):
         validation_status["required_keys"]["status"]
         and validation_status["str"]["status"]
         and validation_status["values"]["status"]
+        and validation_status["flux"]["status"]
         and validation_status["unique"]["status"]
     ):
+        logger.info("[Summary] succeeded to meet all validation criteria")
         validation_status["status"] = True
+    else:
+        logger.info("[Summary] failed to meet all validation criteria")
 
     return validation_status
 

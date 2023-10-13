@@ -15,45 +15,9 @@ from astropy.table import Table
 from dotenv import dotenv_values
 from logzero import logger
 
+from . import target_datatype
+
 warnings.filterwarnings("ignore")
-
-
-target_datatype = {
-    # required keys
-    "ob_code": str,
-    "obj_id": np.int64,
-    "ra": float,
-    "dec": float,
-    "equinox": str,
-    "exptime": float,
-    "priority": float,
-    "resolution": str,
-    "dummy": float,
-    # optional keys
-    "pmra": float,
-    "pmdec": float,
-    "parallax": float,
-    "tract": int,
-    "patch": int,
-    "filter_g": str,
-    "filter_r": str,
-    "filter_i": str,
-    "filter_z": str,
-    "filter_y": str,
-    "filter_j": str,
-    "flux_g": float,
-    "flux_r": float,
-    "flux_i": float,
-    "flux_z": float,
-    "flux_y": float,
-    "flux_j": float,
-    "flux_error_g": float,
-    "flux_error_r": float,
-    "flux_error_i": float,
-    "flux_error_z": float,
-    "flux_error_y": float,
-    "flux_error_j": float,
-}
 
 
 def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):

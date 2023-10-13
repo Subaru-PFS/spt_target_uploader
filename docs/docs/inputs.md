@@ -20,6 +20,50 @@ Mandatory fields are listed below.
 | priority   | int        |        | Priority (0-9) for the object within the list. Smaller value for higher priority                   |
 | resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
 
+#### Flux information
+
+Flux columns must conform the following requirements.
+
+- **At least one** flux information for each `ob_code` is required.
+- **The names of flux columns must be chosen** from the pre-defined [filters](#filters).
+- Filters are categorized as shown in the [filter list](#filters).
+  An `ob_code` cannot have more than one fluxes in the same filter category.
+- If more than one flux columns with finite values are found for an `ob_code`,
+  the value of the first column (left-most one in the input CSV file) will be used.
+- Flux values are in the unit of <font size=5>**nJy**</font>.
+- Errors can be provided by using column names by adding `_error` following the filter names.
+
+##### Example
+
+✅ Good
+
+| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
+|---------|-------|-------------|-------|-------------|-------|-------------|
+| 1       | 10000 | 100         |       |             |       |             |
+| 2       | 20000 | 200         | 20000 |             |       |             |
+| 3       |       |             |       |             | 30000 | 300         |
+
+
+⚠️ OK
+
+- For the `ob_code 3`, `g_hsc` will be used and `g_ps1` will be ignored.
+
+| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
+|---------|-------|-------------|-------|-------------|-------|-------------|
+| 1       | 10000 | 100         |       |             |       |             |
+| 2       | 20000 | 200         | 20000 |             |       |             |
+| 3       | 35000 | 350         |       |             | 30000 | 300         |
+
+🚫 Bad
+
+- The `ob_code 1` does not have flux information at all.
+
+| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
+|---------|-------|-------------|-------|-------------|-------|-------------|
+| 1       |       |             |       |             |       |             |
+| 2       | 20000 | 200         | 20000 |             |       |             |
+| 3       |       |             |       |             | 30000 | 300         |
+
 
 
 
@@ -27,59 +71,65 @@ Mandatory fields are listed below.
 
 Optional fields are listed below.
 
-| Name         | Datatype | Unit     | Default | Description                                |
-|--------------|----------|----------|---------|--------------------------------------------|
-| pmra         | float    | mas/year | 0       | Proper motion in right ascension direction |
-| pmdec        | float    | mas/year | 0       | Proper motion in declination direction     |
-| parallax     | float    | mas      | 1e-7    | Parallax                                   |
-| tract        | int      |          |         | Tract ID                                   |
-| patch        | int      |          |         | Patch name                                 |
-| filter_g     | str      |          |         | Filter name for g-band                     |
-| filter_r     | str      |          |         | Filter name for r-band                     |
-| filter_i     | str      |          |         | Filter name for i-band                     |
-| filter_z     | str      |          |         | Filter name for z-band                     |
-| filter_y     | str      |          |         | Filter name for y-band                     |
-| filter_j     | str      |          |         | Filter name for J-band                     |
-| flux_g       | float    | nJy      |         | Flux in g-band                             |
-| flux_r       | float    | nJy      |         | Flux in r-band                             |
-| flux_i       | float    | nJy      |         | Flux in i-band                             |
-| flux_z       | float    | nJy      |         | Flux in z-band                             |
-| flux_y       | float    | nJy      |         | Flux in y-band                             |
-| flux_j       | float    | nJy      |         | Flux in J-band                             |
-| flux_error_g | float    | nJy      |         | Error in g-band flux                       |
-| flux_error_r | float    | nJy      |         | Error in r-band flux                       |
-| flux_error_i | float    | nJy      |         | Error in i-band flux                       |
-| flux_error_z | float    | nJy      |         | Error in z-band flux                       |
-| flux_error_y | float    | nJy      |         | Error in y-band flux                       |
-| flux_error_j | float    | nJy      |         | Error in J-band flux                       |
+| Name     | Datatype | Unit     | Default | Description                                |
+|----------|----------|----------|---------|--------------------------------------------|
+| pmra     | float    | mas/year | 0       | Proper motion in right ascension direction |
+| pmdec    | float    | mas/year | 0       | Proper motion in declination direction     |
+| parallax | float    | mas      | 1e-7    | Parallax                                   |
+| tract    | int      |          |         | Tract ID                                   |
+| patch    | int      |          |         | Patch name                                 |
 
 ### Filters
 
-Currently, the following filters are registered in our database.
+Currently, the following filters are registered in our database. Filters are categorized as follows.
+
+#### `g` category filters
+
+| Name    | Description          |
+|---------|----------------------|
+| g_hsc   | HSC g filter         |
+| g_ps1   | Pan-STARRS1 g filter |
+| g_sdss  | SDSS g filter        |
+| bp_gaia | Gaia BP filter       |
+
+#### `r` category filters
 
 | Name      | Description                 |
 |-----------|-----------------------------|
-| g_hsc     | HSC g filter                |
 | r_old_hsc | HSC r filter (old r filter) |
 | r2_hsc    | HSC r2 filter               |
+| r_ps1     | Pan-STARRS1 r filter        |
+| r_sdss    | SDSS r filter               |
+| g_gaia    | Gaia G filter               |
+
+#### `i` category filters
+
+| Name      | Description                 |
+|-----------|-----------------------------|
 | i_old_hsc | HSC i filter (old i filter) |
 | i2_hsc    | HSC i2 filter               |
-| z_hsc     | HSC z filter                |
-| y_hsc     | HSC Y filter                |
-| g_ps1     | Pan-STARRS1 g filter        |
-| r_ps1     | Pan-STARRS1 r filter        |
 | i_ps1     | Pan-STARRS1 i filter        |
-| z_ps1     | Pan-STARRS1 z filter        |
-| y_ps1     | Pan-STARRS1 y filter        |
-| bp_gaia   | Gaia BP filter              |
-| rp_gaia   | Gaia RP filter              |
-| g_gaia    | Gaia G filter               |
-| u_sdss    | SDSS u filter               |
-| g_sdss    | SDSS g filter               |
-| r_sdss    | SDSS r filter               |
 | i_sdss    | SDSS i filter               |
-| z_sdss    | SDSS z filter               |
+| rp_gaia   | Gaia RP filter              |
 
+#### `z` category filters
+
+| Name   | Description          |
+|--------|----------------------|
+| z_hsc  | HSC z filter         |
+| z_ps1  | Pan-STARRS1 z filter |
+| z_sdss | SDSS z filter        |
+
+#### `y` category filters
+
+| Name  | Description          |
+|-------|----------------------|
+| y_hsc | HSC Y filter         |
+| y_ps1 | Pan-STARRS1 y filter |
+
+#### `j` category filters
+
+TBD
 
 ## File format
 
