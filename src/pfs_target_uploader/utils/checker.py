@@ -196,34 +196,45 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
 
     is_found = np.zeros(df.index.size, dtype=bool)
 
+    # print(df["i2_hsc"])
+
     def assign_filter_category(k):
         for band in filter_category.keys():
+            # print(band, filter_category[band])
             if k in filter_category[band]:
                 return band
-            else:
-                return None
+        return None
 
     for i in range(df.index.size):
         for c in df.columns:
             b = assign_filter_category(c)
+            # print(c, b)
             if b is not None:
                 if np.isfinite(df.loc[i, c]):
+                    if df.loc[i, f"filter_{b}"] is not None:
+                        logger.warning(
+                            f"filter_{b} has already been filled. {c} filter for {df.loc[i,'ob_code']} is skipped."
+                        )
+                        continue
+
                     flux = df.loc[i, c]
                     logger.info(
                         f"{b} band filter column ({c}) found for OB {df.loc[i, 'ob_code']} as {flux}"
                     )
                     is_found[i] = True
-                    df.loc[i, f"filter_{band}"] = c
-                    df.loc[i, f"flux_{band}"] = flux
+                    df.loc[i, f"filter_{b}"] = c
+                    df.loc[i, f"flux_{b}"] = flux
                     try:
                         if np.isfinite(df.loc[i, f"{c}_error"]):
                             flux_error = df.loc[i, f"{c}_error"]
-                            df.loc[i, f"flux_error_{band}"] = flux_error
+                            df.loc[i, f"flux_error_{b}"] = flux_error
                             logger.info(
                                 f"{b} band flux error ({c}_error) found as {flux_error}"
                             )
                     except KeyError:
                         pass
+
+    # logger.info(f"{df.loc[:,'filter_i']}")
 
     dict_flux = {}
     dict_flux["success"] = is_found
@@ -235,6 +246,18 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
         )
     else:
         dict_flux["status"] = True
+
+    # cleaning
+    logger.info("dropping columns with NA values for all rows.")
+    for k, v in filter_category.items():
+        if df.loc[:, f"filter_{k}"].isna().all():
+            df.drop(columns=[f"filter_{k}"], inplace=True)
+            df.drop(columns=[f"flux_{k}"], inplace=True)
+            df.drop(columns=[f"flux_error_{k}"], inplace=True)
+        elif df.loc[:, f"flux_{k}"].isna().all():
+            df.drop(columns=[f"flux_{k}"], inplace=True)
+        elif df.loc[:, f"flux_error_{k}"].isna().all():
+            df.drop(columns=[f"flux_error_{k}"], inplace=True)
 
     logger.info(f"{df}")
 
