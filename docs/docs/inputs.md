@@ -31,6 +31,7 @@ Flux columns must conform the following requirements.
 - If more than one flux columns with finite values are found for an `ob_code`,
   the value of the first column (left-most one in the input CSV file) will be used.
 - Flux values are in the unit of <font size=5>**nJy**</font>.
+- Flux values are assumed to be total flux.
 - Errors can be provided by using column names by adding `_error` following the filter names.
 
 ##### Example
