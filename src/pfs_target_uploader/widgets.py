@@ -132,30 +132,35 @@ class FileInputWidgets(param.Parameterized):
 
 
 class StatusWidgets:
-    def __init__(self):
+    def __init__(self, size=36):
         self.status_keys = pn.indicators.BooleanStatus(
-            width=54, height=54, value=False, color="danger"
+            width=size, height=size, value=False, color="danger"
         )
         self.status_str = pn.indicators.BooleanStatus(
-            width=54, height=54, value=False, color="danger"
+            width=size, height=size, value=False, color="danger"
         )
         self.status_vals = pn.indicators.BooleanStatus(
-            width=54, height=54, value=False, color="danger"
+            width=size, height=size, value=False, color="danger"
+        )
+        self.status_flux = pn.indicators.BooleanStatus(
+            width=size, height=size, value=False, color="danger"
         )
         self.status_dups = pn.indicators.BooleanStatus(
-            width=54, height=54, value=False, color="danger"
+            width=size, height=size, value=False, color="danger"
         )
 
         self.status_grid = pn.GridBox(
             "<font size='3'>Stage 1</font>",
             "<font size='3'>Stage 2</font>",
             "<font size='3'>Stage 3</font>",
+            "<font size='3'>Stage 3'</font>",
             "<font size='3'>Stage 4</font>",
             self.status_keys,
             self.status_str,
             self.status_vals,
+            self.status_flux,
             self.status_dups,
-            ncols=4,
+            ncols=5,
             nrows=2,
             height=120,
         )
@@ -205,6 +210,7 @@ class StatusWidgets:
         self.status_keys.value = False
         self.status_str.value = False
         self.status_vals.value = False
+        self.status_flux.value = False
         self.status_dups.value = False
         # self.summary_nobj_L.value = 0
         # self.summary_nobj_M.value = 0
@@ -250,6 +256,16 @@ class StatusWidgets:
                 self.status_vals.color = "danger"
 
         if validation_status["values"]["status"]:
+            if validation_status["flux"]["status"] is None:
+                pass
+            elif validation_status["flux"]["status"]:
+                self.status_flux.value = True
+                self.status_flux.color = "success"
+            elif not validation_status["flux"]["status"]:
+                self.status_flux.value = True
+                self.status_flux.color = "danger"
+
+        if validation_status["flux"]["status"]:
             if validation_status["unique"]["status"] is None:
                 pass
             elif validation_status["unique"]["status"]:
@@ -373,6 +389,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.error_text_keys = pn.pane.Markdown("")
         self.error_text_str = pn.pane.Markdown("")
         self.error_text_vals = pn.pane.Markdown("")
+        self.error_text_flux = pn.pane.Markdown("")
         self.error_text_dups = pn.pane.Markdown("")
 
         self.warning_text_keys = pn.pane.Markdown("")
@@ -382,6 +399,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.info_text_keys = pn.pane.Markdown("")
         self.info_text_str = pn.pane.Markdown("")
         self.info_text_vals = pn.pane.Markdown("")
+        self.info_text_flux = pn.pane.Markdown("")
         self.info_text_dups = pn.pane.Markdown("")
 
         self.error_table_str = pn.widgets.Tabulator(
@@ -431,6 +449,18 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             layout="fit_data_table",
         )
 
+        self.error_table_flux = pn.widgets.Tabulator(
+            pd.DataFrame(),
+            page_size=500,
+            theme="bootstrap",
+            theme_classes=["table-striped", "table-sm"],
+            frozen_columns=["index"],
+            pagination="remote",
+            header_filters=True,
+            visible=False,
+            layout="fit_data_table",
+        )
+
         self.error_table_dups = pn.widgets.Tabulator(
             pd.DataFrame(),
             page_size=500,
@@ -457,6 +487,9 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             # errors on out-of-range values
             self.error_text_vals,
             self.error_table_vals,
+            # errors on flux columns
+            self.error_text_flux,
+            self.error_table_flux,
             # errors on duplicate ob_codes
             self.error_text_dups,
             self.error_table_dups,
@@ -475,6 +508,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.info_text_keys,
             self.info_text_str,
             self.info_text_vals,
+            self.info_text_flux,
             self.info_text_dups,
             # height=200,
         )
@@ -484,6 +518,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.error_text_keys.object = "\n####"
         self.error_text_str.object = "\n####"
         self.error_text_vals.object = "\n####"
+        self.error_text_flux.object = "\n####"
         self.error_text_dups.object = "\n####"
 
         self.warning_text_keys.object = "\n####"
@@ -493,11 +528,13 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.info_text_keys.object = "\n####"
         self.info_text_str.object = "\n####"
         self.info_text_vals.object = "\n####"
+        self.info_text_flux.object = "\n####"
         self.info_text_dups.object = "\n####"
 
         self.error_table_str.visible = False
         self.error_table_dups.visible = False
         self.error_table_vals.visible = False
+        self.error_table_flux.visible = False
 
         self.warning_table_str.visible = False
         self.warning_table_vals.visible = False
@@ -566,8 +603,24 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         else:
             return
 
-        # Stage 4 results
+        # Stage 3' results
         if validation_status["values"]["status"]:
+            if validation_status["flux"]["status"]:
+                self.info_text_flux.object += "\n<font size='3'>All ob_codes have at least one flux information</font>\n"
+                self.error_table_flux.visible = False
+            else:
+                # add an error message and data table for duplicates
+                self.error_text_flux.object += "\n<font size='3'>No flux info found in the following ob_codes:</font>\n"
+                self.error_table_flux.value = df.loc[
+                    ~validation_status["flux"]["success"], :
+                ]
+                self.error_table_flux.editors = tabulator_editors
+                self.error_table_flux.visible = True
+        else:
+            return
+
+        # Stage 4 results
+        if validation_status["flux"]["status"]:
             # logger.info(
             #     f"Status for duplicate: {validation_status['unique']['status']}"
             # )
@@ -605,6 +658,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             validation_status["required_keys"]["status"]
             and validation_status["str"]["status"]
             and validation_status["values"]["status"]
+            and validation_status["flux"]["status"]
             and validation_status["unique"]["status"]
         ):
             self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
