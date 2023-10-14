@@ -170,8 +170,8 @@ def target_uploader_app():
             return
 
         panel_status.show_results(df_input, validation_status)
-        panel_results.show_results(df_input, validation_status)
         panel_targets.show_results(df_input)
+        panel_results.show_results(df_input, validation_status)
 
         _toggle_buttons(button_set, disabled=False)
 
@@ -180,6 +180,7 @@ def target_uploader_app():
         #     panel_input.file_input.value = None
 
         tab_panels.visible = True
+        tab_panels.active = 1
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):

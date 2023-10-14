@@ -189,7 +189,7 @@ class StatusWidgets:
         )#"""
 
         self.summary_table = pn.widgets.Tabulator(
-            pd.DataFrame(),
+            None,
             page_size=11,
             theme="bootstrap",
             theme_classes=["table-sm"],
@@ -201,6 +201,7 @@ class StatusWidgets:
             width=350,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
+            disabled=True,
         )
 
         self.pane = pn.Column(
@@ -318,13 +319,6 @@ class StatusWidgets:
             ]
 
             self.summary_table.value = df_summary
-            self.summary_table.editors = {
-                "priority": None,
-                "N_L": None,
-                "Texp_L": None,
-                "N_M": None,
-                "Texp_M": None,
-            }
             self.summary_table.visible = True
 
         except:
@@ -334,7 +328,7 @@ class StatusWidgets:
 class TargetWidgets:
     def __init__(self):
         self.table_all = pn.widgets.Tabulator(
-            pd.DataFrame(),
+            None,
             page_size=50,
             theme="bootstrap",
             theme_classes=["table-striped", "table-sm"],
@@ -343,24 +337,35 @@ class TargetWidgets:
             header_filters=True,
             visible=False,
             layout="fit_data_table",
+            disabled=True,
         )
 
         self.pane = pn.Column(self.table_all)
 
     def show_results(self, df):
-        tabulator_editors = {}
-        for c in df.columns:
-            tabulator_editors[c] = None
-        # for some reason, it need to be reset once.
         self.table_all.value = pd.DataFrame()
-        time.sleep(0.1)
         self.table_all.value = df
-        time.sleep(0.2)
-        self.table_all.editors = tabulator_editors
         self.table_all.visible = True
+
+    def reset(self):
+        self.table_all.value = pd.DataFrame()
+        self.table_all.visible = False
 
 
 class ResultWidgets:
+    tabulator_kwargs = dict(
+        page_size=50,
+        theme="bootstrap",
+        theme_classes=["table-striped", "table-sm"],
+        frozen_columns=["index"],
+        pagination="remote",
+        # pagination="local",
+        # header_filters=True,
+        visible=False,
+        disabled=True,
+        layout="fit_data_table",
+    )
+
     def __init__(self):
         # grand title of the main pane
         self.title = pn.pane.Markdown(
@@ -406,76 +411,15 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.info_text_flux = pn.pane.Markdown("")
         self.info_text_dups = pn.pane.Markdown("")
 
-        self.error_table_str = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
-        self.warning_table_str = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
+        self.error_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.warning_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
 
-        self.error_table_vals = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
+        self.error_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.warning_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
 
-        self.warning_table_vals = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
+        self.error_table_flux = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
 
-        self.error_table_flux = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
-
-        self.error_table_dups = pn.widgets.Tabulator(
-            pd.DataFrame(),
-            page_size=500,
-            theme="bootstrap",
-            theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
-            pagination="remote",
-            header_filters=True,
-            visible=False,
-            layout="fit_data_table",
-        )
+        self.error_table_dups = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
 
         self.pane = pn.Column(
             self.title,
@@ -535,6 +479,14 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.info_text_flux.object = "\n####"
         self.info_text_dups.object = "\n####"
 
+        self.error_table_str.value = pd.DataFrame()
+        self.error_table_dups.value = pd.DataFrame()
+        self.error_table_vals.value = pd.DataFrame()
+        self.error_table_flux.value = pd.DataFrame()
+
+        self.warning_table_str.value = pd.DataFrame()
+        self.warning_table_vals.value = pd.DataFrame()
+
         self.error_table_str.visible = False
         self.error_table_dups.visible = False
         self.error_table_vals.visible = False
@@ -543,14 +495,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.warning_table_str.visible = False
         self.warning_table_vals.visible = False
 
-    def show_results(self, df, validation_status, tabulator_editors=None):
-        # self.reset()
-
-        if tabulator_editors is None:
-            tabulator_editors = {}
-            for c in df.columns:
-                tabulator_editors[c] = None
-
+    def show_results(self, df, validation_status):
         # Stage 1 results
         for desc in validation_status["required_keys"]["desc_error"]:
             self.error_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
@@ -575,6 +520,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
 <font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
 <font size='3'>The following entries must be fixed.</font>
                 """
+                self.error_table_str.value = pd.DataFrame()
                 self.error_table_str.value = df.loc[
                     ~validation_status["str"]["success_required"], :
                 ]
@@ -585,6 +531,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
 <font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
 <font size='3'>The following entries must be fixed.</font>
                 """
+                self.warning_table_str.value = pd.DataFrame()
                 self.warning_table_str.value = df.loc[
                     ~validation_status["str"]["success_optional"], :
                 ]
@@ -600,6 +547,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
                 pass
             elif not validation_status["values"]["status"]:
                 self.error_text_vals.object += """\n<font size='3'>Errors in values are detected for the following entries (See [documentation](doc/validation.html#stage-3)). </font>"""
+                self.error_table_vals.value = pd.DataFrame()
                 self.error_table_vals.value = df.loc[
                     ~validation_status["values"]["success"], :
                 ]
@@ -615,10 +563,10 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             else:
                 # add an error message and data table for duplicates
                 self.error_text_flux.object += "\n<font size='3'>No flux info found in the following ob_codes:</font>\n"
+                self.error_table_flux.value = pd.DataFrame()
                 self.error_table_flux.value = df.loc[
                     ~validation_status["flux"]["success"], :
                 ]
-                self.error_table_flux.editors = tabulator_editors
                 self.error_table_flux.visible = True
         else:
             return
@@ -638,6 +586,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             else:
                 # add an error message and data table for duplicates
                 self.error_text_dups.object += "\n<font size='3'>`ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets:</font>\n"
+                self.error_table_dups.value = pd.DataFrame()
                 self.error_table_dups.value = df.loc[
                     validation_status["unique"]["flags"], :
                 ]
@@ -653,7 +602,6 @@ Detected warnings detected. Please take a look and fix them if possible and nece
                 #     # c="green",
                 # )
 
-                self.error_table_dups.editors = tabulator_editors
                 self.error_table_dups.visible = True
         else:
             return
