@@ -160,7 +160,6 @@ def target_uploader_app():
         tab_panels.visible = False
         panel_status.reset()
         panel_results.reset()
-        time.sleep(0.1)  # may be removed
         pn.state.notifications.clear()
 
         df_input, validation_status = _validate_file(panel_input)
@@ -169,8 +168,11 @@ def target_uploader_app():
             _toggle_buttons(button_set, disabled=False)
             return
 
+        time.sleep(0.1)  # may be removed
         panel_status.show_results(df_input, validation_status)
+        time.sleep(0.1)  # may be removed
         panel_targets.show_results(df_input)
+        time.sleep(0.1)  # may be removed
         panel_results.show_results(df_input, validation_status)
 
         _toggle_buttons(button_set, disabled=False)
@@ -193,7 +195,7 @@ def target_uploader_app():
         # panel_status.reset()
         panel_results.reset()
         panel_ppp.reset()
-        time.sleep(0.1)  # may be removed
+        # time.sleep(0.1)  # may be removed
         pn.state.notifications.clear()
 
         gif_pane = pn.pane.GIF(

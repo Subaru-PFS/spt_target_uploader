@@ -318,6 +318,7 @@ class StatusWidgets:
                 sum(exptime_priority_M / 3600),
             ]
 
+            self.summary_table.value = pd.DataFrame()
             self.summary_table.value = df_summary
             self.summary_table.visible = True
 
