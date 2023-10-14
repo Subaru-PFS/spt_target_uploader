@@ -2,12 +2,16 @@
 
 import secrets
 import time
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import panel as pn
 import param
 from logzero import logger
+from zoneinfo import ZoneInfo
+
+from .utils.checker import get_semester_daterange
 
 
 class UploadNoteWidgets:
@@ -743,3 +747,22 @@ class SubmitButtonWidgets:
 ## Submit results""",
             self.submit,
         )
+
+
+class DatePickerWidgets(param.Parameterized):
+    def __init__(self):
+        today = datetime.now(ZoneInfo("US/Hawaii"))
+
+        semester_begin, semester_end = get_semester_daterange(
+            today.date(),
+            next=True,
+        )
+
+        self.date_begin = pn.widgets.DatePicker(
+            name="Date Begin (HST)", value=semester_begin.date()
+        )
+        self.date_end = pn.widgets.DatePicker(
+            name="Date End (HST)", value=semester_end.date()
+        )
+
+        self.pane = pn.Column("### Observation Period", self.date_begin, self.date_end)
