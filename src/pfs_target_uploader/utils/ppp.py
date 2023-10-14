@@ -1137,11 +1137,11 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
             selectable=False,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
+            disabled=True,
         )
 
         p_result_ppc = pn.widgets.Tabulator(
-            pn.bind(ppp_res_tab2, nppc),
-            visible=False,
+            pn.bind(ppp_res_tab2, nppc), visible=False, disabled=True
         )
 
         return nppc, p_result_fig, p_result_tab, p_result_ppc
@@ -1194,11 +1194,13 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
             selectable=False,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
+            disabled=True,
         )
 
         p_result_ppc_fin = pn.widgets.Tabulator(
             pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
             visible=False,
+            disabled=True,
         )
 
         return (

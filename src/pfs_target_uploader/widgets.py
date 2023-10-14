@@ -360,11 +360,10 @@ class ResultWidgets:
         theme_classes=["table-striped", "table-sm"],
         frozen_columns=["index"],
         pagination="remote",
-        # pagination="local",
-        # header_filters=True,
+        header_filters=True,
         visible=False,
-        disabled=True,
         layout="fit_data_table",
+        disabled=True,
     )
 
     def __init__(self):
