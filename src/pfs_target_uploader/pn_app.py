@@ -16,6 +16,7 @@ from .utils.checker import validate_input, visibility_checker
 from .utils.io import load_file_properties, load_input, upload_file
 from .utils.ppp import PPPrunStart, ppp_result
 from .widgets import (
+    DatePickerWidgets,
     DocLinkWidgets,
     FileInputWidgets,
     PPPresultWidgets,
@@ -90,14 +91,18 @@ def target_uploader_app():
 
     # setup panel components
     panel_doc = DocLinkWidgets()
+
     panel_input = FileInputWidgets()
     panel_validate_button = ValidateButtonWidgets()
-    panel_ppp_button = RunPppButtonWidgets()
     panel_status = StatusWidgets()
+    panel_ppp_button = RunPppButtonWidgets()
+    panel_submit_button = SubmitButtonWidgets()
+
+    panel_dates = DatePickerWidgets()
+
     panel_results = ResultWidgets()
     panel_targets = TargetWidgets()
     panel_ppp = PPPresultWidgets()
-    panel_submit_button = SubmitButtonWidgets()
 
     panel_input.reset()
 
@@ -118,6 +123,13 @@ def target_uploader_app():
         panel_submit_button.pane,
     )
 
+    sidebar_configs = pn.Column(panel_dates.pane)
+
+    tab_sidebar = pn.Tabs(
+        ("Home", sidebar_column),
+        ("Config", sidebar_configs),
+    )
+
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
         ("Input list", panel_targets.pane),
@@ -132,7 +144,8 @@ def target_uploader_app():
     )
 
     # put them into the template
-    template.sidebar.append(sidebar_column)
+    # template.sidebar.append(sidebar_column)
+    template.sidebar.append(tab_sidebar)
     template.main.append(main_column)
 
     tab_panels.visible = False
@@ -198,7 +211,15 @@ def target_uploader_app():
 
         tb_input = Table.from_pandas(df_input_)
 
-        tgt_obs_ok = visibility_checker(tb_input, "B")
+        # tgt_obs_ok = visibility_checker(tb_input, "B")
+        logger.info(f"Observation period start at {panel_dates.date_begin.value}")
+        logger.info(f"Observation period end at {panel_dates.date_end.value}")
+
+        tgt_obs_ok = visibility_checker(
+            tb_input,
+            panel_dates.date_begin.value,
+            panel_dates.date_end.value,
+        )
 
         # NOTE: It seems boolean comparison for a numpy array must not be done with "is"
         # https://beta.ruff.rs/docs/rules/true-false-comparison/
@@ -231,7 +252,7 @@ def target_uploader_app():
                     """### Warnings
 The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.
             """,
-                    alert_type="danger",
+                    alert_type="warning",
                 )
                 if len(tgt_obs_no) > 0:
                     tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
@@ -249,7 +270,7 @@ The following targets are not observable during the semester. Please remove them
 The following targets are not observable during the semester. Please remove them.
     {tgt_obs_no_id}
                 """,
-                        alert_type="danger",
+                        alert_type="warning",
                     )
 
                 else:

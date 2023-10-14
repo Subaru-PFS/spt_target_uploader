@@ -2,6 +2,7 @@
 
 import re
 import warnings
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -22,6 +23,106 @@ from . import (
 )
 
 warnings.filterwarnings("ignore")
+
+
+def get_semester_daterange(dt, current=False, next=False):
+    if current and next:
+        logger.error("current and next cannot be True at the same time")
+
+    if (not current) and (not next):
+        logger.error("current and next cannot be False at the same time")
+
+    if current:
+        if (dt.month >= 2) and (dt.month <= 7):
+            semester_begin = datetime(dt.year, 2, 1)
+            semester_end = datetime(dt.year, 7, 31)
+        elif (dt.month >= 8) and (dt.month <= 12):
+            semester_begin = datetime(dt.year, 8, 1)
+            semester_end = datetime(dt.year + 1, 1, 31)
+        elif dt.month == 1:
+            semester_begin = datetime(dt.year - 1, 8, 1)
+            semester_end = datetime(dt.year, 1, 31)
+
+    if next:
+        if (dt.month >= 2) and (dt.month <= 7):
+            semester_begin = datetime(dt.year, 8, 1)
+            semester_end = datetime(dt.year + 1, 1, 31)
+        elif (dt.month >= 8) and (dt.month <= 12):
+            semester_begin = datetime(dt.year + 1, 2, 1)
+            semester_end = datetime(dt.year + 1, 7, 31)
+        elif dt.month == 1:
+            semester_begin = datetime(dt.year, 2, 1)
+            semester_end = datetime(dt.year, 7, 31)
+
+    return semester_begin, semester_end
+
+
+def visibility_checker(uS, date_begin=None, date_end=None):
+    if len(uS) == 0:
+        return np.array([])
+
+    tz_HST = tz.gettz("US/Hawaii")
+
+    # set next semester if there is no range is defined.
+    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
+
+    if date_begin is None:
+        date_begin = tmp_begin
+    if date_end is None:
+        date_end = tmp_end
+
+    daterange = pd.date_range(date_begin, date_end)
+
+    ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
+
+    min_el = 30.0
+    max_el = 85.0
+
+    tgt_obs_ok = []
+
+    for i_t in range(len(RA)):
+        target = StaticTarget(
+            name=ob_code[i_t], ra=RA[i_t], dec=DEC[i_t], equinox=2000.0
+        )
+        total_time = exptime[i_t]  # SEC
+
+        t_obs_ok = 0
+
+        for dd in range(len(daterange) - 1):
+            night_begin = parser.parse(
+                daterange[dd].strftime("%Y-%m-%d") + " 18:30:00"
+            ).replace(tzinfo=tz_HST)
+            night_end = parser.parse(
+                daterange[dd + 1].strftime("%Y-%m-%d") + " 05:30:00"
+            ).replace(tzinfo=tz_HST)
+            observer.set_date(night_begin)
+
+            obs_ok, t_start, t_stop = observer.observable(
+                target,
+                night_begin,
+                night_end,
+                min_el,
+                max_el,
+                total_time,
+                airmass=None,
+                moon_sep=None,
+            )
+
+            if t_start is None or t_stop is None:
+                t_obs_ok += 0
+                continue
+
+            if t_stop > t_start:
+                t_obs_ok += (t_stop - t_start).seconds  # SEC
+            else:
+                t_obs_ok += 0
+
+        if t_obs_ok >= exptime[i_t]:
+            tgt_obs_ok.append(True)
+        else:
+            tgt_obs_ok.append(False)
+
+    return np.array(tgt_obs_ok, dtype=bool)
 
 
 def check_keys(
@@ -371,66 +472,3 @@ def validate_input(df, logger=logger):
         logger.info("[Summary] failed to meet all validation criteria")
 
     return validation_status
-
-
-def visibility_checker(uS, semester):
-    if len(uS) == 0:
-        return np.array([])
-
-    tz_HST = tz.gettz("US/Hawaii")
-
-    if semester == "A":
-        daterange = pd.date_range("20240201", "20240731")
-    elif semester == "B":
-        daterange = pd.date_range("20240801", "20250131")
-
-    ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
-
-    min_el = 30.0
-    max_el = 85.0
-
-    tgt_obs_ok = []
-
-    for i_t in range(len(RA)):
-        target = StaticTarget(
-            name=ob_code[i_t], ra=RA[i_t], dec=DEC[i_t], equinox=2000.0
-        )
-        total_time = exptime[i_t]  # SEC
-
-        t_obs_ok = 0
-
-        for dd in range(len(daterange) - 1):
-            night_begin = parser.parse(
-                daterange[dd].strftime("%Y-%m-%d") + " 18:30:00"
-            ).replace(tzinfo=tz_HST)
-            night_end = parser.parse(
-                daterange[dd + 1].strftime("%Y-%m-%d") + " 05:30:00"
-            ).replace(tzinfo=tz_HST)
-            observer.set_date(night_begin)
-
-            obs_ok, t_start, t_stop = observer.observable(
-                target,
-                night_begin,
-                night_end,
-                min_el,
-                max_el,
-                total_time,
-                airmass=None,
-                moon_sep=None,
-            )
-
-            if t_start is None or t_stop is None:
-                t_obs_ok += 0
-                continue
-
-            if t_stop > t_start:
-                t_obs_ok += (t_stop - t_start).seconds  # SEC
-            else:
-                t_obs_ok += 0
-
-        if t_obs_ok >= exptime[i_t]:
-            tgt_obs_ok.append(True)
-        else:
-            tgt_obs_ok.append(False)
-
-    return np.array(tgt_obs_ok, dtype=bool)
