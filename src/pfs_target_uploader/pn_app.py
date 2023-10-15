@@ -422,10 +422,6 @@ def list_files_app():
         os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]), ext="ecsv"
     )
 
-    editors = {}
-    for c in df_files_tgt.columns:
-        editors[c] = None
-
     # setup panel components
     table_files_tgt = pn.widgets.Tabulator(
         df_files_tgt,
@@ -436,7 +432,6 @@ def list_files_app():
         frozen_columns=["index"],
         pagination="remote",
         header_filters=True,
-        editors=editors,
         titles={
             "upload_id": "Upload ID",
             "filenames": "File",
@@ -449,6 +444,7 @@ def list_files_app():
         hidden_columns=["index", "fullpath", "link"],
         buttons={"download": "<i class='fa-solid fa-download'></i>"},
         layout="fit_data_table",
+        disabled=True,
     )
 
     table_files_psl = pn.widgets.Tabulator(
@@ -458,7 +454,6 @@ def list_files_app():
         theme_classes=["table-striped"],
         pagination="remote",
         header_filters=True,
-        editors=editors,
         layout="fit_data_table",
         disabled=True,
         buttons={
@@ -467,6 +462,7 @@ def list_files_app():
         },
         hidden_columns=["index"],
         width=1400,
+        disabled=True,
     )
 
     table_files_ppc = pn.widgets.Tabulator(
@@ -475,12 +471,12 @@ def list_files_app():
         theme_classes=["table-striped"],
         pagination="remote",
         header_filters=True,
-        editors=editors,
         layout="fit_data_table",
         disabled=True,
         hidden_columns=["index", "Fiber usage fraction (%)", "link"],
         width=550,
         visible=False,
+        disabled=True,
     )
 
     # Open a file by clicking the download buttons
