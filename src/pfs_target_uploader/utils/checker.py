@@ -235,7 +235,7 @@ def check_values(df, logger=logger):
     # TODO: check data range including:
     # - ra must be in 0 to 360
     # - dec must be in -90 to 90
-    # - equinox must be up to seven character string starting with "J" or "B"
+    # - equinox must be "J2000" or "J2000.0"
     # - [x] priority must be positive integer [0-9]
     # - exptime must be positive
     # - resolution must be 'L' or 'M'
@@ -251,26 +251,13 @@ def check_values(df, logger=logger):
     is_priority = np.logical_and(df["priority"] >= 0.0, df["priority"] <= 9.0)
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
-
-    def check_equinox(e):
-        # check if an equinox string starts with "J" or "B"
-        is_epoch = (e[0] == "J") or (e[0] == "B")
-        # check if the rest of the input can be converted to a float value
-        # Here I don't check if it's in a reasonable range or not.
-        # TODO: We may make the equinox optional (J2000.0), need some discussion with obsproc.
-        try:
-            _ = float(e[1:])
-            is_year = True
-        except ValueError:
-            is_year = False
-        return is_epoch and is_year
-
-    vectorized_check_equinox = np.vectorize(check_equinox)
-    is_equinox = vectorized_check_equinox(df["equinox"].to_numpy())
+    is_equinox = np.logical_or(df["equinox"] == "J2000", df["equinox"] == "J2000.0")
 
     dict_values = {}
     is_success = True
+
     success_all = np.ones(df.index.size, dtype=bool)  # True if success
+
     for k, v in zip(
         ["ra", "dec", "equinox", "priority", "exptime", "resolution"],
         [is_ra, is_dec, is_equinox, is_priority, is_exptime, is_resolution],
