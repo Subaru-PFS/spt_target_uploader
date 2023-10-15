@@ -111,7 +111,7 @@ class FileInputWidgets(param.Parameterized):
 
     pane = pn.Column(
         """# Step 1:
-## Select a target list ([example](doc/examples/example_targetlist.csv))""",
+## Select a target list (<a href='doc/examples/example_targetlist.csv' target='_blank'>example</a>)""",
         file_input,
     )
 
