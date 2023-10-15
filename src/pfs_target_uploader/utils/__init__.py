@@ -110,9 +110,9 @@ filter_names = [
 
 # where to put Gaia filters?
 filter_category = {
-    "g": ["g_hsc", "g_ps1", "g_sdss"],
-    "r": ["r_old_hsc", "r2_hsc", "r_ps1", "r_sdss"],
-    "i": ["i_old_hsc", "i2_hsc", "i_ps1", "i_sdss"],
+    "g": ["g_hsc", "g_ps1", "g_sdss", "bp_gaia"],
+    "r": ["r_old_hsc", "r2_hsc", "r_ps1", "r_sdss", "g_gaia"],
+    "i": ["i_old_hsc", "i2_hsc", "i_ps1", "i_sdss", "rp_gaia"],
     "z": ["z_hsc", "z_ps1", "z_sdss"],
     "y": ["y_hsc", "y_ps1"],
     "j": [],
