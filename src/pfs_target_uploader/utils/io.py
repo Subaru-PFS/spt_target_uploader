@@ -130,7 +130,7 @@ def load_file_properties(dir=".", ext="ecsv"):
                     upload_ids[i] = None
 
                 try:
-                    timestamps[i] = tb.meta["upload_at"]
+                    timestamps[i] = datetime.fromisoformat(tb.meta["upload_at"])
                 except KeyError:
                     timestamps[i] = None
 
@@ -163,12 +163,19 @@ def load_file_properties(dir=".", ext="ecsv"):
         exp_sci_fh_m = np.zeros(n_files, dtype=float)
         tot_time_l = np.zeros(n_files, dtype=float)
         tot_time_m = np.zeros(n_files, dtype=float)
+        # timestamps = np.zeros(n_files, dtype="datetime64[s]")
 
         for i, f in enumerate(files_in_dir):
             if ext == "ecsv":
                 tb = Table.read(f)
                 orignames[i] = tb.meta["original_filename"]
                 upload_ids[i] = tb.meta["upload_id"]
+                # try:
+                #     timestamps[i] = timestamps[i] = datetime.fromisoformat(
+                #         tb.meta["upload_at"]
+                #     )
+                # except KeyError:
+                #     timestamps[i] = None
 
                 tb_l = tb[tb["resolution"] == "low"]
                 tb_m = tb[tb["resolution"] == "medium"]
@@ -199,8 +206,11 @@ def load_file_properties(dir=".", ext="ecsv"):
                 "Exptime_sci_M (FH)": exp_sci_fh_m,
                 "Time_tot_L (h)": tot_time_l,
                 "Time_tot_M (h)": tot_time_m,
+                # "timestamp": timestamps,
                 # "Science category":
                 # "Community":
             }
         )
+
         return df.sort_values("Upload ID", ascending=False, ignore_index=True)
+        # return df_out.sort_values("timestamp", ascending=False, ignore_index=True)
