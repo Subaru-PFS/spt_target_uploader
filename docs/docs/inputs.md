@@ -1,6 +1,6 @@
 # Input Target List
 
-## Contents
+## Contents of the list
 
 There are required and optional fields. String values must consist of `[A-Za-z0-9_-+.]`.
 

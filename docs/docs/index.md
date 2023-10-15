@@ -17,9 +17,9 @@ graph TD
 
 ## [Input Target List](inputs.md)
 
-- [Contents](inputs.md#contents)
-- [Format](inputs.md#file-format)
-- [Example](inputs.md#example)
+- [Content of the list](inputs.md#contents-of-the-list)
+- [File format](inputs.md#file-format)
+- [Example file](inputs.md#example)
 
 ## [Validation](validation.md)
 
