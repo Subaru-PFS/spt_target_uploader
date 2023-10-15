@@ -462,7 +462,6 @@ def list_files_app():
         },
         hidden_columns=["index"],
         width=1400,
-        disabled=True,
     )
 
     table_files_ppc = pn.widgets.Tabulator(
@@ -476,7 +475,6 @@ def list_files_app():
         hidden_columns=["index", "Fiber usage fraction (%)", "link"],
         width=550,
         visible=False,
-        disabled=True,
     )
 
     # Open a file by clicking the download buttons
