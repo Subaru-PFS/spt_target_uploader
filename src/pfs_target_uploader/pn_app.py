@@ -397,12 +397,13 @@ def list_files_app():
 
     template = pn.template.VanillaTemplate(
         title="PFS Target & Proposal Lists",
-        collapsed_sidebar=True,
+        # collapsed_sidebar=True,
         # header_background="#3A7D7E",
         # header_background="#C71585",  # mediumvioletred
         header_background="#dc143c",  # crimson
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
+        # sidebar_width=400,
     )
     # template = pn.template.BootstrapTemplate(
     #     title="PFS Target Lists",
@@ -414,15 +415,62 @@ def list_files_app():
     #     favicon="docs/site/assets/images/favicon.png",
     # )
 
-    df_files_tgt = load_file_properties(
+    _df_files_tgt = load_file_properties(
         os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]), ext="ecsv"
     )
 
-    df_files_psl = load_file_properties(
+    _df_files_psl = load_file_properties(
         os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]), ext="ecsv"
     )
 
+    # join two dataframes for filtering
+    df_files_tgt = _df_files_tgt.merge(
+        _df_files_psl.loc[:, ["Upload ID", "Time_tot_L (h)", "Time_tot_M (h)"]],
+        how="left",
+        right_on="Upload ID",
+        left_on="upload_id",
+    )
+    df_files_tgt.drop(columns=["Upload ID"], inplace=True)
+
+    df_files_psl = _df_files_psl.merge(
+        _df_files_tgt.loc[:, ["upload_id", "n_obj", "t_exp", "timestamp"]],
+        how="left",
+        right_on="upload_id",
+        left_on="Upload ID",
+    )
+    df_files_psl.drop(columns=["upload_id"], inplace=True)
+    df_files_psl.sort_values("timestamp", ascending=False, ignore_index=True)
+
+    # range sliders for filtering
+    slider_nobj = pn.widgets.EditableRangeSlider(
+        name="N(ob_code)",
+        start=np.floor(df_files_tgt["n_obj"].min() / 10) * 10,
+        end=np.ceil(df_files_tgt["n_obj"].max() / 10) * 10,
+        step=10,
+    )
+    slider_fiberhour = pn.widgets.EditableRangeSlider(
+        name="Fiberhour (h)",
+        start=np.floor(df_files_tgt["t_exp"].min()),
+        end=np.ceil(df_files_tgt["t_exp"].max()),
+        step=1,
+    )
+
+    slider_rot_l = pn.widgets.EditableRangeSlider(
+        name="ROT (low, h)",
+        start=np.floor(df_files_psl["Time_tot_L (h)"].min()),
+        end=np.ceil(df_files_psl["Time_tot_L (h)"].max()),
+        step=1,
+    )
+    slider_rot_m = pn.widgets.EditableRangeSlider(
+        name="ROT (medium, h)",
+        start=np.floor(df_files_psl["Time_tot_M (h)"].min()),
+        end=np.ceil(df_files_psl["Time_tot_M (h)"].max()),
+        step=1,
+    )
+
     # setup panel components
+
+    # Target summary table
     table_files_tgt = pn.widgets.Tabulator(
         df_files_tgt,
         page_size=500,
@@ -435,18 +483,29 @@ def list_files_app():
         titles={
             "upload_id": "Upload ID",
             "filenames": "File",
-            "n_obj": "N(object)",
+            "n_obj": "N(ob_code)",
             "t_exp": "Fiberhour (h)",
             "origname": "Original filename",
             "filesize": "Size (kB)",
             "timestamp": "Timestamp",
         },
-        hidden_columns=["index", "fullpath", "link"],
+        hidden_columns=[
+            "index",
+            "fullpath",
+            "link",
+            "Time_tot_L (h)",
+            "Time_tot_M (h)",
+        ],
         buttons={"download": "<i class='fa-solid fa-download'></i>"},
         layout="fit_data_table",
         disabled=True,
     )
+    table_files_tgt.add_filter(slider_nobj, "n_obj")
+    table_files_tgt.add_filter(slider_fiberhour, "t_exp")
+    table_files_tgt.add_filter(slider_rot_l, "Time_tot_L (h)")
+    table_files_tgt.add_filter(slider_rot_m, "Time_tot_M (h)")
 
+    # PPP summary table
     table_files_psl = pn.widgets.Tabulator(
         df_files_psl,
         page_size=500,
@@ -460,9 +519,13 @@ def list_files_app():
             "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
             "download": "<i class='fa-solid fa-download'></i>",
         },
-        hidden_columns=["index"],
+        hidden_columns=["index", "n_obj", "t_exp", "timestamp"],
         width=1400,
     )
+    table_files_psl.add_filter(slider_nobj, "n_obj")
+    table_files_psl.add_filter(slider_fiberhour, "t_exp")
+    table_files_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
+    table_files_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
 
     table_files_ppc = pn.widgets.Tabulator(
         page_size=20,
@@ -520,13 +583,17 @@ def list_files_app():
     table_files_tgt.on_click(open_panel_download)
     table_files_psl.on_click(open_panel_magnify)
 
+    sidebar_column = pn.Column(
+        slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
+    )
+
     tab_panels = pn.Tabs(
         ("Target info", pn.Column(table_files_tgt, js_panel)),
         ("Program info", pn.Row(table_files_psl, table_files_ppc)),
     )
 
     # put them into the template
-    # template.sidebar.append(sidebar_column)
+    template.sidebar.append(sidebar_column)
     template.main.append(tab_panels)
 
     app = template.servable()
