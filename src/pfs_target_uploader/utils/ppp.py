@@ -41,6 +41,16 @@ from qplan.util.site import site_subaru as observer
 warnings.filterwarnings("ignore")
 
 
+# check bokeh version
+# ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
+# isort: split
+import bokeh
+from pkg_resources import parse_version
+
+if parse_version(bokeh.__version__) < parse_version("3.3"):
+    hv.renderer("bokeh").webgl = False
+
+
 def PPPrunStart(uS, weight_para):
     def count_N(sample):
         """calculate local count of targets
@@ -1019,13 +1029,14 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
             cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
 
             p1 = cR__.hvplot.line(
-                "PPC_id",
-                name[:-1],
+                x="PPC_id",
+                y=name[:-1],
                 value_label="Completion rate (%)",
                 title=f"{RESmode:s}-resolution mode",
                 color=["k", "r"] + colors,
                 line_width=[3, 2] + [1] * (len(sub) - 1),
                 line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
+                legend=True,
             )
             p2 = hv.Rectangles([(30, 88, 95, 100)]).opts(
                 color="orange", line_width=0, alpha=0.2
