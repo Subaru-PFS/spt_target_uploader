@@ -439,7 +439,9 @@ def list_files_app():
         left_on="Upload ID",
     )
     df_files_psl.drop(columns=["upload_id"], inplace=True)
-    df_files_psl.sort_values("timestamp", ascending=False, ignore_index=True)
+    df_files_psl.sort_values(
+        "timestamp", ascending=False, ignore_index=True, inplace=True
+    )
 
     # range sliders for filtering
     slider_nobj = pn.widgets.EditableRangeSlider(
