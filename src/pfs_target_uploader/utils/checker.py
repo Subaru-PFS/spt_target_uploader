@@ -16,7 +16,6 @@ from qplan.util.site import site_subaru as observer
 
 from . import (
     filter_category,
-    filter_keys,
     optional_keys,
     required_keys,
     target_datatype,
@@ -28,9 +27,11 @@ warnings.filterwarnings("ignore")
 def get_semester_daterange(dt, current=False, next=False):
     if current and next:
         logger.error("current and next cannot be True at the same time")
+        raise ValueError
 
     if (not current) and (not next):
         logger.error("current and next cannot be False at the same time")
+        raise ValueError
 
     if current:
         if (dt.month >= 2) and (dt.month <= 7):
