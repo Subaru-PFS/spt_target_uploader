@@ -144,7 +144,6 @@ def target_uploader_app():
     )
 
     # put them into the template
-    # template.sidebar.append(sidebar_column)
     template.sidebar.append(tab_sidebar)
     template.main.append(main_column)
 
@@ -158,8 +157,10 @@ def target_uploader_app():
         placeholder_floatpanel.objects = []
         tab_panels.active = 0
         tab_panels.visible = False
+
         panel_status.reset()
         panel_results.reset()
+
         pn.state.notifications.clear()
 
         df_input, validation_status = _validate_file(panel_input)
@@ -168,18 +169,11 @@ def target_uploader_app():
             _toggle_buttons(button_set, disabled=False)
             return
 
-        time.sleep(0.1)  # may be removed
         panel_status.show_results(df_input, validation_status)
-        time.sleep(0.1)  # may be removed
         panel_targets.show_results(df_input)
-        time.sleep(0.1)  # may be removed
         panel_results.show_results(df_input, validation_status)
 
         _toggle_buttons(button_set, disabled=False)
-
-        # if validation_status["status"] is False:
-        #     panel_input.file_input.file_name = None
-        #     panel_input.file_input.value = None
 
         tab_panels.visible = True
         tab_panels.active = 1
@@ -195,7 +189,7 @@ def target_uploader_app():
         # panel_status.reset()
         panel_results.reset()
         panel_ppp.reset()
-        # time.sleep(0.1)  # may be removed
+
         pn.state.notifications.clear()
 
         gif_pane = pn.pane.GIF(
@@ -206,7 +200,6 @@ def target_uploader_app():
         df_input_, validation_status = _validate_file(panel_input)
 
         if validation_status is None:
-            time.sleep(0.1)
             _toggle_buttons(button_set, disabled=False)
             return
 
@@ -320,10 +313,12 @@ The total requested time is reasonable for normal program. All the input targets
 
             if (validation_status is None) or (not validation_status["status"]):
                 logger.error("Validation failed for some reason")
+
                 tab_panels.visible = False
+
                 panel_status.reset()
                 panel_results.reset()
-                time.sleep(0.1)  # may be removed
+
                 pn.state.notifications.clear()
 
                 if validation_status is None:

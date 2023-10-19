@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import secrets
-import time
 from datetime import datetime
 
 import numpy as np
@@ -80,16 +79,6 @@ class UploadNoteWidgets:
         self.floatpanel.objects = []
         for m in messages:
             self.floatpanel.objects.append(m)
-
-
-#         f"""<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  The target list has been uploaded successfully!</font>
-
-# <font size='4'>Upload ID:  </font><font size='6'><span style='color: darkcyan;'>**{secret_token}**</span></font>
-
-# <font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>
-
-# Please keep the Upload ID for the observation planning.
-#             """
 
 
 class DocLinkWidgets:
@@ -190,10 +179,8 @@ class StatusWidgets:
 
         self.summary_table = pn.widgets.Tabulator(
             None,
-            page_size=11,
             theme="bootstrap",
             theme_classes=["table-sm"],
-            pagination="remote",
             visible=False,
             layout="fit_data_table",
             hidden_columns=["index"],
@@ -205,29 +192,24 @@ class StatusWidgets:
         )
 
         self.pane = pn.Column(
-            # "# Status",
             self.status_grid,
             self.summary_table,
-            # height=400,
         )
 
     def reset(self):
-        self.status_keys.value = False
-        self.status_str.value = False
-        self.status_vals.value = False
-        self.status_flux.value = False
-        self.status_dups.value = False
-        # self.summary_nobj_L.value = 0
-        # self.summary_nobj_M.value = 0
-        # self.summary_fh.value = 0
-        self.summary_table.value = pd.DataFrame()
+        for s in [
+            self.status_keys,
+            self.status_str,
+            self.status_vals,
+            self.status_flux,
+            self.status_dups,
+        ]:
+            s.value = False
+
+        # self.summary_table.value = pd.DataFrame()
         self.summary_table.visible = False
 
     def show_results(self, df, validation_status):
-        # self.reset()
-
-        # logger.info(validation_status)
-
         if validation_status["required_keys"]["status"] is None:
             pass
         elif validation_status["required_keys"]["status"]:
@@ -333,7 +315,7 @@ class TargetWidgets:
             page_size=50,
             theme="bootstrap",
             theme_classes=["table-striped", "table-sm"],
-            frozen_columns=["index"],
+            frozen_columns=[],
             pagination="remote",
             header_filters=True,
             visible=False,
@@ -344,12 +326,16 @@ class TargetWidgets:
         self.pane = pn.Column(self.table_all)
 
     def show_results(self, df):
+        # it seems that frozen_columns must be empty when replacing its value
+        self.table_all.frozen_columns = []
         self.table_all.value = pd.DataFrame()
         self.table_all.value = df
+        self.table_all.frozen_columns = ["index"]
         self.table_all.visible = True
 
     def reset(self):
-        self.table_all.value = pd.DataFrame()
+        # self.table_all.frozen_columns = []
+        # self.table_all.value = pd.DataFrame()
         self.table_all.visible = False
 
 
@@ -358,7 +344,7 @@ class ResultWidgets:
         page_size=50,
         theme="bootstrap",
         theme_classes=["table-striped", "table-sm"],
-        frozen_columns=["index"],
+        frozen_columns=[],
         pagination="remote",
         header_filters=True,
         visible=False,
@@ -479,21 +465,17 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.info_text_flux.object = "\n####"
         self.info_text_dups.object = "\n####"
 
-        self.error_table_str.value = pd.DataFrame()
-        self.error_table_dups.value = pd.DataFrame()
-        self.error_table_vals.value = pd.DataFrame()
-        self.error_table_flux.value = pd.DataFrame()
-
-        self.warning_table_str.value = pd.DataFrame()
-        self.warning_table_vals.value = pd.DataFrame()
-
-        self.error_table_str.visible = False
-        self.error_table_dups.visible = False
-        self.error_table_vals.visible = False
-        self.error_table_flux.visible = False
-
-        self.warning_table_str.visible = False
-        self.warning_table_vals.visible = False
+        for t in [
+            self.error_table_str,
+            self.error_table_dups,
+            self.error_table_vals,
+            self.error_table_flux,
+            self.warning_table_str,
+            self.warning_text_keys,
+        ]:
+            # t.frozen_columns = []
+            # t.value = pd.DataFrame()
+            t.visible = False
 
     def show_results(self, df, validation_status):
         # Stage 1 results
@@ -520,10 +502,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
 <font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
 <font size='3'>The following entries must be fixed.</font>
                 """
+                self.error_table_str.frozen_columns = []
                 self.error_table_str.value = pd.DataFrame()
                 self.error_table_str.value = df.loc[
                     ~validation_status["str"]["success_required"], :
                 ]
+                self.error_table_str.frozen_columns = ["index"]
                 self.error_table_str.visible = True
 
             if not validation_status["str"]["status_optional"]:
@@ -531,10 +515,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
 <font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
 <font size='3'>The following entries must be fixed.</font>
                 """
+                self.warning_table_str.frozen_columns = []
                 self.warning_table_str.value = pd.DataFrame()
                 self.warning_table_str.value = df.loc[
                     ~validation_status["str"]["success_optional"], :
                 ]
+                self.warning_table_str.frozen_columns = ["index"]
                 self.warning_table_str.visible = True
         else:
             return
@@ -547,10 +533,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
                 pass
             elif not validation_status["values"]["status"]:
                 self.error_text_vals.object += """\n<font size='3'>Errors in values are detected for the following entries (See [documentation](doc/validation.html#stage-3)). </font>"""
+                self.error_table_vals.frozen_columns = []
                 self.error_table_vals.value = pd.DataFrame()
                 self.error_table_vals.value = df.loc[
                     ~validation_status["values"]["success"], :
                 ]
+                self.error_table_vals.frozen_columns = ["index"]
                 self.error_table_vals.visible = True
         else:
             return
@@ -563,10 +551,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             else:
                 # add an error message and data table for duplicates
                 self.error_text_flux.object += "\n<font size='3'>No flux info found in the following ob_codes:</font>\n"
+                self.error_table_flux.frozen_columns = []
                 self.error_table_flux.value = pd.DataFrame()
                 self.error_table_flux.value = df.loc[
                     ~validation_status["flux"]["success"], :
                 ]
+                self.error_table_flux.frozen_columns = ["index"]
                 self.error_table_flux.visible = True
         else:
             return
@@ -586,10 +576,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             else:
                 # add an error message and data table for duplicates
                 self.error_text_dups.object += "\n<font size='3'>`ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets:</font>\n"
+                self.error_table_dups.frozen_columns = []
                 self.error_table_dups.value = pd.DataFrame()
                 self.error_table_dups.value = df.loc[
                     validation_status["unique"]["flags"], :
                 ]
+                self.error_table_dups.frozen_columns = ["index"]
 
                 # BUG: it seems that the pandas-like styling does not work for panel>1.0.4 or so.
                 # def _set_column_color(x, c="red"):
