@@ -155,11 +155,12 @@ def target_uploader_app():
         _toggle_buttons(button_set, disabled=True)
 
         placeholder_floatpanel.objects = []
-        tab_panels.active = 0
+        # tab_panels.active = 0
         tab_panels.visible = False
 
         panel_status.reset()
         panel_results.reset()
+        panel_ppp.reset()
 
         pn.state.notifications.clear()
 
@@ -175,8 +176,8 @@ def target_uploader_app():
 
         _toggle_buttons(button_set, disabled=False)
 
-        tab_panels.visible = True
         tab_panels.active = 1
+        tab_panels.visible = True
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
@@ -184,9 +185,10 @@ def target_uploader_app():
         panel_submit_button.submit.disabled = True
 
         placeholder_floatpanel.objects = []
-        tab_panels.active = 0
-        tab_panels.visible = False
-        # panel_status.reset()
+        tab_panels.active = 1
+        # tab_panels.visible = False
+
+        panel_status.reset()
         panel_results.reset()
         panel_ppp.reset()
 
@@ -202,6 +204,11 @@ def target_uploader_app():
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
             return
+
+        panel_status.show_results(df_input_, validation_status)
+        panel_results.show_results(df_input_, validation_status)
+        panel_targets.show_results(df_input_)
+        tab_panels.visible = True
 
         panel_ppp_button.PPPrunStats.append(gif_pane)
 
@@ -239,6 +246,7 @@ def target_uploader_app():
                 sub_m,
                 obj_allo_M_fin,
             ) = PPPrunStart(tb_input_, weight_para)
+
             res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
                 cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
             )
@@ -277,15 +285,11 @@ The total requested time is reasonable for normal program. All the input targets
                         alert_type="success",
                     )
 
-            panel_status.show_results(df_input_, validation_status)
-            panel_results.show_results(df_input_, validation_status)
-            panel_targets.show_results(df_input_)
-
             panel_ppp.show_results(
                 res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert
             )
 
-            tab_panels.visible = True
+            # tab_panels.visible = True
             tab_panels.active = 2
 
             panel_submit_button.submit.disabled = False

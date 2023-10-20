@@ -1022,7 +1022,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                 legend=True,
             )
 
-            return (p_tgt * p_ppc).opts(show_grid=True)
+            return (p_tgt * p_ppc).opts(show_grid=True, shared_axes=False)
 
         def plot_CR(nppc_fin):
             cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
@@ -1047,7 +1047,10 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
             p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
 
             return (p1 * p2 * p3 * p4).opts(
-                xlim=(0, len(obj_allo) + 1), ylim=(0, 105), show_grid=True
+                xlim=(0, len(obj_allo) + 1),
+                ylim=(0, 105),
+                show_grid=True,
+                shared_axes=False,
             )
 
         def plot_FE(nppc_fin):
@@ -1073,6 +1076,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                 fontsize={"xticks": "0pt"},
                 xlim=(0, len(obj_allo) + 1),
                 ylim=(0, max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) + 1),
+                shared_axes=False,
             )
 
         def ppp_res_tab1(nppc_fin):
