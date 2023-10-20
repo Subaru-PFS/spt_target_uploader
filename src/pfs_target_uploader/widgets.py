@@ -92,6 +92,8 @@ class DocLinkWidgets:
 
 class FileInputWidgets(param.Parameterized):
     file_input = pn.widgets.FileInput(
+        value=None,
+        filename=None,
         accept=".csv,.ecsv",
         multiple=False,
         sizing_mode="stretch_width",
