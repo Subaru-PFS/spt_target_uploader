@@ -103,17 +103,19 @@ class FileInputWidgets(param.Parameterized):
             sizing_mode="stretch_width",
         )
 
-        self.pane = pn.Column(
-            """# Step 1:
-## Select a target list (<a href='doc/examples/example_targetlist.csv' target='_blank'>example</a>)""",
-            self.file_input,
-        )
+        # store previous information for input comparison
         self.previous_filename = None
         self.previous_value = None
         self.previous_mime_type = None
 
         # hex string to be used as an upload ID
         self.secret_token = None
+
+        self.pane = pn.Column(
+            """# Step 1:
+## Select a target list (<a href='doc/examples/example_targetlist.csv' target='_blank'>example</a>)""",
+            self.file_input,
+        )
 
     def reset(self):
         self.file_input.filename = None
