@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
+import os
 import secrets
 from datetime import datetime
+from io import BytesIO
 
 import numpy as np
 import pandas as pd
@@ -10,7 +12,8 @@ import param
 from logzero import logger
 from zoneinfo import ZoneInfo
 
-from .utils.checker import get_semester_daterange
+from .utils.checker import get_semester_daterange, validate_input
+from .utils.io import load_input
 
 
 class UploadNoteWidgets:
@@ -91,39 +94,84 @@ class DocLinkWidgets:
 
 
 class FileInputWidgets(param.Parameterized):
-    file_input = pn.widgets.FileInput(
-        value=None,
-        filename=None,
-        accept=".csv,.ecsv",
-        multiple=False,
-        sizing_mode="stretch_width",
-    )
-    secret_token = None
+    def __init__(self):
+        self.file_input = pn.widgets.FileInput(
+            value=None,
+            filename=None,
+            accept=".csv,.ecsv",
+            multiple=False,
+            sizing_mode="stretch_width",
+        )
 
-    pane = pn.Column(
-        """# Step 1:
+        self.pane = pn.Column(
+            """# Step 1:
 ## Select a target list (<a href='doc/examples/example_targetlist.csv' target='_blank'>example</a>)""",
-        file_input,
-    )
+            self.file_input,
+        )
+        self.previous_filename = None
+        self.previous_value = None
+        self.previous_mime_type = None
 
-    # FIXME:
-    # - This watcher function does not work for browser engines other than Gecko.
-    #   I don't know how to fix it...
-    # - The function is called multiple times when selecting a file. I don't know why.
-    @pn.depends("file_input.value", watch=True)
-    def generate_secret_token(self):
-        st = secrets.token_hex(8)
-        logger.info(f"Secret Token Updated: {st}")
-        logger.info(f"Filename: {self.file_input.filename}")
-        logger.info(f"MIME Type: {self.file_input.mime_type}")
-        self.secret_token = st
+        # hex string to be used as an upload ID
+        self.secret_token = None
 
-    # NOTE: When I put the `file_input` in `__init__(self)`, the watcher does not work.
-    #       The reset function is a sort of a workaround.
     def reset(self):
         self.file_input.filename = None
         self.file_input.mime_type = None
         self.file_input.value = None
+
+    def validate(self):
+        # update the upload ID when the input file is different from previous validation.
+        if (
+            (self.file_input.filename != self.previous_filename)
+            or (self.file_input.value != self.previous_value)
+            or (self.file_input.mime_type != self.previous_mime_type)
+        ):
+            st = secrets.token_hex(8)
+
+            logger.info("New file detected.")
+            logger.info(f"    Upload ID updated: {st}")
+            logger.info(f"    Filename: {self.file_input.filename}")
+            logger.info(f"    MIME Type: {self.file_input.mime_type}")
+
+            self.secret_token = st
+
+            self.previous_filename = self.file_input.filename
+            self.previous_value = self.file_input.value
+            self.previous_mime_type = self.file_input.mime_type
+        else:
+            logger.info("Identical to the previous validation.")
+            logger.info(
+                "    Upload ID not updated: one or more of the filename, content, "
+                "and mime type are identical to the previous validation."
+            )
+
+        logger.info(f"Upload ID: {self.secret_token}")
+
+        if self.file_input.filename is not None:
+            logger.info(f"{self.file_input.filename} is selected.")
+            file_format = os.path.splitext(self.file_input.filename)[-1].replace(
+                ".", ""
+            )
+            df_input, dict_load = load_input(
+                BytesIO(self.file_input.value),
+                format=file_format,
+            )
+            # if the input file cannot be read, raise a sticky error notifications
+            if not dict_load["status"]:
+                pn.state.notifications.error(
+                    f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
+                    duration=0,
+                )
+                return None, None
+        else:
+            logger.info("No file selected.")
+            pn.state.notifications.error("Please select a CSV file.")
+            return None, None
+
+        validation_status = validate_input(df_input)
+
+        return df_input, validation_status
 
 
 class StatusWidgets:

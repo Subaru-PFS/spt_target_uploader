@@ -29,32 +29,31 @@ from .widgets import (
     ValidateButtonWidgets,
 )
 
+# def _validate_file(panel_input):
+#     if panel_input.file_input.filename is not None:
+#         logger.info(f"{panel_input.file_input.filename} is selected.")
+#         file_format = os.path.splitext(panel_input.file_input.filename)[-1].replace(
+#             ".", ""
+#         )
+#         df_input, dict_load = load_input(
+#             BytesIO(panel_input.file_input.value),
+#             format=file_format,
+#         )
+#         # if the input file cannot be read, raise a sticky error notifications
+#         if not dict_load["status"]:
+#             pn.state.notifications.error(
+#                 f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
+#                 duration=0,
+#             )
+#             return None, None
+#     else:
+#         logger.info("No file selected.")
+#         pn.state.notifications.error("Please select a CSV file.")
+#         return None, None
 
-def _validate_file(panel_input):
-    if panel_input.file_input.filename is not None:
-        logger.info(f"{panel_input.file_input.filename} is selected.")
-        file_format = os.path.splitext(panel_input.file_input.filename)[-1].replace(
-            ".", ""
-        )
-        df_input, dict_load = load_input(
-            BytesIO(panel_input.file_input.value),
-            format=file_format,
-        )
-        # if the input file cannot be read, raise a sticky error notifications
-        if not dict_load["status"]:
-            pn.state.notifications.error(
-                f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
-                duration=0,
-            )
-            return None, None
-    else:
-        logger.info("No file selected.")
-        pn.state.notifications.error("Please select a CSV file.")
-        return None, None
+#     validation_status = validate_input(df_input)
 
-    validation_status = validate_input(df_input)
-
-    return df_input, validation_status
+#     return df_input, validation_status
 
 
 def _toggle_buttons(buttons: list, disabled: bool = True):
@@ -164,7 +163,8 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        df_input, validation_status = _validate_file(panel_input)
+        # df_input, validation_status = _validate_file(panel_input)
+        df_input, validation_status = panel_input.validate()
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
@@ -199,7 +199,7 @@ def target_uploader_app():
             width=20,
         )
 
-        df_input_, validation_status = _validate_file(panel_input)
+        df_input_, validation_status = panel_input.validate()
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
@@ -313,7 +313,7 @@ The total requested time is reasonable for normal program. All the input targets
             # do the validation again (input file can be different)
             # and I don't know how to implement to return value
             # from callback to another function (sorry)
-            df_input, validation_status = _validate_file(panel_input)
+            df_input, validation_status = panel_input.validate()
 
             if (validation_status is None) or (not validation_status["status"]):
                 logger.error("Validation failed for some reason")
