@@ -534,9 +534,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.error_table_vals.visible = True
 
         # Stage 3' results
-        print(validation_status["values"]["status"])
         if not validation_status["values"]["status"]:
-            logger.info("values error")
             return
 
         if validation_status["flux"]["status"]:

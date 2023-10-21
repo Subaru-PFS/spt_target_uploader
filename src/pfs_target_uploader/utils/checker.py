@@ -495,6 +495,6 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     else:
         logger.info("[Summary] failed to meet all validation criteria")
 
-    logger.info(validation_status)
+    # logger.info(validation_status)
 
     return validation_status
