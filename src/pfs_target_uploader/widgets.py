@@ -123,6 +123,12 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.value = None
 
     def validate(self, date_begin=None, date_end=None):
+        if date_begin >= date_end:
+            pn.state.notifications.error(
+                "Date Begin must be before Date End.", duration=0
+            )
+            return None, None
+
         # update the upload ID when the input file is different from previous validation.
         if (
             (self.file_input.filename != self.previous_filename)
