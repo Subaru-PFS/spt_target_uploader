@@ -482,7 +482,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.info_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
 
         # Stage 2 results
-        if validation_status["required_keys"]["status"] is False:
+        if not validation_status["required_keys"]["status"]:
             return
 
         if validation_status["str"]["status"] is None:
@@ -516,7 +516,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.warning_table_str.visible = True
 
         # Stage 3 results
-        if validation_status["str"]["status"] is False:
+        if not validation_status["str"]["status"]:
             return
 
         if validation_status["values"]["status"] is None:
@@ -534,7 +534,9 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.error_table_vals.visible = True
 
         # Stage 3' results
-        if validation_status["values"]["status"] is False:
+        print(validation_status["values"]["status"])
+        if not validation_status["values"]["status"]:
+            logger.info("values error")
             return
 
         if validation_status["flux"]["status"]:
