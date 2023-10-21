@@ -72,6 +72,9 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     if date_end is None:
         date_end = tmp_end
 
+    logger.info(f"Observation period start at {date_begin}")
+    logger.info(f"Observation period end at {date_end}")
+
     daterange = pd.date_range(date_begin, date_end)
 
     ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
@@ -353,6 +356,29 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     return dict_flux, df
 
 
+def check_visibility(df, date_begin=None, date_end=None, logger=logger):
+    dict_visibility = {}
+
+    is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
+
+    if np.all(is_visible):
+        logger.info("All objects are visible in the input period")
+        dict_visibility["status"] = True
+    elif np.any(is_visible):
+        logger.warning(
+            f"Objects are not visible in the input period: {df.loc[~is_visible,'ob_code'].to_list()}"
+        )
+        dict_visibility["status"] = True
+    else:
+        # None of targets are visible in the input observation period
+        logger.error("None of objects is visible in the input period")
+        dict_visibility["status"] = False
+
+    dict_visibility["success"] = is_visible
+
+    return dict_visibility
+
+
 def check_unique(df, logger=logger):
     # if the dataframe is None or empty, skip validation
     if df is None or df.empty:
@@ -387,7 +413,7 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
-def validate_input(df, logger=logger):
+def validate_input(df, date_begin=None, date_end=None, logger=logger):
     validation_status = {}
 
     # Validation status
@@ -400,6 +426,7 @@ def validate_input(df, logger=logger):
     validation_status["str"] = {"status": None}
     validation_status["values"] = {"status": None}
     validation_status["flux"] = {"status": None}
+    validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
 
     # check mandatory columns
@@ -441,6 +468,14 @@ def validate_input(df, logger=logger):
     if not dict_flux["status"]:
         return validation_status
 
+    # check columns for visibility
+    logger.info("[TMP 2] Checking target visibility")
+    dict_visibility = check_visibility(df, date_begin=date_begin, date_end=date_end)
+    logger.info(f"[TMP 2] status: {dict_visibility['status']} (Success if True)")
+    validation_status["visibility"] = dict_visibility
+    if not dict_visibility["status"]:
+        return validation_status
+
     # check unique constraint for `ob_code`
     logger.info("[STAGE 4] Checking whether all ob_code are unique")
     dict_unique = check_unique(df)
@@ -452,6 +487,7 @@ def validate_input(df, logger=logger):
         and validation_status["str"]["status"]
         and validation_status["values"]["status"]
         and validation_status["flux"]["status"]
+        and validation_status["visibility"]["status"]
         and validation_status["unique"]["status"]
     ):
         logger.info("[Summary] succeeded to meet all validation criteria")
