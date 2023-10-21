@@ -135,7 +135,10 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        df_input, validation_status = panel_input.validate()
+        df_input, validation_status = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
         _toggle_buttons(button_set, disabled=False)
 
@@ -169,7 +172,10 @@ def target_uploader_app():
             width=20,
         )
 
-        df_input_, validation_status = panel_input.validate()
+        df_input_, validation_status = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
@@ -183,10 +189,6 @@ def target_uploader_app():
         panel_ppp_button.PPPrunStats.append(gif_pane)
 
         tb_input = Table.from_pandas(df_input_)
-
-        # tgt_obs_ok = visibility_checker(tb_input, "B")
-        logger.info(f"Observation period start at {panel_dates.date_begin.value}")
-        logger.info(f"Observation period end at {panel_dates.date_end.value}")
 
         tgt_obs_ok = visibility_checker(
             tb_input,
@@ -283,7 +285,10 @@ The total requested time is reasonable for normal program. All the input targets
             # do the validation again (input file can be different)
             # and I don't know how to implement to return value
             # from callback to another function (sorry)
-            df_input, validation_status = panel_input.validate()
+            df_input, validation_status = panel_input.validate(
+                date_begin=panel_dates.date_begin.value,
+                date_end=panel_dates.date_end.value,
+            )
 
             if (validation_status is None) or (not validation_status["status"]):
                 logger.error("Validation failed for some reason")
