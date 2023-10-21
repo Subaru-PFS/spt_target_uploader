@@ -135,6 +135,13 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
+        if panel_dates.date_begin.value >= panel_dates.date_end.value:
+            pn.state.notifications.error(
+                "Date Begin must be before Date End.", duration=0
+            )
+            _toggle_buttons(button_set, disabled=False)
+            return
+
         df_input, validation_status = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
