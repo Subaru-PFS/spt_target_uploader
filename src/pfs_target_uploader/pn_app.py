@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import time
 from datetime import datetime, timezone
-from io import BytesIO
 
 import gurobipy
 import numpy as np
@@ -12,8 +10,8 @@ from astropy.table import Table
 from dotenv import dotenv_values
 from logzero import logger
 
-from .utils.checker import validate_input, visibility_checker
-from .utils.io import load_file_properties, load_input, upload_file
+from .utils.checker import visibility_checker
+from .utils.io import load_file_properties, upload_file
 from .utils.ppp import PPPrunStart, ppp_result
 from .widgets import (
     DatePickerWidgets,
@@ -28,32 +26,6 @@ from .widgets import (
     UploadNoteWidgets,
     ValidateButtonWidgets,
 )
-
-# def _validate_file(panel_input):
-#     if panel_input.file_input.filename is not None:
-#         logger.info(f"{panel_input.file_input.filename} is selected.")
-#         file_format = os.path.splitext(panel_input.file_input.filename)[-1].replace(
-#             ".", ""
-#         )
-#         df_input, dict_load = load_input(
-#             BytesIO(panel_input.file_input.value),
-#             format=file_format,
-#         )
-#         # if the input file cannot be read, raise a sticky error notifications
-#         if not dict_load["status"]:
-#             pn.state.notifications.error(
-#                 f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
-#                 duration=0,
-#             )
-#             return None, None
-#     else:
-#         logger.info("No file selected.")
-#         pn.state.notifications.error("Please select a CSV file.")
-#         return None, None
-
-#     validation_status = validate_input(df_input)
-
-#     return df_input, validation_status
 
 
 def _toggle_buttons(buttons: list, disabled: bool = True):
@@ -154,7 +126,7 @@ def target_uploader_app():
         _toggle_buttons(button_set, disabled=True)
 
         placeholder_floatpanel.objects = []
-        # tab_panels.active = 0
+
         tab_panels.visible = False
 
         panel_status.reset()
@@ -163,18 +135,16 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        # df_input, validation_status = _validate_file(panel_input)
         df_input, validation_status = panel_input.validate()
 
+        _toggle_buttons(button_set, disabled=False)
+
         if validation_status is None:
-            _toggle_buttons(button_set, disabled=False)
             return
 
         panel_status.show_results(df_input, validation_status)
         panel_targets.show_results(df_input)
         panel_results.show_results(df_input, validation_status)
-
-        _toggle_buttons(button_set, disabled=False)
 
         tab_panels.active = 1
         tab_panels.visible = True
