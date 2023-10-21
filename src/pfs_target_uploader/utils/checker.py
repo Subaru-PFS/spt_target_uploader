@@ -465,16 +465,16 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     dict_flux, df = check_fluxcolumns(df)
     logger.info(f"[TMP] status: {dict_flux['status']} (Success if True)")
     validation_status["flux"] = dict_flux
-    if not dict_flux["status"]:
-        return validation_status
+    # if not dict_flux["status"]:
+    #     return validation_status
 
     # check columns for visibility
     logger.info("[TMP 2] Checking target visibility")
     dict_visibility = check_visibility(df, date_begin=date_begin, date_end=date_end)
     logger.info(f"[TMP 2] status: {dict_visibility['status']} (Success if True)")
     validation_status["visibility"] = dict_visibility
-    if not dict_visibility["status"]:
-        return validation_status
+    # if not dict_visibility["status"]:
+    #     return validation_status
 
     # check unique constraint for `ob_code`
     logger.info("[STAGE 4] Checking whether all ob_code are unique")
