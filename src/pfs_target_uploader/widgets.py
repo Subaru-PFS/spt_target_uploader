@@ -307,8 +307,8 @@ class TargetWidgets:
         self.table_all.visible = True
 
     def reset(self):
-        # self.table_all.frozen_columns = []
-        # self.table_all.value = pd.DataFrame()
+        self.table_all.frozen_columns = []
+        self.table_all.value = pd.DataFrame()
         self.table_all.visible = False
 
 
@@ -384,7 +384,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
         self.error_table_visibility = pn.widgets.Tabulator(
             None, **self.tabulator_kwargs
         )
-        self.warning_table_visibiilty = pn.widgets.Tabulator(
+        self.warning_table_visibility = pn.widgets.Tabulator(
             None, **self.tabulator_kwargs
         )
 
@@ -425,7 +425,7 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.warning_table_vals,
             # warnings on visibility
             self.warning_text_visibility,
-            self.warning_table_visibiilty,
+            self.warning_table_visibility,
             # successful vaildations last
             self.info_title,
             self.info_text_keys,
@@ -465,9 +465,10 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             self.warning_table_vals,
             self.error_table_flux,
             self.error_table_visibility,
-            self.warning_table_visibiilty,
+            self.warning_table_visibility,
             self.error_table_dups,
         ]:
+            t.value = pd.DataFrame()
             t.visible = False
 
     def show_results(self, df, validation_status):
@@ -563,10 +564,12 @@ Detected warnings detected. Please take a look and fix them if possible and nece
                 self.info_text_flux.object += "\n<font size='3'>All `ob_code`s are visible in the input observing period.</font>\n"
             elif np.any(validation_status["visibility"]["success"]):
                 self.warning_text_visibility.object += "\n<font size='3'>Some `ob_code`s are not visible in the input observing period.</font>\n"
-                self.warning_table_visibiilty.value = df.loc[
-                    ~validation_status["visibility"]["success"], :
-                ]
-                self.warning_table_visibiilty.visible = True
+                # self.warning_text_visibility.value = pd.DataFrame()
+                self.error_table_flux.frozen_columns = []
+                dfout = df.loc[~validation_status["visibility"]["success"], :]
+                self.warning_table_visibility.value = dfout
+                self.error_table_flux.frozen_columns = ["index"]
+                self.warning_table_visibility.visible = True
             self.error_table_visibility.visible = False
         else:
             # add an error message and data table for duplicates
