@@ -13,9 +13,8 @@ Mandatory fields are listed below.
 |------------|------------|--------|----------------------------------------------------------------------------------------------------|
 | ob_code    | str        |        | A unique string to identify the entry                                                              |
 | obj_id     | 64 bit int |        | Object ID                                                                                          |
-| ra         | float      | degree | Right Ascension at the reference epoch specified by `equinox`                                      |
-| dec        | float      | degree | Declination at the the reference epoch specified by `equinox`                                      |
-| equinox    | str        |        | Equinox string (must be J2000.0)                                                                   |
+| ra         | float      | degree | Right Ascension (J2000.0)                                                                          |
+| dec        | float      | degree | Declination (J2000.0)                                                                              |
 | exptime    | float      | second | Exposure time requested for the object                                                             |
 | priority   | int        |        | Priority (0-9) for the object within the list. Smaller value for higher priority                   |
 | resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |

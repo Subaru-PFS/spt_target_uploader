@@ -321,12 +321,11 @@ def check_str(
 
 def check_values(df, logger=logger):
     # TODO: check data range including:
-    # - ra must be in 0 to 360
-    # - dec must be in -90 to 90
-    # - equinox must be "J2000" or "J2000.0"
+    # - [x] ra must be in 0 to 360
+    # - [x] dec must be in -90 to 90
     # - [x] priority must be positive integer [0-9]
-    # - exptime must be positive
-    # - resolution must be 'L' or 'M'
+    # - [x] exptime must be positive
+    # - [x] resolution must be 'L' or 'M'
     #
     # - filters must be in targetdb
     # - fluxes must be positive
@@ -339,7 +338,6 @@ def check_values(df, logger=logger):
     is_priority = np.logical_and(df["priority"] >= 0.0, df["priority"] <= 9.0)
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
-    is_equinox = np.logical_or(df["equinox"] == "J2000", df["equinox"] == "J2000.0")
 
     dict_values = {}
     is_success = True
@@ -347,8 +345,8 @@ def check_values(df, logger=logger):
     success_all = np.ones(df.index.size, dtype=bool)  # True if success
 
     for k, v in zip(
-        ["ra", "dec", "equinox", "priority", "exptime", "resolution"],
-        [is_ra, is_dec, is_equinox, is_priority, is_exptime, is_resolution],
+        ["ra", "dec", "priority", "exptime", "resolution"],
+        [is_ra, is_dec, is_priority, is_exptime, is_resolution],
     ):
         dict_values[f"status_{k}"] = np.all(v)
         dict_values[f"success_{k}"] = v
