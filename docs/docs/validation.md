@@ -9,9 +9,9 @@ Validation of a input target list is carried out in 4 stages.
   <!-- <figcaption>Status indicators</figcaption> -->
 </figure>
 
-### Stage 0
+### Filetype
 
-At **Stage 0**, whether a proper readable CSV file is provided is checked.
+Whether a proper readable CSV file is provided is checked.
 
 !!! danger "Errors are raised in the following cases"
 
@@ -19,9 +19,9 @@ At **Stage 0**, whether a proper readable CSV file is provided is checked.
     - When `pandas.read_csv()` fails to read the input CSV file, an error will be raised. This is likely caused by wrong formats in the fields for numbers.
 
 
-### Stage 1
+### Mandatory columns
 
-At **Stage 1**, the input column names are checked against the required and optional keys.
+The names of input columns are checked against the required and optional keys except for flux-related ones.
 
 !!! danger "Errors are raised in the following case"
 
@@ -32,32 +32,39 @@ At **Stage 1**, the input column names are checked against the required and opti
 
     - A mandatory keyword `key name` is missing. Please add them with proper values.
 
-### Stage 2
+### String values
 
-At **Stage 2**, cells with string data will be validated to contain only allowed characters, `[A-Za-z0-9_-+.]`.
+String data are validated whether they contain only allowed characters, `[A-Za-z0-9_-+.]`.
 
 !!! danger "Errors are raised in the following case"
 
     - Characters not in `[A-Za-z0-9_-+.]` are detected.
 
 
-### Stage 3
+### Data ranges
 
-At **Stage 3**, values are checked whether they are in allowed ranges.
+Value of `ra`, `dec`, `priority`, `exptiem`, and `resolution` are checked whether they are in the allowed ranges.
 
 !!! note "Following checks are conducted and errors are raised when violations are detected"
 
     - $0 \le \mathrm{ra} \le 360$.
     - $-90 \le \mathrm{dec} \le 90$.
-    - `equinox` must start with `J` (Julien epoch) or `B` (Besselian epoch) followed by string which can be converted to a float number. Note that down to the first digit after the decimal is considered.
     - `priority` must be positive.
     - `exptime`must be positive.
     - `resolution` must be either `L` or `M`.
 
 
-### Stage 4
+### Flux columns
 
-At **Stage 4**, `ob_code` are checked not to have duplicates.
+TBD
+
+### Target visibility
+
+TBD
+
+### Duplicated `ob_code`
+
+`ob_code` are checked not to have duplicates.
 
 !!! danger "Errors are raised in the following case"
 
@@ -94,18 +101,9 @@ Circles show the status of each stage. Meaning of each color is the following.
 <span style="color: teal;">**Green**</span>
 : Validation at **Stage** was successful without errors and warnings.
 
-#### <u>Number of objects</u>
+#### <u>Summary table</u>
 
-Total number of objects in the list is shown.
-
-
-#### <u>Number of objects</u>
-
-Total fiberhours requested in the list is shown.
-
-#### <u>Breakdown table by priority</u>
-
-A table showing the number of objects and fiberhours in each priority group is presented.
+Numbers of objects and fiberhours for each priority are displayed for the `L` and `M` resolutions separately.
 
 ## Main panel (right)
 

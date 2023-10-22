@@ -10,7 +10,6 @@ required_keys = [
     "ob_code",
     "ra",
     "dec",
-    "equinox",
     "priority",
     "exptime",
     "resolution",
@@ -26,7 +25,6 @@ target_datatype = {
     "obj_id": np.int64,
     "ra": float,  # deg
     "dec": float,  # deg
-    "equinox": str,
     "exptime": float,  # s
     "priority": float or int,
     "resolution": str,
