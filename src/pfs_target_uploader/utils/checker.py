@@ -2,7 +2,7 @@
 
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -75,7 +75,7 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     logger.info(f"Observation period start at {date_begin}")
     logger.info(f"Observation period end at {date_end}")
 
-    daterange = pd.date_range(date_begin, date_end)
+    daterange = pd.date_range(date_begin, date_end + timedelta(days=1))
 
     ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
 
@@ -127,6 +127,90 @@ def visibility_checker(uS, date_begin=None, date_end=None):
             tgt_obs_ok.append(False)
 
     return np.array(tgt_obs_ok, dtype=bool)
+
+
+def visibility_checker_vec(
+    df: pd.DataFrame,
+    date_begin: datetime = None,
+    date_end: datetime = None,
+    min_el: float = 30.0,
+    max_el: float = 85.0,
+) -> np.ndarray:
+    if df.index.size == 0:
+        return np.array([], dtype=bool)
+
+    # set timezone to HST
+    tz_HST = tz.gettz("US/Hawaii")
+
+    # set next semester if there is no range is defined.
+    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
+
+    if date_begin is None:
+        date_begin = tmp_begin
+    if date_end is None:
+        date_end = tmp_end
+
+    logger.info(f"Observation period start at {date_begin}")
+    logger.info(f"Observation period end at {date_end}")
+
+    # include the last date instead of removing it
+    daterange = pd.date_range(date_begin, date_end + timedelta(days=1), tz=tz_HST)
+
+    dates_begin, dates_end = daterange[:-1], daterange[1:]
+
+    nights_begin = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
+        for d in dates_begin
+    ]
+    nights_end = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
+        for d in dates_end
+    ]
+
+    # # one can set start/stop times with sunset/sunrise
+    # datetime_sunset = [observer.sunset(d) for d in dates_begin]
+    # datetime_sunrise = [observer.sunrise(d) for d in dates_end]
+
+    # define targets
+    targets = [
+        StaticTarget(name=df["ob_code"][i], ra=df["ra"][i], dec=df["dec"][i])
+        for i in range(df.index.size)
+    ]
+
+    def process_single_target(target: StaticTarget, exptime: float) -> bool:
+        t_obs_ok_single = 0
+        for dd in range(len(dates_begin)):
+            observer.set_date(nights_begin[dd])
+            _, t_start, t_stop = observer.observable(
+                target,
+                nights_begin[dd],
+                nights_end[dd],
+                # datetime_sunset[dd],
+                # datetime_sunrise[dd],
+                min_el,  # [deg]
+                max_el,  # [deg]
+                exptime,  # [s] TODO: This has to be a total time including overheads
+                airmass=None,
+                moon_sep=None,
+            )
+            try:
+                if t_stop > t_start:
+                    t_obs_ok_single += (t_stop - t_start).seconds
+            except TypeError:
+                continue
+
+            # Once t_obs_ok_single exceeds the required exptime, you can exit the function
+            if t_obs_ok_single >= exptime:
+                return True
+        # If it not ever returned before, it means that the object cannot be observed in the input period
+        return False
+
+    # make the object loop vectorized
+    vec_func = np.vectorize(process_single_target, otypes=["bool"])
+    # TODO: Exposure time should be the total time required to make an exposure (i.e., incl. overheads)
+    is_observable = vec_func(targets, df["exptime"])
+
+    return is_observable
 
 
 def check_keys(
@@ -356,10 +440,17 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     return dict_flux, df
 
 
-def check_visibility(df, date_begin=None, date_end=None, logger=logger):
+def check_visibility(
+    df, date_begin=None, date_end=None, vectorized=True, logger=logger
+):
     dict_visibility = {}
 
-    is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
+    if vectorized:
+        is_visible = visibility_checker_vec(
+            df, date_begin=date_begin, date_end=date_end
+        )
+    else:
+        is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
 
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")
@@ -470,7 +561,9 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
 
     # check columns for visibility
     logger.info("[TMP 2] Checking target visibility")
-    dict_visibility = check_visibility(df, date_begin=date_begin, date_end=date_end)
+    dict_visibility = check_visibility(
+        df, date_begin=date_begin, date_end=date_end, vectorized=True
+    )
     logger.info(f"[TMP 2] status: {dict_visibility['status']} (Success if True)")
     validation_status["visibility"] = dict_visibility
     # if not dict_visibility["status"]:
