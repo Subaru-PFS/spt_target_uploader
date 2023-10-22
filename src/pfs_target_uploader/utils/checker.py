@@ -2,7 +2,7 @@
 
 import re
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -75,7 +75,7 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     logger.info(f"Observation period start at {date_begin}")
     logger.info(f"Observation period end at {date_end}")
 
-    daterange = pd.date_range(date_begin, date_end)
+    daterange = pd.date_range(date_begin, date_end + timedelta(days=1))
 
     ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
 
