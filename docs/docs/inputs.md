@@ -142,4 +142,4 @@ Input target list must be a Comma-separated values (CSV) file.
 
 ## Example
 
-An example CSV file can be found in [this link](examples/example_targetlist.csv)
+An example CSV file containing 100 random entries can be found in [this link](examples/example_targetlist_random100.csv).
