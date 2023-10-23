@@ -52,7 +52,9 @@ if parse_version(bokeh.__version__) < parse_version("3.3"):
     hv.renderer("bokeh").webgl = False
 
 
-def PPPrunStart(uS, weight_para):
+def PPPrunStart(uS, weight_para, d_pfi=1.38):
+    r_pfi = d_pfi / 2.0
+
     def count_N(sample):
         """calculate local count of targets
 
@@ -108,7 +110,7 @@ def PPPrunStart(uS, weight_para):
 
         return sample
 
-    def target_DBSCAN(sample, sep=1.38):
+    def target_DBSCAN(sample, sep=d_pfi):
         """separate pointings/targets into different groups
 
         Parameters
@@ -200,7 +202,7 @@ def PPPrunStart(uS, weight_para):
         # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
         hexagon = center.directional_offset_by(
             [30 + PA, 90 + PA, 150 + PA, 210 + PA, 270 + PA, 330 + PA, 30 + PA] * u.deg,
-            1.38 / 2.0 * u.deg,
+            r_pfi * u.deg,
         )
         ra_h = hexagon.ra.deg
         dec_h = hexagon.dec.deg
@@ -233,7 +235,7 @@ def PPPrunStart(uS, weight_para):
         """
         values = np.vstack((np.deg2rad(sample["dec"]), np.deg2rad(sample["ra"])))
         kde = KernelDensity(
-            bandwidth=np.deg2rad(1.38 / 2.0),
+            bandwidth=np.deg2rad(r_pfi),
             kernel="linear",
             algorithm="ball_tree",
             metric="haversine",
@@ -343,7 +345,7 @@ def PPPrunStart(uS, weight_para):
 
         peak = []
 
-        for sample in target_DBSCAN(sample_f, 1.38):
+        for sample in target_DBSCAN(sample_f, d_pfi):
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
             while any(sample_s["exptime_PPP"] > 0):
@@ -387,7 +389,7 @@ def PPPrunStart(uS, weight_para):
         return sample_f
 
     def plot_KDE(sample_f):
-        sample_g = target_DBSCAN(sample_f, 1.38, True)
+        sample_g = target_DBSCAN(sample_f, d_pfi, True)
         peak = sample_f.meta["PPC"]
         for sample in sample_g:
             plt.figure(figsize=(7, 5))
@@ -426,7 +428,7 @@ def PPPrunStart(uS, weight_para):
         ppc_xy = sample.meta["PPC"]
 
         # haversine uses (dec,ra) in radian;
-        db = DBSCAN(eps=np.radians(1.38), min_samples=1, metric="haversine").fit(
+        db = DBSCAN(eps=np.radians(d_pfi), min_samples=1, metric="haversine").fit(
             np.fliplr(np.radians(ppc_xy[:, [1, 2]]))
         )
 
@@ -947,7 +949,11 @@ def PPPrunStart(uS, weight_para):
     )
 
 
-def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
+def ppp_result(
+    cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2, d_pfi=1.38
+):
+    r_pfi = d_pfi / 2.0
+
     def overheads(n_sci_frame):
         # in seconds
         t_exp_sci: float = 900.0
@@ -1026,7 +1032,7 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                             30 + pa_t,
                         ]
                         * u.deg,
-                        1.38 / 2.0 * u.deg,
+                        r_pfi * u.deg,
                     )
                     ra_h = hexagon.ra.deg
                     dec_h = hexagon.dec.deg
@@ -1077,7 +1083,13 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                 legend=True,
             )
 
-            return (p_tgt * p_ppc).opts(show_grid=True, shared_axes=False)
+            # dec_min = np.min([np.min(obj_allo1["ppc_dec"]), np.min(uS_["dec"])])
+            # dec_max = np.max([np.max(obj_allo1["ppc_dec"]), np.max(uS_["dec"])])
+            dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - r_pfi
+            dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + r_pfi
+            return (p_tgt * p_ppc).opts(
+                ylim=(dec_min, dec_max), show_grid=True, shared_axes=False
+            )
 
         def plot_CR(nppc_fin):
             cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
