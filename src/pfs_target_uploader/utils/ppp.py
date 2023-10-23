@@ -18,6 +18,7 @@ import seaborn as sns
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
+from logzero import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
@@ -831,6 +832,10 @@ def PPPrunStart(uS, weight_para):
 
             return obj_allo
 
+    # computation starts here
+    logger.info("PPP run started")
+    t_ppp_start = time.time()
+
     conta, contb, contc = weight_para
 
     exptime_ppp = np.ceil(uS["exptime"] / 900) * 900
@@ -838,6 +843,17 @@ def PPPrunStart(uS, weight_para):
 
     uS_L = uS[uS["resolution"] == "L"]
     uS_M = uS[uS["resolution"] == "M"]
+
+    out_uS_L2 = []
+    out_cR_L = []
+    out_cR_L_ = []
+    out_sub_l = []
+    out_obj_allo_L_fin = []
+    out_uS_M2 = []
+    out_cR_M = []
+    out_cR_M_ = []
+    out_sub_m = []
+    out_obj_allo_M_fin = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
         uS_L_s2 = PPP_centers(uS_L, True, conta, contb, contc)
@@ -848,7 +864,13 @@ def PPPrunStart(uS, weight_para):
         uS_L_s2.remove_column("allocate_time")
         uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
 
-        return uS_L2, cR_L, cR_L_, sub_l, obj_allo_L_fin, [], [], [], [], []
+        out_uS_L2 = uS_L2
+        out_cR_L = cR_L
+        out_cR_L_ = cR_L_
+        out_sub_l = sub_l
+        out_obj_allo_L_fin = obj_allo_L_fin
+
+        # return uS_L2, cR_L, cR_L_, sub_l, obj_allo_L_fin, [], [], [], [], []
 
     if len(uS_M) > 0 and len(uS_L) == 0:
         uS_M_s2 = PPP_centers(uS_M, True, conta, contb, contc)
@@ -859,7 +881,13 @@ def PPPrunStart(uS, weight_para):
         uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
 
-        return [], [], [], [], [], uS_M2, cR_M, cR_M_, sub_m, obj_allo_M_fin
+        out_uS_M2 = uS_M2
+        out_cR_M = cR_M
+        out_cR_M_ = cR_M_
+        out_sub_m = sub_m
+        out_obj_allo_M_fin = obj_allo_M_fin
+
+        # return [], [], [], [], [], uS_M2, cR_M, cR_M_, sub_m, obj_allo_M_fin
 
     if len(uS_L) > 0 and len(uS_M) > 0:
         uS_L_s2 = PPP_centers(uS_L, True, conta, contb, contc)
@@ -878,18 +906,45 @@ def PPPrunStart(uS, weight_para):
         uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
 
-        return (
-            uS_L2,
-            cR_L,
-            cR_L_,
-            sub_l,
-            obj_allo_L_fin,
-            uS_M2,
-            cR_M,
-            cR_M_,
-            sub_m,
-            obj_allo_M_fin,
-        )
+        out_uS_L2 = uS_L2
+        out_cR_L = cR_L
+        out_cR_L_ = cR_L_
+        out_sub_l = sub_l
+        out_obj_allo_L_fin = obj_allo_L_fin
+        out_uS_M2 = uS_M2
+        out_cR_M = cR_M
+        out_cR_M_ = cR_M_
+        out_sub_m = sub_m
+        out_obj_allo_M_fin = obj_allo_M_fin
+
+        # return (
+        #     uS_L2,
+        #     cR_L,
+        #     cR_L_,
+        #     sub_l,
+        #     obj_allo_L_fin,
+        #     uS_M2,
+        #     cR_M,
+        #     cR_M_,
+        #     sub_m,
+        #     obj_allo_M_fin,
+        # )
+
+    t_ppp_stop = time.time()
+    logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
+
+    return (
+        out_uS_L2,
+        out_cR_L,
+        out_cR_L_,
+        out_sub_l,
+        out_obj_allo_L_fin,
+        out_uS_M2,
+        out_cR_M,
+        out_cR_M_,
+        out_sub_m,
+        out_obj_allo_M_fin,
+    )
 
 
 def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import time
 import warnings
 from datetime import datetime, timedelta
 
@@ -503,6 +504,15 @@ def check_unique(df, logger=logger):
 
 
 def validate_input(df, date_begin=None, date_end=None, logger=logger):
+    logger.info("Validation of the input list starts")
+    t_validate_start = time.time()
+
+    def msg_t_stop():
+        t_validate_stop = time.time()
+        logger.info(
+            f"Validation of the input list finished in {t_validate_stop-t_validate_start:.1f} seconds"
+        )
+
     validation_status = {}
 
     # Validation status
@@ -531,6 +541,7 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     validation_status["optional_keys"] = dict_optional_keys
 
     if not dict_required_keys["status"]:
+        msg_t_stop()
         return validation_status
 
     # check string values
@@ -539,6 +550,7 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     logger.info(f"[STAGE 2] status: {dict_str['status']} (Success if True)")
     validation_status["str"] = dict_str
     if not dict_str["status"]:
+        msg_t_stop()
         return validation_status
 
     # check value against allowed ranges
@@ -547,6 +559,7 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     logger.info(f"[STAGE 3] status: {dict_values['status']} (Success if True)")
     validation_status["values"] = dict_values
     if not dict_values["status"]:
+        msg_t_stop()
         return validation_status
 
     # check columns for flux
@@ -586,6 +599,5 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     else:
         logger.info("[Summary] failed to meet all validation criteria")
 
-    # logger.info(validation_status)
-
+    msg_t_stop()
     return validation_status
