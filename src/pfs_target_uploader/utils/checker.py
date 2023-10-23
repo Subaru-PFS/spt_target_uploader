@@ -302,6 +302,10 @@ def check_str(
             dict_str[f"success_{k}"] = is_match
             success_required_keys = np.logical_and(success_required_keys, is_match)
             is_success = is_success and np.all(is_match)
+            if np.all(is_match):
+                logger.info(f"[{k}] validation for string values in {k} is successful")
+            else:
+                logger.error(f"[{k}] validation for string values in {k} is failed")
 
     for k in optional_keys:
         if (k in df.columns) and (dtype[k] is str):
@@ -311,6 +315,10 @@ def check_str(
             dict_str[f"success_{k}"] = is_match
             success_optional_keys = np.logical_and(success_optional_keys, is_match)
             is_optional_success = is_optional_success and np.all(is_match)
+            if np.all(is_match):
+                logger.info(f"[{k}] validation for string values is {k} is successful")
+            else:
+                logger.warning(f"[{k}] validation for string values in {k} if failed")
 
     dict_str["status"] = is_success
     dict_str["status_optional"] = is_optional_success
@@ -321,17 +329,6 @@ def check_str(
 
 
 def check_values(df, logger=logger):
-    # TODO: check data range including:
-    # - [x] ra must be in 0 to 360
-    # - [x] dec must be in -90 to 90
-    # - [x] priority must be positive integer [0-9]
-    # - [x] exptime must be positive
-    # - [x] resolution must be 'L' or 'M'
-    #
-    # - filters must be in targetdb
-    # - fluxes must be positive
-    #
-
     # Required keys
     is_ra = np.logical_and(df["ra"] >= 0.0, df["ra"] <= 360.0)
     is_dec = np.logical_and(df["dec"] >= -90.0, df["dec"] <= 90.0)
@@ -353,6 +350,12 @@ def check_values(df, logger=logger):
         dict_values[f"success_{k}"] = v
         is_success = is_success and np.all(v)
         success_all = np.logical_and(success_all, v)
+
+        if np.all(v):
+            logger.info(f"[{k}] validation for values in {k} is successful")
+        else:
+            logger.error(f"[{k}] validation for values in {k} is failed")
+
     dict_values["status"] = is_success
     dict_values["success"] = success_all
 
