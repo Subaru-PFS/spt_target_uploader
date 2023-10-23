@@ -38,7 +38,15 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
                 encoding="utf8",
                 comment="#",
                 dtype=dtype,
-                converters={"obj_id": check_integer, "priority": check_integer},
+                converters={
+                    "ob_code": str,
+                    "obj_id": check_integer,
+                    "priority": check_integer,
+                    "resolution": str,
+                    "tract": check_integer,
+                    "patch": check_integer,
+                    "equinox": str,
+                },
             )
             load_status = True
             load_error = None
