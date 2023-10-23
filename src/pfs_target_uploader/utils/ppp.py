@@ -1059,13 +1059,14 @@ def ppp_result(
                     y="DEC",
                     by="PA",
                     title="Distribution of targets & PPC",
-                    color="gray",
+                    fill_color="lightgray",
+                    line_color="black",
                     marker="s",
-                    s=40,
+                    s=60,
                     legend=False,
                 )
 
-                return p1 * hv.Overlay(ppc_tot_plot)
+                return hv.Overlay(ppc_tot_plot) * p1
 
             p_ppc = PFS_FoV_plot(
                 obj_allo1["ppc_ra"][:nppc_fin],
@@ -1083,11 +1084,10 @@ def ppp_result(
                 legend=True,
             )
 
-            # dec_min = np.min([np.min(obj_allo1["ppc_dec"]), np.min(uS_["dec"])])
-            # dec_max = np.max([np.max(obj_allo1["ppc_dec"]), np.max(uS_["dec"])])
             dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - r_pfi
             dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + r_pfi
-            return (p_tgt * p_ppc).opts(
+
+            return (p_ppc * p_tgt).opts(
                 ylim=(dec_min, dec_max), show_grid=True, shared_axes=False
             )
 
