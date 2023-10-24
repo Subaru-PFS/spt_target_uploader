@@ -623,9 +623,12 @@ class ResultWidgets:
                     "<font size=4><u>Visibility</u></font>\n\n"
                 )
                 if n_invisible == 1:
-                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code` is not visible in the input observing period.</font>"
+                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code` is not visible in the input observing period</font>"
                 else:
-                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code`s are not visible in the input observing period.</font>"
+                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code`s are not visible in the input observing period</font>"
+                self.warning_text_visibility.object += (
+                    "<font size=3> (see the following table).</font>"
+                )
                 # self.warning_text_visibility.value = pd.DataFrame()
                 self.warning_table_visibility.frozen_columns = []
                 dfout = df.loc[~validation_status["visibility"]["success"], :]
