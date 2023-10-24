@@ -136,7 +136,7 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        df_input, validation_status = panel_input.validate(
+        validation_status, df_input = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -173,7 +173,7 @@ def target_uploader_app():
             width=20,
         )
 
-        df_input_, validation_status = panel_input.validate(
+        validation_status, df_input_ = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -286,7 +286,7 @@ The total requested time is reasonable for normal program. All the input targets
             # do the validation again (input file can be different)
             # and I don't know how to implement to return value
             # from callback to another function (sorry)
-            df_input, validation_status = panel_input.validate(
+            validation_status, df_input = panel_input.validate(
                 date_begin=panel_dates.date_begin.value,
                 date_end=panel_dates.date_end.value,
             )
