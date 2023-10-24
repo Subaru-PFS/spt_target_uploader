@@ -372,47 +372,53 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
         df[f"flux_{band}"] = np.nan
         df[f"flux_error_{band}"] = np.nan
 
-    is_found = np.zeros(df.index.size, dtype=bool)
-
-    # print(df["i2_hsc"])
-
     def assign_filter_category(k):
         for band in filter_category.keys():
-            # print(band, filter_category[band])
             if k in filter_category[band]:
                 return band
         return None
 
-    for i in range(df.index.size):
+    t_start = time.time()
+
+    def detect_fluxcolumns(s):
+        is_found_filter = False
         for c in df.columns:
             b = assign_filter_category(c)
-            # print(c, b)
             if b is not None:
-                if np.isfinite(df.loc[i, c]):
-                    if df.loc[i, f"filter_{b}"] is not None:
+                if np.isfinite(s[c]):
+                    if s[f"filter_{b}"] is not None:
                         logger.warning(
-                            f"filter_{b} has already been filled. {c} filter for {df.loc[i,'ob_code']} is skipped."
+                            f"filter_{b} has already been filled. {c} filter for {s['ob_code']} is skipped."
                         )
                         continue
 
-                    flux = df.loc[i, c]
+                    flux = s[c]
                     logger.info(
-                        f"{b} band filter column ({c}) found for OB {df.loc[i, 'ob_code']} as {flux}"
+                        f"{b} band filter column ({c}) found for OB {s['ob_code']} as {flux}"
                     )
-                    is_found[i] = True
-                    df.loc[i, f"filter_{b}"] = c
-                    df.loc[i, f"flux_{b}"] = flux
+                    is_found_filter = True
+                    s[f"filter_{b}"] = c
+                    s[f"flux_{b}"] = flux
+
                     try:
-                        if np.isfinite(df.loc[i, f"{c}_error"]):
-                            flux_error = df.loc[i, f"{c}_error"]
-                            df.loc[i, f"flux_error_{b}"] = flux_error
+                        if np.isfinite(s[f"{c}_error"]):
+                            flux_error = s[f"{c}_error"]
+                            s[f"flux_error_{b}"] = flux_error
                             logger.info(
                                 f"{b} band flux error ({c}_error) found as {flux_error}"
                             )
                     except KeyError:
                         pass
 
-    # logger.info(f"{df.loc[:,'filter_i']}")
+        return s, is_found_filter
+
+    vfunc_fluxcolumns = np.vectorize(detect_fluxcolumns, otypes=[dict, bool])
+    input_list_of_dicts = df.to_dict(orient="records")
+    output_list_of_dicts, is_found = vfunc_fluxcolumns(input_list_of_dicts)
+    df = pd.DataFrame.from_records(output_list_of_dicts)
+    t_stop = time.time()
+
+    logger.info(f"Flux column detection finished in {t_stop - t_start:.2f} [s]")
 
     dict_flux = {}
     dict_flux["success"] = is_found
