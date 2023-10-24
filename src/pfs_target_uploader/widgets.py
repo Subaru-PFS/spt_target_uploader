@@ -10,7 +10,6 @@ import pandas as pd
 import panel as pn
 import param
 from logzero import logger
-from matplotlib.rcsetup import validate_any
 from zoneinfo import ZoneInfo
 
 from .utils.checker import get_semester_daterange, validate_input
@@ -262,9 +261,9 @@ class StatusWidgets:
                 {
                     "Priority": unique_priority,
                     "N (L)": number_priority_L,
-                    "Texp (L)": exptime_priority_L / 3600,
+                    "Texp (L) / FH": exptime_priority_L / 3600,
                     "N (M)": number_priority_M,
-                    "Texp (M)": exptime_priority_M / 3600,
+                    "Texp (M) / FH": exptime_priority_M / 3600,
                 }
             )
 
@@ -528,7 +527,11 @@ class ResultWidgets:
         if validation_status["str"]["status"] is None:
             pass
         elif validation_status["str"]["status"]:
-            pass
+            is_info = self.append_title(is_info, "info")
+            self.info_text_str = """<font size=4><u>String values</u></font>
+
+<font size=3>All string values consist of `[A-Za-z0-9_-+.]` </font>"""
+            self.info_pane.append(self.info_text_str)
         elif not validation_status["str"]["status"]:
             is_error = self.append_title(is_error, "error")
             self.error_text_str.object = """<font size=4><u>Invalid characters in string values</u></font>
@@ -555,14 +558,18 @@ class ResultWidgets:
         if validation_status["values"]["status"] is None:
             pass
         elif validation_status["values"]["status"]:
-            pass
+            is_info = self.append_title(is_info, "info")
+            self.info_text_vals.object = """<font size=4><u>Data ranges</u></font>
+
+<font size=3>All values of `ra`, `dec`, `priority`, `exptime`, and `resolution` satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>
+"""
+            self.info_pane.append(self.info_text_vals)
         elif not validation_status["values"]["status"]:
             is_error = self.append_title(is_error, "error")
             self.error_text_vals.object = """<font size=4><u>Value errors</u></font>
 
 <font size=3>Invalid values are detected for the following columns in the following entries (see [documentation](doc/validation.html)).</font>
 """
-
             for k, v in zip(
                 ["ra", "dec", "priority", "exptime", "resolution"],
                 [
@@ -661,7 +668,7 @@ class ResultWidgets:
         # Duplication
         if validation_status["unique"]["status"]:
             is_info = self.append_title(is_info, "info")
-            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`s</u></font>\n\n<font size=3>All `ob_code` are unique</font>"
+            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`s</u></font>\n\n<font size=3>All `ob_code` are unique.</font>"
             self.info_pane.append(self.info_text_dups)
             self.error_table_dups.visible = False
         else:
@@ -709,6 +716,7 @@ class PPPresultWidgets:
         self.ppp_figure.visible = False
 
     def show_results(self, mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
+        logger.info("showing PPP results")
         self.ppp_figure.append(ppp_Alert)
         self.ppp_figure.append(
             pn.pane.Markdown(
@@ -720,6 +728,7 @@ class PPPresultWidgets:
         self.ppp_figure.append(p_result_tab)
         self.ppp_figure.append(p_result_fig)
         self.ppp_figure.visible = True
+        logger.info("showing PPP results done")
 
 
 class ValidateButtonWidgets:

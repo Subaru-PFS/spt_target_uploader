@@ -27,7 +27,7 @@ from . import (
 warnings.filterwarnings("ignore")
 
 
-def get_semester_daterange(dt, current=False, next=False):
+def get_semester_daterange(dt, current=False, next=True):
     if current and next:
         logger.error("current and next cannot be True at the same time")
         raise ValueError
@@ -75,8 +75,8 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     if date_end is None:
         date_end = tmp_end
 
-    logger.info(f"Observation period start at {date_begin}")
-    logger.info(f"Observation period end at {date_end}")
+    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
+    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
 
     daterange = pd.date_range(date_begin, date_end + timedelta(days=1))
 
@@ -153,8 +153,8 @@ def visibility_checker_vec(
     if date_end is None:
         date_end = tmp_end
 
-    logger.info(f"Observation period start at {date_begin}")
-    logger.info(f"Observation period end at {date_end}")
+    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
+    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
 
     # include the last date instead of removing it
     daterange = pd.date_range(date_begin, date_end + timedelta(days=1), tz=tz_HST)
@@ -622,11 +622,10 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     msg_t_stop()
 
     # remove unregistered columns from the dataframe
+    logger.info("Dropping columns not in the required, optional, and filter keys")
     for k in df.columns:
         if k not in required_keys + optional_keys + filter_keys:
-            logger.info(
-                f'Column "{k}" is dropped as it\'s not in the required, optional, and filter keys.'
-            )
+            logger.info(f'"{k}" is dropped')
             df.drop(columns=[k], inplace=True)
 
     return validation_status, df

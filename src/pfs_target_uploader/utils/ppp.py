@@ -1228,10 +1228,13 @@ def ppp_result(
 
         return nppc, p_result_fig, p_result_tab, p_result_ppc
 
+    # function starts here
+    logger.info("start creating PPP figures")
     if len(cR_l) > 0 and len(cR_m) == 0:
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
             "low", cR_l, sub_l, obj_allo_l, uS_L2
         )
+        logger.info("creating PPP figures finished ")
 
         return "low", nppc_l, p_result_fig_l, p_result_ppc_l, p_result_tab_l
 
@@ -1239,6 +1242,7 @@ def ppp_result(
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
+        logger.info("creating PPP figures finished ")
 
         return "medium", nppc_m, p_result_fig_m, p_result_ppc_m, p_result_tab_m
 
@@ -1285,6 +1289,7 @@ def ppp_result(
             disabled=True,
         )
 
+        logger.info("creating PPP figures finished ")
         return (
             "low & medium",
             nppc_fin,
