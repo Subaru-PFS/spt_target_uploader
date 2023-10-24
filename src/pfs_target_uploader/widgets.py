@@ -177,11 +177,11 @@ class FileInputWidgets(param.Parameterized):
             pn.state.notifications.error("Please select a CSV file.")
             return None, None
 
-        validation_status = validate_input(
+        df_output, validation_status = validate_input(
             df_input, date_begin=date_begin, date_end=date_end
         )
 
-        return df_input, validation_status
+        return df_output, validation_status
 
 
 class StatusWidgets:

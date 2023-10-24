@@ -46,6 +46,7 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
                     "tract": check_integer,
                     "patch": check_integer,
                     "equinox": str,
+                    "comment": str,
                 },
             )
             load_status = True
