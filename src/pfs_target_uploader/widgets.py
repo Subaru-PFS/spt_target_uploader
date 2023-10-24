@@ -10,6 +10,7 @@ import pandas as pd
 import panel as pn
 import param
 from logzero import logger
+from matplotlib.rcsetup import validate_any
 from zoneinfo import ZoneInfo
 
 from .utils.checker import get_semester_daterange, validate_input
@@ -177,11 +178,11 @@ class FileInputWidgets(param.Parameterized):
             pn.state.notifications.error("Please select a CSV file.")
             return None, None
 
-        df_output, validation_status = validate_input(
+        validation_status, df_output = validate_input(
             df_input, date_begin=date_begin, date_end=date_end
         )
 
-        return df_output, validation_status
+        return validation_status, df_output
 
 
 class StatusWidgets:
@@ -313,6 +314,7 @@ class TargetWidgets:
 
 
 class ResultWidgets:
+    box_width = 1200
     tabulator_kwargs = dict(
         page_size=50,
         theme="bootstrap",
@@ -323,55 +325,61 @@ class ResultWidgets:
         visible=False,
         layout="fit_data_table",
         disabled=True,
+        max_width=box_width,
     )
 
     def __init__(self):
         # grand title of the main pane
         self.title = pn.pane.Markdown(
-            """# Validation results
-<font size='3'>Please check the validation results carefully and fix any errors to proceed to the submission.</font>
+            """# Results on the validation of the input list
+<font size='3'>Please check the validation results carefully and fix the input list accordingly before proceeding to the submission.</font>
 """,
-            # renderer="myst",
             dedent=True,
         )
 
         # subsection titles
         self.error_title = pn.pane.Alert(
-            """### Errors
-Detected errors are listed below. Please fix them.
+            """<font size=5>🚫 **Errors**</font>\n\n
+<font size=3>Detected errors are listed below. Please fix them.</font>
             """,
             alert_type="danger",
+            max_width=self.box_width,
         )
         self.warning_title = pn.pane.Alert(
-            """### Warnings
-Detected warnings detected. Please take a look and fix them if possible and necessary.""",
+            """<font size=5>⚠️ **Warnings**</font>\n\n
+<font size=3>Detected warnings listed below. Please take a look and fix them if possible and necessary.</font>""",
             alert_type="warning",
+            max_width=self.box_width,
         )
         self.info_title = pn.pane.Alert(
-            """### Info""",
+            """<font size=5>✅ Info</font>\n\n
+<font size=3>The following items are successfully passed the validation.</font>""",
             alert_type="success",
+            max_width=self.box_width,
         )
 
         # subsection texts
-        self.error_text_success = pn.pane.Markdown("")
-        self.error_text_keys = pn.pane.Markdown("")
-        self.error_text_str = pn.pane.Markdown("")
-        self.error_text_vals = pn.pane.Markdown("")
-        self.error_text_flux = pn.pane.Markdown("")
-        self.error_text_visibility = pn.pane.Markdown("")
-        self.error_text_dups = pn.pane.Markdown("")
+        self.error_text_success = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_keys = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_str = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_vals = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_flux = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
+        self.error_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
-        self.warning_text_keys = pn.pane.Markdown("")
-        self.warning_text_str = pn.pane.Markdown("")
-        self.warning_text_vals = pn.pane.Markdown("")
-        self.warning_text_visibility = pn.pane.Markdown("")
+        self.warning_text_keys = pn.pane.Markdown(
+            "<font size=5>Missing optional keys</font>\n", max_width=self.box_width
+        )
+        self.warning_text_str = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
 
-        self.info_text_keys = pn.pane.Markdown("")
-        self.info_text_str = pn.pane.Markdown("")
-        self.info_text_vals = pn.pane.Markdown("")
-        self.info_text_flux = pn.pane.Markdown("")
-        self.info_text_visibility = pn.pane.Markdown("")
-        self.info_text_dups = pn.pane.Markdown("")
+        self.info_text_keys = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_str = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_vals = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_flux = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.error_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
         self.warning_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
@@ -390,73 +398,35 @@ Detected warnings detected. Please take a look and fix them if possible and nece
 
         self.error_table_dups = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
 
+        self.error_pane = pn.Column()
+        self.warning_pane = pn.Column()
+        self.info_pane = pn.Column()
+
         self.pane = pn.Column(
-            self.title,
-            # put errors first
-            self.error_title,
-            # show success message
+            self.title, self.error_pane, self.warning_pane, self.info_pane
+        )
+
+    def reset(self):
+        for t in [
             self.error_text_success,
-            # errors on required keys (no need to put a table)
             self.error_text_keys,
-            # errors on characters in string values
             self.error_text_str,
-            self.error_table_str,
-            # errors on out-of-range values
             self.error_text_vals,
-            self.error_table_vals,
-            # errors on flux columns
             self.error_text_flux,
-            self.error_table_flux,
-            # errors on visibility
             self.error_text_visibility,
-            self.error_table_visibility,
-            # errors on duplicate ob_codes
             self.error_text_dups,
-            self.error_table_dups,
-            # warnings next
-            self.warning_title,
-            # warnings on optional keys
             self.warning_text_keys,
-            # warnings on characters in string values (for optional keywords)
             self.warning_text_str,
-            self.warning_table_str,
-            # warnings on out-of-range values
             self.warning_text_vals,
-            self.warning_table_vals,
-            # warnings on visibility
             self.warning_text_visibility,
-            self.warning_table_visibility,
-            # successful vaildations last
-            self.info_title,
             self.info_text_keys,
             self.info_text_str,
             self.info_text_vals,
             self.info_text_flux,
             self.info_text_visibility,
             self.info_text_dups,
-            # height=200,
-        )
-
-    def reset(self):
-        self.error_text_success.object = "\n####"
-        self.error_text_keys.object = "\n####"
-        self.error_text_str.object = "\n####"
-        self.error_text_vals.object = "\n####"
-        self.error_text_flux.object = "\n####"
-        self.error_text_visibility.object = "\n####"
-        self.error_text_dups.object = "\n####"
-
-        self.warning_text_keys.object = "\n####"
-        self.warning_text_str.object = "\n####"
-        self.warning_text_vals.object = "\n####"
-        self.warning_text_visibility.object = "\n####"
-
-        self.info_text_keys.object = "\n####"
-        self.info_text_str.object = "\n####"
-        self.info_text_vals.object = "\n####"
-        self.info_text_flux.object = "\n####"
-        self.info_text_visibility.object = "\n####"
-        self.info_text_dups.object = "\n####"
+        ]:
+            t.object = ""
 
         for t in [
             self.error_table_str,
@@ -471,138 +441,223 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             t.value = pd.DataFrame()
             t.visible = False
 
+        self.error_pane.objects.clear()
+        self.warning_pane.objects.clear()
+        self.info_pane.objects.clear()
+
+        # self.pane.objects.clear()
+
+    def append_title(self, flag, status_str):
+        if status_str == "error":
+            if not flag:
+                self.error_pane.append(self.error_title)
+                flag = True
+        if status_str == "warning":
+            if not flag:
+                self.warning_pane.append(self.warning_title)
+                flag = True
+        if status_str == "info":
+            if not flag:
+                self.info_pane.append(self.info_title)
+                flag = True
+        return flag
+
     def show_results(self, df, validation_status):
+        # self.pane.append(self.title)
+
+        is_error = False
+        is_warning = False
+        is_info = False
+
         if validation_status["status"]:
             self.error_title.visible = False
 
-        # Stage 1 results
-        for desc in validation_status["required_keys"]["desc_error"]:
-            self.error_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
+        # Errors on missing required keys
+        if not validation_status["required_keys"]["status"]:
+            self.error_text_keys.object = (
+                "<font size=4><u>Missing required columns</u></font>\n"
+            )
+            for desc in validation_status["required_keys"]["desc_error"]:
+                self.error_text_keys.object += f"- <font size='3'>{desc}</font>\n"
+            is_error = self.append_title(is_error, "error")
+            self.error_pane.append(self.error_text_keys)
 
-        for desc in validation_status["optional_keys"]["desc_warning"]:
-            self.warning_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
+        # Warnings on missing optional keys
+        if not validation_status["optional_keys"]["status"]:
+            self.warning_text_keys.object = (
+                "<font size=4><u>Missing optional columns</u></font>\n"
+            )
+            for desc in validation_status["optional_keys"]["desc_warning"]:
+                self.warning_text_keys.object += f"- <font size='3'>{desc}</font>\n"
+            is_warning = self.append_title(is_warning, "warning")
+            self.warning_pane.append(self.warning_text_keys)
 
-        for desc in validation_status["required_keys"]["desc_success"]:
-            self.info_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
+        # Info on discovered keys
+        n_req_success = len(validation_status["required_keys"]["desc_success"])
+        n_opt_success = len(validation_status["optional_keys"]["desc_success"])
+        if n_req_success + n_opt_success > 0:
+            is_info = self.append_title(is_info, "info")
+            self.info_text_keys.object = (
+                "<font size=4><u>Discovered columns</u></font>\n"
+            )
+            for desc in validation_status["required_keys"]["desc_success"]:
+                self.info_text_keys.object += f"- <font size='3'>{desc}</font>\n"
+            for desc in validation_status["optional_keys"]["desc_success"]:
+                self.info_text_keys.object += f"- <font size='3'>{desc}</font>\n"
+            self.info_pane.append(self.info_text_keys)
 
-        for desc in validation_status["optional_keys"]["desc_success"]:
-            self.info_text_keys.object += f"\n<font size='3'>{desc}</font>\n"
-
-        # Stage 2 results
+        # if there are missing required columns, return immediately
         if not validation_status["required_keys"]["status"]:
             return
 
+        # String values
         if validation_status["str"]["status"] is None:
             pass
         elif validation_status["str"]["status"]:
             pass
         elif not validation_status["str"]["status"]:
-            self.error_text_str.object += """\n
-<font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
-<font size='3'>The following entries must be fixed.</font>
-                """
+            is_error = self.append_title(is_error, "error")
+            self.error_text_str.object = """<font size=4><u>Invalid characters in string values</u></font>
+
+<font size=3>String values must consist of `[A-Za-z0-9_-+.]`. The following entries must be fixed.</font>"""
+
+            is_invalid_str = np.logical_or(
+                ~validation_status["str"]["success_required"],
+                ~validation_status["str"]["success_optional"],
+            )
             self.error_table_str.frozen_columns = []
             # self.error_table_str.value = pd.DataFrame()
-            self.error_table_str.value = df.loc[
-                ~validation_status["str"]["success_required"], :
-            ]
+            self.error_table_str.value = df.loc[is_invalid_str, :]
             self.error_table_str.frozen_columns = ["index"]
+            self.error_pane.append(self.error_text_str)
+            self.error_pane.append(self.error_table_str)
             self.error_table_str.visible = True
 
-        if not validation_status["str"]["status_optional"]:
-            self.warning_text_str.object += """\n
-<font size='3'>String values must consist of `[A-Za-z0-9_-+.]`.</font>
-<font size='3'>The following entries must be fixed.</font>
-                """
-            self.warning_table_str.frozen_columns = []
-            # self.warning_table_str.value = pd.DataFrame()
-            self.warning_table_str.value = df.loc[
-                ~validation_status["str"]["success_optional"], :
-            ]
-            self.warning_table_str.frozen_columns = ["index"]
-            self.warning_table_str.visible = True
-
-        # Stage 3 results
+        # If string validation failed, retrun immediately
         if not validation_status["str"]["status"]:
             return
 
+        # Data range
         if validation_status["values"]["status"] is None:
             pass
         elif validation_status["values"]["status"]:
             pass
         elif not validation_status["values"]["status"]:
-            self.error_text_vals.object += """\n<font size='3'>Errors in values are detected for the following entries (See [documentation](doc/validation.html#stage-3)). </font>"""
+            is_error = self.append_title(is_error, "error")
+            self.error_text_vals.object = """<font size=4><u>Value errors</u></font>
+
+<font size=3>Invalid values are detected for the following columns in the following entries (see [documentation](doc/validation.html)).</font>
+"""
+
+            for k, v in zip(
+                ["ra", "dec", "priority", "exptime", "resolution"],
+                [
+                    "0 < `ra` < 360",
+                    "-90 < `dec` < 90",
+                    "[0, 9]",
+                    "positive `float` value",
+                    "`L` or `M`",
+                ],
+            ):
+                if not validation_status["values"][f"status_{k}"]:
+                    self.error_text_vals.object += (
+                        f"- <font size=3>`{k}` ({v})</font>\n"
+                    )
             self.error_table_vals.frozen_columns = []
             # self.error_table_vals.value = pd.DataFrame()
             self.error_table_vals.value = df.loc[
                 ~validation_status["values"]["success"], :
             ]
             self.error_table_vals.frozen_columns = ["index"]
+            self.error_pane.append(self.error_text_vals)
+            self.error_pane.append(self.error_table_vals)
             self.error_table_vals.visible = True
 
-        # Stage 3' results
+        # If invalid values are detected, return immediately
         if not validation_status["values"]["status"]:
             return
 
+        # flux columns
+        # TODO: show a list of detected/undetected flux columns
         if validation_status["flux"]["status"]:
-            self.info_text_flux.object += "\n<font size='3'>All `ob_code`s have at least one flux information</font>\n"
+            is_info = self.append_title(is_info, "info")
+            self.info_text_flux.object = "<font size=4><u>Flux information</u></font>\n\n<font size=3>All `ob_code`s have at least one flux information. The detected filters are the following: </font>"
+            for f in validation_status["flux"]["filters"]:
+                self.info_text_flux.object += f"<font size=3>`{f}`</font>, "
+            self.info_text_flux.object = self.info_text_flux.object[:-2]
+
+            self.info_pane.append(self.info_text_flux)
             self.error_table_flux.visible = False
         else:
+            is_error = self.append_title(is_error, "error")
             # add an error message and data table for duplicates
-            self.error_text_flux.object += "\n<font size='3'>No flux info found in the following `ob_code`s:</font>\n"
+            self.error_text_flux.object = "<font size=4><u>Missing flux information</u></font>\n\n<font size=3>No flux information found in the following `ob_code`s. Detected filters are the following: </font>"
+            for f in validation_status["flux"]["filters"]:
+                self.error_text_flux.object += f"<font size=3>`{f}`</font>, "
+            self.error_text_flux.object = self.error_text_flux.object[:-2]
+
             self.error_table_flux.frozen_columns = []
             # self.error_table_flux.value = pd.DataFrame()
             self.error_table_flux.value = df.loc[
                 ~validation_status["flux"]["success"], :
             ]
             self.error_table_flux.frozen_columns = ["index"]
+            self.error_pane.append(self.error_text_flux)
+            self.error_pane.append(self.error_table_flux)
             self.error_table_flux.visible = True
 
-        # Stage 3'' results
+        # Visibility
+        # TODO: add begin_date and end_date in the message
         if validation_status["visibility"]["status"]:
             if np.all(validation_status["visibility"]["success"]):
-                self.info_text_flux.object += "\n<font size='3'>All `ob_code`s are visible in the input observing period.</font>\n"
+                is_info = self.append_title(is_info, "info")
+                self.info_text_visibility.object = "<font size=4><u>Visibility</u></font>\n\n<font size=3>All `ob_code`s are visible in the input observing period.</font>"
+                self.info_pane.append(self.info_text_visibility)
             elif np.any(validation_status["visibility"]["success"]):
-                self.warning_text_visibility.object += "\n<font size='3'>Some `ob_code`s are not visible in the input observing period.</font>\n"
+                is_warning = self.append_title(is_warning, "warning")
+                n_invisible = np.count_nonzero(
+                    ~validation_status["visibility"]["success"]
+                )
+                self.warning_text_visibility.object = (
+                    "<font size=4><u>Visibility</u></font>\n\n"
+                )
+                if n_invisible == 1:
+                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code` is not visible in the input observing period.</font>"
+                else:
+                    self.warning_text_visibility.object += f"<font size=3>{n_invisible} `ob_code`s are not visible in the input observing period.</font>"
                 # self.warning_text_visibility.value = pd.DataFrame()
-                self.error_table_flux.frozen_columns = []
+                self.warning_table_visibility.frozen_columns = []
                 dfout = df.loc[~validation_status["visibility"]["success"], :]
                 self.warning_table_visibility.value = dfout
-                self.error_table_flux.frozen_columns = ["index"]
+                self.warning_table_visibility.frozen_columns = ["index"]
+                self.warning_pane.append(self.warning_text_visibility)
+                self.warning_pane.append(self.warning_table_visibility)
                 self.warning_table_visibility.visible = True
             self.error_table_visibility.visible = False
         else:
+            is_error = self.append_title(is_error, "error")
             # add an error message and data table for duplicates
-            self.error_text_visibility.object += "\n<font size='3'>None of `ob_code`s are visible in the input observing period.</font>\n"
+            self.error_text_visibility.object = "<font size=4><u>Visibility</u></font>\n\n<font size='3'>None of `ob_code`s in the list is visible in the input observing period.</font>"
+            self.error_pane.append(self.error_text_visibility)
 
-        # Stage 4 results
+        # Duplication
         if validation_status["unique"]["status"]:
-            self.info_text_dups.object += (
-                "\n<font size='3'>All `ob_code` are unique</font>\n"
-            )
-            # tweak for text update (I don't know the cause)
-            # self.error_text_dups.object += "\n###"
+            is_info = self.append_title(is_info, "info")
+            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`s</u></font>\n\n<font size=3>All `ob_code` are unique</font>"
+            self.info_pane.append(self.info_text_dups)
             self.error_table_dups.visible = False
         else:
+            is_error = self.append_title(is_error, "error")
             # add an error message and data table for duplicates
-            self.error_text_dups.object += "\n<font size='3'>`ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets:</font>\n"
+            self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code`s </u></font>\n\n<font size=3>Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets</font>"
             self.error_table_dups.frozen_columns = []
             # self.error_table_dups.value = pd.DataFrame()
             self.error_table_dups.value = df.loc[
                 validation_status["unique"]["flags"], :
             ]
+            self.error_pane.append(self.error_text_dups)
+            self.error_pane.append(self.error_table_dups)
             self.error_table_dups.frozen_columns = ["index"]
-
-            # BUG: it seems that the pandas-like styling does not work for panel>1.0.4 or so.
-            # def _set_column_color(x, c="red"):
-            #     print("setting background for the ob_code column")
-            #     return [f"background-color: {c}" for _ in x]
-            # self.table_duplicate.style.apply(
-            #     _set_column_color,
-            #     axis=0,
-            #     subset=["ob_code"],
-            #     # c="green",
-            # )
             self.error_table_dups.visible = True
 
         if (
@@ -613,7 +668,6 @@ Detected warnings detected. Please take a look and fix them if possible and nece
             and validation_status["visibility"]["status"]
             and validation_status["unique"]["status"]
         ):
-            # self.error_text_success.object += "\n<font size='3'>No error is found. Congratulations. You can proceed to the submission.</font>\n"
             self.error_text_success.visible = False
 
 
