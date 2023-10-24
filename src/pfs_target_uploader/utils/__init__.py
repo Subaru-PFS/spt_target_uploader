@@ -2,7 +2,14 @@
 
 import numpy as np
 
-__all__ = ["required_keys", "optional_keys", "target_datatype", "filter_category"]
+__all__ = [
+    "required_keys",
+    "optional_keys",
+    "optional_keys_default",
+    "filter_keys",
+    "target_datatype",
+    "filter_category",
+]
 
 
 required_keys = [
@@ -17,6 +24,13 @@ required_keys = [
 
 
 optional_keys = ["pmra", "pmdec", "parallax", "tract", "patch"]
+optional_keys_default = {
+    "pmra": 0,
+    "pmdec": 0,
+    "parallax": 1e-7,
+    "tract": None,
+    "patch": None,
+}
 
 
 target_datatype = {
@@ -90,27 +104,27 @@ filter_category = {
 # ]
 
 
-# filter_keys = [
-#     # TODO: filters must be in the filter_name table in targetDB
-#     "filter_g",
-#     "filter_r",
-#     "filter_i",
-#     "filter_z",
-#     "filter_y",
-#     "filter_j",
-#     # TODO: fluxes can be fiber, psf, total, etc.
-#     # Let's assume it is total (still ambiguous, though)
-#     "flux_g",
-#     "flux_r",
-#     "flux_i",
-#     "flux_z",
-#     "flux_y",
-#     "flux_j",
-#     # errors are optional
-#     "flux_error_g",
-#     "flux_error_r",
-#     "flux_error_i",
-#     "flux_error_z",
-#     "flux_error_y",
-#     "flux_error_j",
-# ]
+filter_keys = [
+    # TODO: filters must be in the filter_name table in targetDB
+    "filter_g",
+    "filter_r",
+    "filter_i",
+    "filter_z",
+    "filter_y",
+    "filter_j",
+    # TODO: fluxes can be fiber, psf, total, etc.
+    # Let's assume it is total (still ambiguous, though)
+    "flux_g",
+    "flux_r",
+    "flux_i",
+    "flux_z",
+    "flux_y",
+    "flux_j",
+    # errors are optional
+    "flux_error_g",
+    "flux_error_r",
+    "flux_error_i",
+    "flux_error_z",
+    "flux_error_y",
+    "flux_error_j",
+]
