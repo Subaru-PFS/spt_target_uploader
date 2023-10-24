@@ -114,7 +114,7 @@ class FileInputWidgets(param.Parameterized):
 
         self.pane = pn.Column(
             """# Step 1:
-## Select a target list (<a href='doc/examples/example_targetlist.csv' target='_blank'>example</a>)""",
+## Select a target list (<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)""",
             self.file_input,
         )
 
@@ -594,7 +594,8 @@ class ResultWidgets:
             self.error_text_flux.object = "<font size=4><u>Missing flux information</u></font>\n\n<font size=3>No flux information found in the following `ob_code`s. Detected filters are the following: </font>"
             for f in validation_status["flux"]["filters"]:
                 self.error_text_flux.object += f"<font size=3>`{f}`</font>, "
-            self.error_text_flux.object = self.error_text_flux.object[:-2]
+            if len(validation_status["flux"]["filters"]) > 0:
+                self.error_text_flux.object = self.error_text_flux.object[:-2]
 
             self.error_table_flux.frozen_columns = []
             # self.error_table_flux.value = pd.DataFrame()
