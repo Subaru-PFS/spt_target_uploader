@@ -158,11 +158,11 @@ def target_uploader_app():
         panel_submit_button.submit.disabled = True
 
         placeholder_floatpanel.objects = []
-        tab_panels.active = 1
+        # tab_panels.active = 1
         # tab_panels.visible = False
 
-        panel_status.reset()
-        panel_results.reset()
+        # panel_status.reset()
+        # panel_results.reset()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
@@ -176,6 +176,7 @@ def target_uploader_app():
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
+        tab_panels_active = 1
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)

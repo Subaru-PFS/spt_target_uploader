@@ -204,16 +204,21 @@ class StatusWidgets:
             disabled=True,
         )
 
-        self.pane = pn.Column(
-            self.status,
-            self.summary_table,
+        self.table_footnote = pn.pane.Markdown(
+            "- <font size=2>`N` is the number of `ob_code`s for each priority.</font>\n"
+            "- <font size=2>`T` is the total fiberhours of `ob_code`s for each priority.</font>\n"
+            "- <font size=2>`L` and `M` correspond to the low- and medium-resolution modes, respectively.</font>",
         )
+        self.table_footnote.visible = False
+
+        self.pane = pn.Column(self.status, self.summary_table, self.table_footnote)
 
     def reset(self):
         self.status.alert_type = "light"
         self.status.visible = False
 
         self.summary_table.visible = False
+        self.table_footnote.visible = False
 
     def show_results(self, df, validation_status):
         if validation_status["status"]:
@@ -237,48 +242,57 @@ class StatusWidgets:
         self.status.visible = True
 
         try:
-            unique_priority = np.arange(0, 10, 1)  # np.unique(df["priority"])
+            unique_priority = np.arange(0, 10, 1, dtype=object)
             number_priority_L = np.zeros_like(unique_priority, dtype=int)
             number_priority_M = np.zeros_like(unique_priority, dtype=int)
             exptime_priority_L = np.zeros_like(unique_priority, dtype=float)
             exptime_priority_M = np.zeros_like(unique_priority, dtype=float)
 
+            idx_l = df["resolution"] == "L"
+            idx_m = df["resolution"] == "M"
+
             for i, p in enumerate(unique_priority):
-                number_priority_L[i] = df.loc[
-                    (df["priority"] == p) & (df["resolution"] == "L"), :
-                ].index.size
-                number_priority_M[i] = df.loc[
-                    (df["priority"] == p) & (df["resolution"] == "M"), :
-                ].index.size
-                exptime_priority_L[i] = df.loc[
-                    (df["priority"] == p) & (df["resolution"] == "L"), "exptime"
-                ].sum()
-                exptime_priority_M[i] = df.loc[
-                    (df["priority"] == p) & (df["resolution"] == "M"), "exptime"
-                ].sum()
+                idx_p = df["priority"] == p
+                number_priority_L[i] = df.loc[idx_p & idx_l, :].index.size
+                number_priority_M[i] = df.loc[idx_p & idx_m, :].index.size
+                exptime_priority_L[i] = df.loc[idx_p & idx_l, "exptime"].sum()
+                exptime_priority_M[i] = df.loc[idx_p & idx_m, "exptime"].sum()
 
             df_summary = pd.DataFrame(
                 {
-                    "priority": unique_priority,
-                    "N_L": number_priority_L,
-                    "Texp_L (FH)": exptime_priority_L / 3600,
-                    "N_M": number_priority_M,
-                    "Texp_M (FH)": exptime_priority_M / 3600,
+                    "Priority": unique_priority,
+                    "N (L)": number_priority_L,
+                    "Texp (L)": exptime_priority_L / 3600,
+                    "N (M)": number_priority_M,
+                    "Texp (M)": exptime_priority_M / 3600,
                 }
             )
+
             df_summary.loc[len(df_summary.index)] = [
-                "total",
+                "Other",
+                df.loc[idx_l, :].index.size - sum(number_priority_L),
+                df.loc[idx_l, "exptime"].sum() - sum(exptime_priority_L),
+                df.loc[idx_m, :].index.size - sum(number_priority_M),
+                df.loc[idx_m, "exptime"].sum() - sum(exptime_priority_M),
+            ]
+
+            df_summary.loc[len(df_summary.index)] = [
+                "Total",
                 sum(number_priority_L),
                 sum(exptime_priority_L / 3600),
                 sum(number_priority_M),
                 sum(exptime_priority_M / 3600),
             ]
 
+            logger.info(f"Summary Table:\n{df_summary}")
+
             self.summary_table.value = pd.DataFrame()
             self.summary_table.value = df_summary
             self.summary_table.visible = True
+            self.table_footnote.visible = True
 
         except:
+            logger.error("failed to show the summary table in the side bar.")
             pass
 
 
