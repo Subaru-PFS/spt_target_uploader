@@ -382,7 +382,7 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
 
     def detect_fluxcolumns(s):
         is_found_filter = False
-        for c in df.columns:
+        for c in s.keys():
             b = assign_filter_category(c)
             if b is not None:
                 if np.isfinite(s[c]):
@@ -415,7 +415,7 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     vfunc_fluxcolumns = np.vectorize(detect_fluxcolumns, otypes=[dict, bool])
     input_list_of_dicts = df.to_dict(orient="records")
     output_list_of_dicts, is_found = vfunc_fluxcolumns(input_list_of_dicts)
-    df = pd.DataFrame.from_records(output_list_of_dicts)
+    dfout = pd.DataFrame.from_records(output_list_of_dicts)
     t_stop = time.time()
 
     logger.info(f"Flux column detection finished in {t_stop - t_start:.2f} [s]")
@@ -426,26 +426,27 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     if not np.all(is_found):
         dict_flux["status"] = False
         logger.error(
-            f"Flux columns are missing for objects: {df.loc[~is_found,'ob_code'].to_numpy()}"
+            f"Flux columns are missing for objects: {dfout.loc[~is_found,'ob_code'].to_numpy()}"
         )
     else:
+        logger.info("Flux columns are detected for all objects")
         dict_flux["status"] = True
 
     # cleaning
     logger.info("dropping columns with NA values for all rows.")
     for k, v in filter_category.items():
-        if df.loc[:, f"filter_{k}"].isna().all():
-            df.drop(columns=[f"filter_{k}"], inplace=True)
-            df.drop(columns=[f"flux_{k}"], inplace=True)
-            df.drop(columns=[f"flux_error_{k}"], inplace=True)
-        elif df.loc[:, f"flux_{k}"].isna().all():
-            df.drop(columns=[f"flux_{k}"], inplace=True)
-        elif df.loc[:, f"flux_error_{k}"].isna().all():
-            df.drop(columns=[f"flux_error_{k}"], inplace=True)
+        if dfout.loc[:, f"filter_{k}"].isna().all():
+            dfout.drop(columns=[f"filter_{k}"], inplace=True)
+            dfout.drop(columns=[f"flux_{k}"], inplace=True)
+            dfout.drop(columns=[f"flux_error_{k}"], inplace=True)
+        elif dfout.loc[:, f"flux_{k}"].isna().all():
+            dfout.drop(columns=[f"flux_{k}"], inplace=True)
+        elif dfout.loc[:, f"flux_error_{k}"].isna().all():
+            dfout.drop(columns=[f"flux_error_{k}"], inplace=True)
 
-    logger.info(f"{df}")
+    logger.info(f"{dfout}")
 
-    return dict_flux, df
+    return dict_flux, dfout
 
 
 def check_visibility(
@@ -609,4 +610,5 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
         logger.info("[Summary] failed to meet all validation criteria")
 
     msg_t_stop()
-    return validation_status
+
+    return df, validation_status
