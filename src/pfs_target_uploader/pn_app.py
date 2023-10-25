@@ -500,10 +500,8 @@ def list_files_app():
 
     def open_panel_magnify(event):
         if event.column == "magnify":
-            p_download = df_files_psl["fullpath"][event.row].replace(
-                config["OUTPUT_DIR"], "data", 1
-            )
-            p_ppc = os.path.split(p_download)[0]
+            p_ppc = os.path.split(df_files_psl["fullpath"][event.row])[0]
+            print(p_ppc)
             table_ppc_t = Table.read(
                 os.path.join(p_ppc, f"ppc_{df_files_psl['Upload ID'][event.row]}.ecsv")
             )
