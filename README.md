@@ -1,5 +1,6 @@
 # pfs_target_uploader
 
+Note: development main branch is the `dev-main` branch. If you develop the software, it's recommended to start from the `dev-main` branch.
 
 ## Install
 
