@@ -131,121 +131,112 @@ def upload_file(
     return outdir, upload_time, secret_token
 
 
-def load_file_properties(dir=".", ext="ecsv"):
-    config = dotenv_values(".env.shared")
-    if dir == os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]):
-        files_in_dir = glob.glob(f"{dir}/*.{ext}")
-        n_files = len(files_in_dir)
-        filenames = np.zeros(n_files, dtype=object)
-        fullpath = np.zeros(n_files, dtype=object)
-        orignames = np.zeros(n_files, dtype=object)
-        upload_ids = np.zeros(n_files, dtype=object)
-        timestamps = np.zeros(n_files, dtype="datetime64[s]")
-        filesizes = np.zeros(n_files, dtype=float)
-        n_obj = np.zeros(n_files, dtype=int)
-        t_exp = np.zeros(n_files, dtype=float)
-        links = np.zeros(n_files, dtype=object)
+def load_file_properties(datadir, ext="ecsv", n_uid=16):
+    dirs = glob.glob(f"{datadir}/????/??/*")
+    n_files = len(dirs)
 
-        for i, f in enumerate(files_in_dir):
-            if ext == "ecsv":
-                tb = Table.read(f)
-                fullpath[i] = f
-                filenames[i] = os.path.basename(f)
-                filesizes[i] = (os.path.getsize(f) * u.byte).to(u.kbyte).value
-                links[i] = f"<a href='{f}'><i class='fa-solid fa-download'></i></a>"
+    orignames = np.zeros(n_files, dtype=object)
+    upload_ids = np.zeros(n_files, dtype=object)
+    timestamps = np.zeros(n_files, dtype="datetime64[s]")
+    filesizes = np.zeros(n_files, dtype=float)
+    n_obj = np.zeros(n_files, dtype=int)
+    t_exp = np.zeros(n_files, dtype=float)
+    links = np.zeros(n_files, dtype=object)
 
+    fullpath_target = np.zeros(n_files, dtype=object)
+    fullpath_psl = np.zeros(n_files, dtype=object)
+
+    exp_sci_l = np.zeros(n_files, dtype=float)
+    exp_sci_m = np.zeros(n_files, dtype=float)
+    exp_sci_fh_l = np.zeros(n_files, dtype=float)
+    exp_sci_fh_m = np.zeros(n_files, dtype=float)
+    tot_time_l = np.zeros(n_files, dtype=float)
+    tot_time_m = np.zeros(n_files, dtype=float)
+
+    for i, d in enumerate(dirs):
+        uid = d[-n_uid:]
+        if ext == "ecsv":
+            f_target = os.path.join(d, f"target_{uid}.{ext}")
+            f_psl = os.path.join(d, f"psl_{uid}.{ext}")
+
+            tb_target = Table.read(f_target)
+            tb_psl = Table.read(f_psl)
+
+            filesizes[i] = (os.path.getsize(f_target) * u.byte).to(u.kbyte).value
+            # links[i] = f"<a href='{f_target}'><i class='fa-solid fa-download'></i></a>"
+
+            fullpath_target[i] = f_target
+            fullpath_psl[i] = f_psl
+
+            try:
+                orignames[i] = tb_target.meta["original_filename"]
+            except KeyError:
+                orignames[i] = None
+
+            try:
+                upload_ids[i] = tb_target.meta["upload_id"]
+            except KeyError:
+                upload_ids[i] = None
+
+            try:
+                if isinstance(tb_target.meta["upload_at"], str):
+                    timestamps[i] = datetime.fromisoformat(tb_target.meta["upload_at"])
+                elif isinstance(tb_target.meta["upload_at"], datetime):
+                    timestamps[i] = tb_target.meta["upload_at"]
+            except KeyError:
+                timestamps[i] = None
+
+            n_obj[i] = tb_target["ob_code"].size
+            t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
+
+            tb_l = tb_psl[tb_psl["resolution"] == "low"]
+            tb_m = tb_psl[tb_psl["resolution"] == "medium"]
+
+            if len(tb_l) > 0:
+                exp_sci_l[i] = tb_l["Texp (h)"]
+                exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
                 try:
-                    orignames[i] = tb.meta["original_filename"]
+                    tot_time_l[i] = tb_l["Request time (h)"]
                 except KeyError:
-                    orignames[i] = None
+                    tot_time_l[i] = tb_l["Request time 1 (h)"]
 
+            if len(tb_m) > 0:
+                exp_sci_m[i] = tb_m["Texp (h)"]
+                exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
                 try:
-                    upload_ids[i] = tb.meta["upload_id"]
+                    tot_time_m[i] = tb_m["Request time (h)"]
                 except KeyError:
-                    upload_ids[i] = None
+                    tot_time_m[i] = tb_m["Request time 1 (h)"]
 
-                try:
-                    timestamps[i] = datetime.fromisoformat(tb.meta["upload_at"])
-                except KeyError:
-                    timestamps[i] = None
+    df_target = pd.DataFrame(
+        {
+            "upload_id": upload_ids,
+            "n_obj": n_obj,
+            "t_exp": t_exp,
+            "origname": orignames,
+            "filesize": filesizes,
+            "timestamp": timestamps,
+            # "link": links,
+            "fullpath": fullpath_target,
+        }
+    )
 
-                n_obj[i] = tb["ob_code"].size
-                t_exp[i] = np.sum(tb["exptime"]) / 3600.0
+    df_psl = pd.DataFrame(
+        {
+            "Upload ID": upload_ids,
+            # "Filename": orignames,
+            "Exptime_sci_L (h)": exp_sci_l,
+            "Exptime_sci_M (h)": exp_sci_m,
+            "Exptime_sci_L (FH)": exp_sci_fh_l,
+            "Exptime_sci_M (FH)": exp_sci_fh_m,
+            "Time_tot_L (h)": tot_time_l,
+            "Time_tot_M (h)": tot_time_m,
+            "fullpath": fullpath_psl,
+            # "timestamp": timestamps,
+        }
+    )
 
-        df = pd.DataFrame(
-            {
-                "upload_id": upload_ids,
-                "filename": filenames,
-                "n_obj": n_obj,
-                "t_exp": t_exp,
-                "origname": orignames,
-                "filesize": filesizes,
-                "timestamp": timestamps,
-                "link": links,
-                "fullpath": fullpath,
-            }
-        )
-        return df.sort_values("timestamp", ascending=False, ignore_index=True)
-
-    elif dir == os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]):
-        files_in_dir = glob.glob(f"{dir}/*.{ext}")
-        n_files = len(files_in_dir)
-        orignames = np.zeros(n_files, dtype=object)
-        upload_ids = np.zeros(n_files, dtype=object)
-        exp_sci_l = np.zeros(n_files, dtype=float)
-        exp_sci_m = np.zeros(n_files, dtype=float)
-        exp_sci_fh_l = np.zeros(n_files, dtype=float)
-        exp_sci_fh_m = np.zeros(n_files, dtype=float)
-        tot_time_l = np.zeros(n_files, dtype=float)
-        tot_time_m = np.zeros(n_files, dtype=float)
-        # timestamps = np.zeros(n_files, dtype="datetime64[s]")
-
-        for i, f in enumerate(files_in_dir):
-            if ext == "ecsv":
-                tb = Table.read(f)
-                orignames[i] = tb.meta["original_filename"]
-                upload_ids[i] = tb.meta["upload_id"]
-                # try:
-                #     timestamps[i] = timestamps[i] = datetime.fromisoformat(
-                #         tb.meta["upload_at"]
-                #     )
-                # except KeyError:
-                #     timestamps[i] = None
-
-                tb_l = tb[tb["resolution"] == "low"]
-                tb_m = tb[tb["resolution"] == "medium"]
-
-                if len(tb_l) > 0:
-                    exp_sci_l[i] = tb_l["Texp (h)"]
-                    exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
-                    try:
-                        tot_time_l[i] = tb_l["Request time (h)"]
-                    except KeyError:
-                        tot_time_l[i] = tb_l["Request time 1 (h)"]
-
-                if len(tb_m) > 0:
-                    exp_sci_m[i] = tb_m["Texp (h)"]
-                    exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
-                    try:
-                        tot_time_m[i] = tb_m["Request time (h)"]
-                    except KeyError:
-                        tot_time_m[i] = tb_m["Request time 1 (h)"]
-
-        df = pd.DataFrame(
-            {
-                "Upload ID": upload_ids,
-                "Filename": orignames,
-                "Exptime_sci_L (h)": exp_sci_l,
-                "Exptime_sci_M (h)": exp_sci_m,
-                "Exptime_sci_L (FH)": exp_sci_fh_l,
-                "Exptime_sci_M (FH)": exp_sci_fh_m,
-                "Time_tot_L (h)": tot_time_l,
-                "Time_tot_M (h)": tot_time_m,
-                # "timestamp": timestamps,
-                # "Science category":
-                # "Community":
-            }
-        )
-
-        return df.sort_values("Upload ID", ascending=False, ignore_index=True)
-        # return df_out.sort_values("timestamp", ascending=False, ignore_index=True)
+    return (
+        df_target.sort_values("timestamp", ascending=False, ignore_index=True),
+        df_psl.sort_values("Upload ID", ascending=False, ignore_index=True),
+    )

@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 import gurobipy
 import numpy as np
@@ -38,11 +39,11 @@ def target_uploader_app():
 
     logger.info(f"config params from dotenv: {config}")
 
-    if os.path.exists(config["OUTPUT_DIR_PREFIX"]):
-        logger.info(f"{config['OUTPUT_DIR_PREFIX']} already exists.")
+    if os.path.exists(config["OUTPUT_DIR"]):
+        logger.info(f"{config['OUTPUT_DIR']} already exists.")
     else:
-        os.makedirs(config["OUTPUT_DIR_PREFIX"])
-        logger.info(f"{config['OUTPUT_DIR_PREFIX']} created.")
+        os.makedirs(config["OUTPUT_DIR"])
+        logger.info(f"{config['OUTPUT_DIR']} created.")
 
     template = pn.template.VanillaTemplate(
         title="PFS Target Uploader",
@@ -310,30 +311,12 @@ The total requested time is reasonable for normal program. All the input targets
                 df_output,
                 p_result_tab_.value,
                 p_result_ppc.value,
-                outdir_prefix=config["OUTPUT_DIR_PREFIX"],
+                outdir_prefix=config["OUTPUT_DIR"],
                 origname=panel_input.file_input.filename,
                 origdata=panel_input.file_input.value,
                 secret_token=secret_token,
                 upload_time=upload_time,
             )
-            # _, _, _ = upload_file(
-            #     p_result_tab_.value,
-            #     outdir=os.path.join(
-            #         config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]
-            #     ),
-            #     origname=panel_input.file_input.filename,
-            #     secret_token=secret_token,
-            #     upload_time=upload_time,
-            # )
-            # _, _, _ = upload_file(
-            #     p_result_ppc.value,
-            #     outdir=os.path.join(
-            #         config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppc"]
-            #     ),
-            #     origname=panel_input.file_input.filename,
-            #     secret_token=secret_token,
-            #     upload_time=upload_time,
-            # )
             panel_notes = UploadNoteWidgets(secret_token, upload_time)
             placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
@@ -350,17 +333,16 @@ The total requested time is reasonable for normal program. All the input targets
     return app
 
 
+#
+# admin app
+#
 def list_files_app():
     config = dotenv_values(".env.shared")
 
     logger.info(f"config params from dotenv: {config}")
 
-    if not os.path.exists(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-    ):
-        logger.error(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} does not exist."
-        )
+    if not os.path.exists(config["OUTPUT_DIR"]):
+        logger.error(f"{config['OUTPUT_DIR']} not found")
         raise ValueError
 
     template = pn.template.VanillaTemplate(
@@ -373,22 +355,10 @@ def list_files_app():
         favicon="docs/site/assets/images/favicon.png",
         # sidebar_width=400,
     )
-    # template = pn.template.BootstrapTemplate(
-    #     title="PFS Target Lists",
-    #     collapsed_sidebar=True,
-    #     # header_background="#3A7D7E",
-    #     # header_background="#C71585",  # mediumvioletred
-    #     header_background="#dc143c",  # crimson
-    #     busy_indicator=None,
-    #     favicon="docs/site/assets/images/favicon.png",
-    # )
 
-    _df_files_tgt = load_file_properties(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]), ext="ecsv"
-    )
-
-    _df_files_psl = load_file_properties(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]), ext="ecsv"
+    _df_files_tgt, _df_files_psl = load_file_properties(
+        config["OUTPUT_DIR"],
+        ext="ecsv",
     )
 
     # join two dataframes for filtering
@@ -413,7 +383,7 @@ def list_files_app():
 
     # range sliders for filtering
     slider_nobj = pn.widgets.EditableRangeSlider(
-        name="N(ob_code)",
+        name="N (ob_code)",
         start=np.floor(df_files_tgt["n_obj"].min() / 10) * 10,
         end=np.ceil(df_files_tgt["n_obj"].max() / 10) * 10,
         step=10,
@@ -453,7 +423,7 @@ def list_files_app():
         titles={
             "upload_id": "Upload ID",
             "filenames": "File",
-            "n_obj": "N(ob_code)",
+            "n_obj": "N (ob_code)",
             "t_exp": "Fiberhour (h)",
             "origname": "Original filename",
             "filesize": "Size (kB)",
@@ -489,7 +459,7 @@ def list_files_app():
             "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
             "download": "<i class='fa-solid fa-download'></i>",
         },
-        hidden_columns=["index", "n_obj", "t_exp", "timestamp"],
+        hidden_columns=["index", "n_obj", "t_exp", "timestamp", "fullpath"],
         width=1400,
     )
     table_files_psl.add_filter(slider_nobj, "n_obj")
@@ -515,39 +485,35 @@ def list_files_app():
     js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
 
     def execute_javascript(script):
-        # print("js executed")
         script = f'<script type="text/javascript">{script}</script>'
         js_panel.object = script
         js_panel.object = ""
 
     def open_panel_download(event):
         if event.column == "download":
-            # href = f"data/target_lists/{df_files_tgt['filename'][event.row]}"
-            href = f"data/{config['OUTPUT_DIR_data']}/{df_files_tgt['filename'][event.row]}"
+            p_parts = Path(df_files_tgt["fullpath"][event.row]).parts
+            p_href = os.path.join("data", *p_parts[1:])
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-            script = f"window.open('{href}', '_blank')"
-            # print(href)
+            script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)
 
     def open_panel_magnify(event):
         if event.column == "magnify":
-            table_ppc_t = Table.read(
-                os.path.join(
-                    config["OUTPUT_DIR_PREFIX"],
-                    config["OUTPUT_DIR_ppc"],
-                    f"targets_{df_files_psl['Upload ID'][event.row]}.ecsv",
-                )
+            p_parts = Path(df_files_psl["fullpath"][event.row]).parts
+            p_href = os.path.join(
+                *p_parts[:-1], f"ppc_{df_files_psl['Upload ID'][event.row]}.ecsv"
             )
+            table_ppc_t = Table.read(p_href)
             table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
                 "ppc_priority", ascending=True, ignore_index=True
             )
             table_files_ppc.visible = True
 
         if event.column == "download":
-            href = f"data/{config['OUTPUT_DIR_ppc']}/targets_{df_files_psl['Upload ID'][event.row]}.ecsv"
+            p_parts = Path(df_files_psl["fullpath"][event.row]).parts
+            p_href = os.path.join("data", *p_parts[1:])
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-            script = f"window.open('{href}', '_blank')"
-            # print(href)
+            script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)
 
     table_files_tgt.on_click(open_panel_download)
