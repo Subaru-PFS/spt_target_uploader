@@ -48,7 +48,6 @@ data/
             ├── psl_<upload_id>.ecsv
             ├── target_<upload_id>.ecsv
             └── <original file>
-
 #
 # data/
 # └── 2023
@@ -72,6 +71,6 @@ data/
 The `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
 
 ```
-# OUTPUT_DIR_PREFIX must be identical to the directory specified as `data` above.
+# OUTPUT_DIR_PREFIX must be identical to the directory value specified as `data` above.
 OUTPUT_DIR="data"
 ```
