@@ -38,19 +38,11 @@ def target_uploader_app():
 
     logger.info(f"config params from dotenv: {config}")
 
-    if os.path.exists(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-    ):
-        logger.info(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} already exists."
-        )
+    if os.path.exists(config["OUTPUT_DIR_PREFIX"]):
+        logger.info(f"{config['OUTPUT_DIR_PREFIX']} already exists.")
     else:
-        os.makedirs(
-            os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-        )
-        logger.info(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} created."
-        )
+        os.makedirs(config["OUTPUT_DIR_PREFIX"])
+        logger.info(f"{config['OUTPUT_DIR_PREFIX']} created.")
 
     template = pn.template.VanillaTemplate(
         title="PFS Target Uploader",
@@ -135,7 +127,7 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        validation_status, df_input = panel_input.validate(
+        validation_status, df_input, df_output = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -145,9 +137,9 @@ def target_uploader_app():
         if validation_status is None:
             return
 
-        panel_status.show_results(df_input, validation_status)
-        panel_targets.show_results(df_input)
-        panel_results.show_results(df_input, validation_status)
+        panel_status.show_results(df_output, validation_status)
+        panel_targets.show_results(df_output)
+        panel_results.show_results(df_output, validation_status)
 
         tab_panels.active = 1
         tab_panels.visible = True
@@ -172,24 +164,24 @@ def target_uploader_app():
             width=20,
         )
 
-        validation_status, df_input_ = panel_input.validate(
+        validation_status, df_input_, df_output_ = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
-        tab_panels_active = 1
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
             return
 
-        panel_status.show_results(df_input_, validation_status)
-        panel_results.show_results(df_input_, validation_status)
-        panel_targets.show_results(df_input_)
+        panel_status.show_results(df_output_, validation_status)
+        panel_results.show_results(df_output_, validation_status)
+        panel_targets.show_results(df_output_)
+        tab_panels.active = 1
         tab_panels.visible = True
 
         panel_ppp_button.PPPrunStats.append(gif_pane)
 
-        tb_input = Table.from_pandas(df_input_)
+        tb_input = Table.from_pandas(df_output_)
 
         tgt_obs_ok = visibility_checker(
             tb_input,
@@ -286,7 +278,7 @@ The total requested time is reasonable for normal program. All the input targets
             # do the validation again (input file can be different)
             # and I don't know how to implement to return value
             # from callback to another function (sorry)
-            validation_status, df_input = panel_input.validate(
+            validation_status, df_input, df_output = panel_input.validate(
                 date_begin=panel_dates.date_begin.value,
                 date_end=panel_dates.date_end.value,
             )
@@ -305,9 +297,9 @@ The total requested time is reasonable for normal program. All the input targets
                     return
                 else:
                     logger.error("Validation failed for some reason")
-                    panel_status.show_results(df_input, validation_status)
-                    panel_results.show_results(df_input, validation_status)
-                    panel_targets.show_results(df_input)
+                    panel_status.show_results(df_output, validation_status)
+                    panel_results.show_results(df_output, validation_status)
+                    panel_targets.show_results(df_output)
                     tab_panels.visible = True
                     return
 
@@ -315,32 +307,33 @@ The total requested time is reasonable for normal program. All the input targets
             secret_token = panel_input.secret_token
 
             _, _, _ = upload_file(
-                df_input,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]
-                ),
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            _, _, _ = upload_file(
+                df_output,
                 p_result_tab_.value,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]
-                ),
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            _, _, _ = upload_file(
                 p_result_ppc.value,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppc"]
-                ),
+                outdir_prefix=config["OUTPUT_DIR_PREFIX"],
                 origname=panel_input.file_input.filename,
+                origdata=panel_input.file_input.value,
                 secret_token=secret_token,
                 upload_time=upload_time,
             )
+            # _, _, _ = upload_file(
+            #     p_result_tab_.value,
+            #     outdir=os.path.join(
+            #         config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]
+            #     ),
+            #     origname=panel_input.file_input.filename,
+            #     secret_token=secret_token,
+            #     upload_time=upload_time,
+            # )
+            # _, _, _ = upload_file(
+            #     p_result_ppc.value,
+            #     outdir=os.path.join(
+            #         config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppc"]
+            #     ),
+            #     origname=panel_input.file_input.filename,
+            #     secret_token=secret_token,
+            #     upload_time=upload_time,
+            # )
             panel_notes = UploadNoteWidgets(secret_token, upload_time)
             placeholder_floatpanel[:] = [panel_notes.floatpanel]
 

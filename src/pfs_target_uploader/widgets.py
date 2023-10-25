@@ -2,6 +2,8 @@
 
 import os
 import secrets
+import sys
+import time
 from datetime import datetime
 from io import BytesIO
 
@@ -9,6 +11,7 @@ import numpy as np
 import pandas as pd
 import panel as pn
 import param
+from astropy import units as u
 from logzero import logger
 from zoneinfo import ZoneInfo
 
@@ -123,6 +126,7 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.value = None
 
     def validate(self, date_begin=None, date_end=None):
+        t_start = time.time()
         if date_begin >= date_end:
             pn.state.notifications.error(
                 "Date Begin must be before Date End.", duration=0
@@ -178,10 +182,12 @@ class FileInputWidgets(param.Parameterized):
             return None, None
 
         validation_status, df_output = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
+            df_input.copy(deep=True), date_begin=date_begin, date_end=date_end
         )
+        t_stop = time.time()
+        logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
 
-        return validation_status, df_output
+        return validation_status, df_input, df_output
 
 
 class StatusWidgets:
@@ -261,9 +267,9 @@ class StatusWidgets:
                 {
                     "Priority": unique_priority,
                     "N (L)": number_priority_L,
-                    "Texp (L) / FH": exptime_priority_L / 3600,
+                    "Texp (L)": exptime_priority_L / 3600,
                     "N (M)": number_priority_M,
-                    "Texp (M) / FH": exptime_priority_M / 3600,
+                    "Texp (M)": exptime_priority_M / 3600,
                 }
             )
 
@@ -380,9 +386,10 @@ class ResultWidgets:
         self.error_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.error_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
-        self.warning_text_keys = pn.pane.Markdown(
-            "<font size=5>Missing optional keys</font>\n", max_width=self.box_width
-        )
+        # self.warning_text_keys = pn.pane.Markdown(
+        #     "<font size=5>Missing optional keys</font>\n", max_width=self.box_width
+        # )
+        self.warning_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_str = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
@@ -528,7 +535,7 @@ class ResultWidgets:
             pass
         elif validation_status["str"]["status"]:
             is_info = self.append_title(is_info, "info")
-            self.info_text_str = """<font size=4><u>String values</u></font>
+            self.info_text_str.object = """<font size=4><u>String values</u></font>
 
 <font size=3>All string values consist of `[A-Za-z0-9_-+.]` </font>"""
             self.info_pane.append(self.info_text_str)
@@ -728,6 +735,11 @@ class PPPresultWidgets:
         self.ppp_figure.append(p_result_tab)
         self.ppp_figure.append(p_result_fig)
         self.ppp_figure.visible = True
+
+        size_of_ppp_figure = sys.getsizeof(p_result_fig) * u.byte
+        logger.info(
+            f"size of the ppp_figure object is {size_of_ppp_figure.to(u.kilobyte)}"
+        )
         logger.info("showing PPP results done")
 
 
