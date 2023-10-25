@@ -516,6 +516,7 @@ def list_files_app():
             p_href = df_files_psl["fullpath"][event.row].replace(
                 config["OUTPUT_DIR"], "data", 1
             )
+            print(p_href)
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)
 
