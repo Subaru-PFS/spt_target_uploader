@@ -143,6 +143,9 @@ def target_uploader_app():
         tab_panels.active = 1
         tab_panels.visible = True
 
+        if validation_status["status"]:
+            panel_submit_button.submit.disabled = False
+
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
         _toggle_buttons(button_set, disabled=True)
@@ -201,65 +204,71 @@ def target_uploader_app():
 
         _toggle_buttons(button_set, disabled=False)
 
-        def cb_submit(event):
-            panel_submit_button.submit.disabled = True
+    def cb_submit(event):
+        panel_submit_button.submit.disabled = True
 
-            placeholder_floatpanel.objects = []
+        placeholder_floatpanel.objects = []
 
-            logger.info("Submit button clicked.")
-            logger.info("Validation before actually writing to the storage")
+        logger.info("Submit button clicked.")
+        logger.info("Validation before actually writing to the storage")
 
-            # do the validation again and again (input file can be different)
-            # and I don't know how to implement to return value
-            # from callback to another function (sorry)
-            validation_status, df_input, df_output = panel_input.validate(
-                date_begin=panel_dates.date_begin.value,
-                date_end=panel_dates.date_end.value,
-            )
+        # do the validation again and again (input file can be different)
+        # and I don't know how to implement to return value
+        # from callback to another function (sorry)
+        validation_status, df_input, df_validated = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
-            if (validation_status is None) or (not validation_status["status"]):
-                logger.error("Validation failed for some reason")
+        if (validation_status is None) or (not validation_status["status"]):
+            logger.error("Validation failed for some reason")
 
-                tab_panels.visible = False
+            tab_panels.visible = False
 
-                panel_status.reset()
-                panel_results.reset()
+            panel_status.reset()
+            panel_results.reset()
 
-                pn.state.notifications.clear()
+            pn.state.notifications.clear()
 
-                if validation_status is None:
-                    return
-                else:
-                    panel_status.show_results(df_output, validation_status)
-                    panel_results.show_results(df_output, validation_status)
-                    panel_targets.show_results(df_output)
-                    tab_panels.visible = True
-                    return
+            if validation_status is None:
+                return
+            else:
+                panel_status.show_results(df_validated, validation_status)
+                panel_results.show_results(df_validated, validation_status)
+                panel_targets.show_results(df_validated)
+                tab_panels.visible = True
+                return
 
-            upload_time = datetime.now(timezone.utc)
-            secret_token = panel_input.secret_token
+        upload_time = datetime.now(timezone.utc)
+        secret_token = panel_input.secret_token
 
-            _, _, _ = upload_file(
-                df_output,
-                panel_ppp.p_result_tab.value,
-                panel_ppp.p_result_ppc.value,
-                outdir_prefix=config["OUTPUT_DIR"],
-                origname=panel_input.file_input.filename,
-                origdata=panel_input.file_input.value,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            panel_notes = UploadNoteWidgets(secret_token, upload_time)
-            placeholder_floatpanel[:] = [panel_notes.floatpanel]
+        try:
+            df_psl = panel_ppp.p_result_tab.value
+            df_ppc = panel_ppp.p_result_ppc.value
+        except AttributeError:
+            df_psl = None
+            df_ppc = None
 
-            panel_submit_button.submit.disabled = True
+        _, _, _ = upload_file(
+            df_validated,
+            df_psl,
+            df_ppc,
+            outdir_prefix=config["OUTPUT_DIR"],
+            origname=panel_input.file_input.filename,
+            origdata=panel_input.file_input.value,
+            secret_token=secret_token,
+            upload_time=upload_time,
+            ppp_status=panel_ppp.ppp_status,
+        )
+        panel_notes = UploadNoteWidgets(secret_token, upload_time, panel_ppp.ppp_status)
+        placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
-        # set callback to the "submit" button click
-        panel_submit_button.submit.on_click(cb_submit)
+        panel_submit_button.submit.disabled = True
 
-    # set callback to the "validate" button click
+    # set callback to the buttons
     panel_validate_button.validate.on_click(cb_validate)
     panel_ppp_button.PPPrun.on_click(cb_PPP)
+    panel_submit_button.submit.on_click(cb_submit)
 
     app = template.servable()
 
