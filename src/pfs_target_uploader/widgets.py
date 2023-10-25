@@ -22,25 +22,26 @@ from .utils.ppp import PPPrunStart, ppp_result
 
 
 class UploadNoteWidgets:
-    # def __init__(self, message):
-    def __init__(self, secret_token, uploaded_time):
-        self.floatpanel = pn.layout.FloatPanel(
-            None,
-            # pn.pane.Markdown(message),
-            name="Info",
-            # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
-            contained=False,
-            position="center",
-            # theme="none",
-            theme="#3A7D7E",
-            margin=20,
-            width=720,
-        )
+    # TODO: perhaps I can refactor to make it simple...
+    def __init__(self, secret_token, uploaded_time, ppp_status):
+        if ppp_status:
+            self.floatpanel = pn.layout.FloatPanel(
+                None,
+                # pn.pane.Markdown(message),
+                name="Info",
+                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
+                contained=False,
+                position="center",
+                # theme="none",
+                theme="#3A7D7E",
+                margin=20,
+                width=720,
+            )
 
-        # JS on-click actions
-        # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-        # so far not working...
-        stylesheet = """
+            # JS on-click actions
+            # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
+            # so far not working...
+            stylesheet = """
         :host {
             --font-size: 2.5em;
             --color: darkcyan;
@@ -50,39 +51,102 @@ class UploadNoteWidgets:
         }
         """
 
-        self.copy_source_button = pn.widgets.Button(
-            name=f"{secret_token}",
-            icon="copy",
-            # width=500,
-            height=96,
-            icon_size="1.5em",
-            # button_style="outline",
-            button_type="light",
-            stylesheets=[stylesheet],
-        )
+            self.copy_source_button = pn.widgets.Button(
+                name=f"{secret_token}",
+                icon="copy",
+                # width=500,
+                height=96,
+                icon_size="1.5em",
+                # button_style="outline",
+                button_type="light",
+                stylesheets=[stylesheet],
+            )
 
-        copy_source_code = "navigator.clipboard.writeText(source);"
+            copy_source_code = "navigator.clipboard.writeText(source);"
 
-        self.copy_source_button.js_on_click(
-            args={"source": f"{secret_token}"},
-            code=copy_source_code,
-        )
+            self.copy_source_button.js_on_click(
+                args={"source": f"{secret_token}"},
+                code=copy_source_code,
+            )
 
-        messages = [
-            pn.pane.Markdown(
-                "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following.</font>"
-            ),
-            self.copy_source_button,
-            pn.pane.Markdown(
-                f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
-            ),
-            pn.pane.Markdown(
-                """
+            messages = [
+                pn.pane.Markdown(
+                    "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following.</font>"
+                ),
+                self.copy_source_button,
+                pn.pane.Markdown(
+                    f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
+                ),
+                pn.pane.Markdown(
+                    """
                 - Please keep the Upload ID for the observation planning.
                 - You can copy the Upload ID to the clipboard by clicking it.
                 """
-            ),
-        ]
+                ),
+            ]
+
+        if not ppp_status:
+            self.floatpanel = pn.layout.FloatPanel(
+                None,
+                # pn.pane.Markdown(message),
+                name="⚠️ Warning",
+                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
+                contained=False,
+                position="center",
+                # theme="none",
+                # theme="#FFF1C2",
+                theme="#866208",
+                margin=20,
+                width=720,
+            )
+
+            # JS on-click actions
+            # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
+            # so far not working...
+            stylesheet = """
+        :host {
+            --font-size: 2.5em;
+            --color: #866208;
+        }
+        .bk-btn-light {
+            color: #866208;
+        }
+        """
+
+            self.copy_source_button = pn.widgets.Button(
+                name=f"{secret_token}",
+                icon="copy",
+                # width=500,
+                height=96,
+                icon_size="1.5em",
+                # button_style="outline",
+                button_type="light",
+                stylesheets=[stylesheet],
+            )
+
+            copy_source_code = "navigator.clipboard.writeText(source);"
+
+            self.copy_source_button.js_on_click(
+                args={"source": f"{secret_token}"},
+                code=copy_source_code,
+            )
+
+            messages = [
+                pn.pane.Markdown(
+                    "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful **_WITHOUT_** pointing simulation! Your **Upload ID** is the following.</font>"
+                ),
+                self.copy_source_button,
+                pn.pane.Markdown(
+                    f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
+                ),
+                pn.pane.Markdown(
+                    """
+                - Please keep the Upload ID for the observation planning.
+                - You can copy the Upload ID to the clipboard by clicking it.
+                - **It is not recommended to submit a target list without simulating pointings.**
+                """
+                ),
+            ]
 
         self.floatpanel.objects = []
         for m in messages:
@@ -709,6 +773,11 @@ class PPPresultWidgets:
     box_width = 1200
 
     def __init__(self):
+        # PPP status
+        # True if PPP has been run
+        # False if PPP has not been run
+        self.ppp_status = True
+
         self.ppp_title = pn.pane.Markdown(
             """# Results of PPP""",
             dedent=True,
@@ -744,6 +813,7 @@ class PPPresultWidgets:
         self.ppp_alert.clear()
         self.ppp_figure.clear()
         self.ppp_figure.visible = False
+        self.ppp_status = False
 
     def show_results(self):  # , mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
         logger.info("showing PPP results")
@@ -799,6 +869,8 @@ class PPPresultWidgets:
             self.ppp_alert.append(self.ppp_warning)
         else:
             self.ppp_alert.append(self.ppp_success)
+
+        self.ppp_status = True
 
 
 class ValidateButtonWidgets:

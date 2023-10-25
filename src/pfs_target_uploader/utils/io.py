@@ -74,6 +74,7 @@ def upload_file(
     origdata=None,
     secret_token=None,
     upload_time=None,
+    ppp_status=True,
 ):
     if secret_token is None:
         secret_token = secrets.token_hex(8)
@@ -104,8 +105,34 @@ def upload_file(
 
     # convert pandas.DataFrame to astropy.Table
     tb_target = Table.from_pandas(df_target)
-    tb_psl = Table.from_pandas(df_psl)
-    tb_ppc = Table.from_pandas(df_ppc)
+    if ppp_status:
+        tb_psl = Table.from_pandas(df_psl)
+        tb_ppc = Table.from_pandas(df_ppc)
+    else:
+        tb_psl = Table(
+            {
+                "resolution": [None],
+                "N_ppc": [None],
+                "Texp (h)": [np.nan],
+                "Texp (fiberhour)": [np.nan],
+                "Request time (h)": [np.nan],
+                "Used fiber fraction (%)": [np.nan],
+                "Fraction of PPC < 30% (%)": [np.nan],
+                "P_all": [np.nan],
+                "P_0": [np.nan],
+            }
+        )
+        tb_ppc = Table(
+            {
+                "ppc_code": [None],
+                "ppc_ra": [np.nan],
+                "ppc_dec": [np.nan],
+                "ppc_pa": [np.nan],
+                "ppc_priority": [-1],
+                "Fiber usage fraction (%)": [np.nan],
+                "ppc_resolution": [None],
+            }
+        )
 
     for file_prefix, tb in zip(["target", "psl", "ppc"], [tb_target, tb_psl, tb_ppc]):
         outfile = f"{file_prefix}_{secret_token}.ecsv"
@@ -113,6 +140,7 @@ def upload_file(
         tb.meta["original_filename"] = origname
         tb.meta["upload_id"] = secret_token
         tb.meta["upload_at"] = upload_time
+        tb.meta["ppp_status"] = ppp_status
 
         # save the table in the output directory as an ECSV file
         tb.write(
