@@ -64,10 +64,17 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
     return df_input, dict_load
 
 
-def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=None):
-    # convert pandas.DataFrame to astropy.Table
-    tb = Table.from_pandas(df)
-
+# def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=None):
+def upload_file(
+    df_target,
+    df_psl,
+    df_ppc,
+    outdir_prefix=".",
+    origname="example.csv",
+    origdata=None,
+    secret_token=None,
+    upload_time=None,
+):
     if secret_token is None:
         secret_token = secrets.token_hex(8)
         logger.warning(
@@ -81,28 +88,47 @@ def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=No
             f"upload_time {upload_time.isoformat(timespec='seconds')} is newly generated as None is provided."
         )
 
-    # add metadata
-    tb.meta["original_filename"] = origname
-    tb.meta["upload_id"] = secret_token
-    tb.meta["upload_at"] = upload_time.isoformat(timespec="seconds")
-
-    # filename = f"{uploaded_time.strftime('%Y%m%d-%H%M%S')}_{secret_token}.ecsv"
-    filename = (
-        # f"targets_{uploaded_time.isoformat(timespec='seconds')}_{secret_token}.ecsv"
-        f"targets_{secret_token}.ecsv"
+    dt = upload_time
+    outdir = os.path.join(
+        outdir_prefix,
+        f"{dt.year:4d}",
+        f"{dt.month:02d}",
+        f"{dt:%Y%m%d-%H%M%S}-{secret_token}",
     )
 
-    logger.info(f"File `{filename}` was saved under `{outdir}`")
+    if not os.path.exists(outdir):
+        logger.info(f"{outdir} is created")
+        os.makedirs(outdir)
+    else:
+        logger.warning(f"{outdir} already exists, strange")
 
-    # save the table in the output directory as an ECSV file
-    tb.write(
-        os.path.join(outdir, filename),
-        delimiter=",",
-        format="ascii.ecsv",
-        overwrite=True,
-    )
+    # convert pandas.DataFrame to astropy.Table
+    tb_target = Table.from_pandas(df_target)
+    tb_psl = Table.from_pandas(df_psl)
+    tb_ppc = Table.from_pandas(df_ppc)
 
-    return filename, upload_time, secret_token
+    for file_prefix, tb in zip(["target", "psl", "ppc"], [tb_target, tb_psl, tb_ppc]):
+        outfile = f"{file_prefix}_{secret_token}.ecsv"
+        # add metadata
+        tb.meta["original_filename"] = origname
+        tb.meta["upload_id"] = secret_token
+        tb.meta["upload_at"] = upload_time
+
+        # save the table in the output directory as an ECSV file
+        tb.write(
+            os.path.join(outdir, outfile),
+            delimiter=",",
+            format="ascii.ecsv",
+            overwrite=True,
+        )
+        logger.info(f"File {outfile} is saved under {outdir}.")
+
+    outfile_orig = origname
+    with open(os.path.join(outdir, outfile_orig), "wb") as f:
+        f.write(origdata)
+        logger.info(f"Original target list is saved as {outfile_orig} in {outdir}.")
+
+    return outdir, upload_time, secret_token
 
 
 def load_file_properties(dir=".", ext="ecsv"):
