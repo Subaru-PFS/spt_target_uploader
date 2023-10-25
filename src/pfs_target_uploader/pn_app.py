@@ -491,28 +491,31 @@ def list_files_app():
 
     def open_panel_download(event):
         if event.column == "download":
-            p_parts = Path(df_files_tgt["fullpath"][event.row]).parts
-            p_href = os.path.join("data", *p_parts[1:])
+            p_href = df_files_tgt["fullpath"][event.row].replace(
+                config["OUTPUT_DIR"], "data", 1
+            )
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)
 
     def open_panel_magnify(event):
         if event.column == "magnify":
-            p_parts = Path(df_files_psl["fullpath"][event.row]).parts
-            p_href = os.path.join(
-                *p_parts[:-1], f"ppc_{df_files_psl['Upload ID'][event.row]}.ecsv"
+            p_download = df_files_psl["fullpath"][event.row].replace(
+                config["OUTPUT_DIR"], "data", 1
             )
-            table_ppc_t = Table.read(p_href)
+            p_ppc = os.path.split(p_download)[0]
+            table_ppc_t = Table.read(
+                os.path.join(p_ppc, f"ppc_{df_files_psl['Upload ID'][event.row]}.ecsv")
+            )
             table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
                 "ppc_priority", ascending=True, ignore_index=True
             )
             table_files_ppc.visible = True
 
         if event.column == "download":
-            p_parts = Path(df_files_psl["fullpath"][event.row]).parts
-            p_href = os.path.join("data", *p_parts[1:])
-            # c.f. https://www.w3schools.com/jsref/met_win_open.asp
+            p_href = df_files_psl["fullpath"][event.row].replace(
+                config["OUTPUT_DIR"], "data", 1
+            )
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)
 
