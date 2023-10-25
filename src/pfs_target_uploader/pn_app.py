@@ -11,9 +11,7 @@ from astropy.table import Table
 from dotenv import dotenv_values
 from logzero import logger
 
-from .utils.checker import visibility_checker
 from .utils.io import load_file_properties, upload_file
-from .utils.ppp import PPPrunStart, ppp_result
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
@@ -151,21 +149,13 @@ def target_uploader_app():
         panel_submit_button.submit.disabled = True
 
         placeholder_floatpanel.objects = []
-        # tab_panels.active = 1
-        # tab_panels.visible = False
 
-        # panel_status.reset()
-        # panel_results.reset()
+        # reset only PPP result panel
         panel_ppp.reset()
 
         pn.state.notifications.clear()
 
-        gif_pane = pn.pane.GIF(
-            "https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif",
-            width=20,
-        )
-
-        validation_status, df_input_, df_output_ = panel_input.validate(
+        validation_status, df_input_, df_validated = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -174,97 +164,40 @@ def target_uploader_app():
             _toggle_buttons(button_set, disabled=False)
             return
 
-        panel_status.show_results(df_output_, validation_status)
-        panel_results.show_results(df_output_, validation_status)
-        panel_targets.show_results(df_output_)
+        if not validation_status["visibility"]["status"]:
+            logger.error("No visible object is found")
+            pn.state.notifications.error(
+                "Cannot simulate pointing for 0 visible targets",
+                duration=0,
+            )
+            _toggle_buttons(button_set, disabled=False)
+            return
+
+        panel_status.show_results(df_validated, validation_status)
+        panel_results.show_results(df_validated, validation_status)
+        panel_targets.show_results(df_validated)
+
         tab_panels.active = 1
         tab_panels.visible = True
 
-        panel_ppp_button.PPPrunStats.append(gif_pane)
-
-        tb_input = Table.from_pandas(df_output_)
-
-        tgt_obs_ok = visibility_checker(
-            tb_input,
-            panel_dates.date_begin.value,
-            panel_dates.date_end.value,
-        )
-
-        # NOTE: It seems boolean comparison for a numpy array must not be done with "is"
-        # https://beta.ruff.rs/docs/rules/true-false-comparison/
-        tgt_obs_no = np.where(~tgt_obs_ok)[0]
-        tgt_obs_yes = np.where(tgt_obs_ok)[0]
-
-        tb_input_ = tb_input[tgt_obs_yes]
-
-        weight_para = [4.02, 0.01, 0.01]
+        # start progress icon
+        panel_ppp_button.start()
 
         try:
-            (
-                uS_L2,
-                cR_L,
-                cR_L_,
-                sub_l,
-                obj_allo_L_fin,
-                uS_M2,
-                cR_M,
-                cR_M_,
-                sub_m,
-                obj_allo_M_fin,
-            ) = PPPrunStart(tb_input_, weight_para)
+            panel_ppp.run_ppp(df_validated, validation_status)
+            panel_ppp.show_results()
 
-            res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
-                cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
-            )
-
-            if p_result_tab_.value.iloc[-1]["Request time (h)"] > 10 * 5:
-                ppp_Alert = pn.pane.Alert(
-                    """### Warnings
-The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.
-            """,
-                    alert_type="warning",
-                )
-                if len(tgt_obs_no) > 0:
-                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                    ppp_Alert.object += f"""
-
-The following targets are not observable during the semester. Please remove them.
-    {tgt_obs_no_id}
-                """
-
-            else:
-                if len(tgt_obs_no) > 0:
-                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                    ppp_Alert = pn.pane.Alert(
-                        f"""### Warnings
-The following targets are not observable during the semester. Please remove them.
-    {tgt_obs_no_id}
-                """,
-                        alert_type="warning",
-                    )
-
-                else:
-                    ppp_Alert = pn.pane.Alert(
-                        """### Success
-The total requested time is reasonable for normal program. All the input targets are observable in the semester.
-                """,
-                        alert_type="success",
-                    )
-
-            panel_ppp.show_results(
-                res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert
-            )
-
-            # tab_panels.visible = True
             tab_panels.active = 2
 
-            panel_submit_button.submit.disabled = False
+            # enable the submit button only with the successful validation
+            if validation_status["status"]:
+                panel_submit_button.submit.disabled = False
 
         except gurobipy.GurobiError as e:
             pn.state.notifications.error(f"{str(e)}", duration=0)
             pass
 
-        panel_ppp_button.PPPrunStats.remove(gif_pane)
+        panel_ppp_button.stop()
 
         _toggle_buttons(button_set, disabled=False)
 
@@ -276,7 +209,7 @@ The total requested time is reasonable for normal program. All the input targets
             logger.info("Submit button clicked.")
             logger.info("Validation before actually writing to the storage")
 
-            # do the validation again (input file can be different)
+            # do the validation again and again (input file can be different)
             # and I don't know how to implement to return value
             # from callback to another function (sorry)
             validation_status, df_input, df_output = panel_input.validate(
@@ -297,7 +230,6 @@ The total requested time is reasonable for normal program. All the input targets
                 if validation_status is None:
                     return
                 else:
-                    logger.error("Validation failed for some reason")
                     panel_status.show_results(df_output, validation_status)
                     panel_results.show_results(df_output, validation_status)
                     panel_targets.show_results(df_output)
@@ -309,8 +241,8 @@ The total requested time is reasonable for normal program. All the input targets
 
             _, _, _ = upload_file(
                 df_output,
-                p_result_tab_.value,
-                p_result_ppc.value,
+                panel_ppp.p_result_tab.value,
+                panel_ppp.p_result_ppc.value,
                 outdir_prefix=config["OUTPUT_DIR"],
                 origname=panel_input.file_input.filename,
                 origdata=panel_input.file_input.value,
@@ -322,9 +254,10 @@ The total requested time is reasonable for normal program. All the input targets
 
             panel_submit_button.submit.disabled = True
 
+        # set callback to the "submit" button click
         panel_submit_button.submit.on_click(cb_submit)
 
-    # set callback to the "validate" click
+    # set callback to the "validate" button click
     panel_validate_button.validate.on_click(cb_validate)
     panel_ppp_button.PPPrun.on_click(cb_PPP)
 
