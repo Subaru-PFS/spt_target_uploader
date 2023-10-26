@@ -9,6 +9,8 @@ from logzero import logger
 class UploadNoteWidgets:
     # TODO: perhaps I can refactor to make it simple...
     def __init__(self, secret_token, uploaded_time, ppp_status, outdir, outfile_zip):
+        href_zip = os.path.join(outdir, outfile_zip)
+
         if ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
@@ -61,7 +63,7 @@ class UploadNoteWidgets:
                 ),
                 self.copy_source_button,
                 pn.pane.Markdown(
-                    f"<a href='{os.path.join(outdir, outfile_zip)}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                    f"<a href='{href_zip}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
                 ),
                 pn.pane.Markdown(
                     f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
@@ -132,7 +134,7 @@ class UploadNoteWidgets:
                 ),
                 self.copy_source_button,
                 pn.pane.Markdown(
-                    f"<a href='{os.path.join(outdir, outfile_zip)}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                    f"<a href='{href_zip}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
                 ),
                 pn.pane.Markdown(
                     f"<font size='4' color='#98741E'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"

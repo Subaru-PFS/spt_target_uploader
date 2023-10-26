@@ -265,7 +265,11 @@ def target_uploader_app():
             ppp_status=panel_ppp.ppp_status,
         )
         panel_notes = UploadNoteWidgets(
-            secret_token, upload_time, panel_ppp.ppp_status, outdir, outfile_zip
+            secret_token,
+            upload_time,
+            panel_ppp.ppp_status,
+            outdir.replace(config["OUTPUT_DIR"], "data", 1),
+            outfile_zip,
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
