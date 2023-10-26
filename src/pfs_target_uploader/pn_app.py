@@ -2,7 +2,6 @@
 
 import os
 from datetime import datetime, timezone
-from pathlib import Path
 
 import gurobipy
 import numpy as np
@@ -95,8 +94,8 @@ def target_uploader_app():
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
         ("Input list", panel_targets.pane),
-        ("Results of validation", panel_results.pane),
-        ("Results of PPP", panel_ppp.pane),
+        ("Validation", panel_results.pane),
+        ("Pointing Simulation", panel_ppp.pane),
     )
 
     main_column = pn.Column(
@@ -245,14 +244,19 @@ def target_uploader_app():
         try:
             df_psl = panel_ppp.p_result_tab.value
             df_ppc = panel_ppp.p_result_ppc.value
+            ppp_fig = panel_ppp.p_result_fig
+            # ppp_fig = panel_ppp.ppp_figure
         except AttributeError:
             df_psl = None
             df_ppc = None
+            ppp_fig = None
 
         _, _, _ = upload_file(
             df_validated,
             df_psl,
             df_ppc,
+            panel_status.df_summary,
+            ppp_fig,
             outdir_prefix=config["OUTPUT_DIR"],
             origname=panel_input.file_input.filename,
             origdata=panel_input.file_input.value,

@@ -152,17 +152,24 @@ class ValidationResultWidgets:
             if not self.is_error:
                 self.error_pane.append(self.error_title)
                 self.is_error = True
+                self.error_title.visible = True
         if status_str == "warning":
             if not self.is_warning:
                 self.warning_pane.append(self.warning_title)
                 self.is_warning = True
+                self.warning_title.visible = True
         if status_str == "info":
             if not self.is_info:
                 self.info_pane.append(self.info_title)
                 self.is_info = True
+                self.info_title.visible = True
 
     def show_results(self, df, validation_status):
         # reset title flags
+        self.error_pane.objects.clear()
+        self.warning_pane.objects.clear()
+        self.info_pane.objects.clear()
+
         self.is_error = False
         self.is_warning = False
         self.is_info = False
