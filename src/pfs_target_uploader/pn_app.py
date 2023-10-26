@@ -16,14 +16,14 @@ from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
     FileInputWidgets,
-    PPPresultWidgets,
-    ResultWidgets,
+    PppResultWidgets,
     RunPppButtonWidgets,
     StatusWidgets,
     SubmitButtonWidgets,
     TargetWidgets,
     UploadNoteWidgets,
     ValidateButtonWidgets,
+    ValidationResultWidgets,
 )
 
 
@@ -62,9 +62,9 @@ def target_uploader_app():
 
     panel_dates = DatePickerWidgets()
 
-    panel_results = ResultWidgets()
+    panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PPPresultWidgets()
+    panel_ppp = PppResultWidgets()
 
     panel_input.reset()
 
