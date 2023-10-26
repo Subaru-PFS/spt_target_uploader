@@ -79,7 +79,7 @@ class StatusWidgets:
                 exptime_priority_L[i] = df.loc[idx_p & idx_l, "exptime"].sum()
                 exptime_priority_M[i] = df.loc[idx_p & idx_m, "exptime"].sum()
 
-            df_summary = pd.DataFrame(
+            self.df_summary = pd.DataFrame(
                 {
                     "Priority": unique_priority,
                     "N (L)": number_priority_L,
@@ -89,7 +89,7 @@ class StatusWidgets:
                 }
             )
 
-            df_summary.loc[len(df_summary.index)] = [
+            self.df_summary.loc[len(self.df_summary.index)] = [
                 "Other",
                 df.loc[idx_l, :].index.size - sum(number_priority_L),
                 df.loc[idx_l, "exptime"].sum() - sum(exptime_priority_L),
@@ -97,7 +97,7 @@ class StatusWidgets:
                 df.loc[idx_m, "exptime"].sum() - sum(exptime_priority_M),
             ]
 
-            df_summary.loc[len(df_summary.index)] = [
+            self.df_summary.loc[len(self.df_summary.index)] = [
                 "Total",
                 sum(number_priority_L),
                 sum(exptime_priority_L / 3600),
@@ -105,10 +105,10 @@ class StatusWidgets:
                 sum(exptime_priority_M / 3600),
             ]
 
-            logger.info(f"Summary Table:\n{df_summary}")
+            logger.info(f"Summary Table:\n{self.df_summary}")
 
             self.summary_table.value = pd.DataFrame()
-            self.summary_table.value = df_summary
+            self.summary_table.value = self.df_summary
             self.summary_table.visible = True
             self.table_footnote.visible = True
 

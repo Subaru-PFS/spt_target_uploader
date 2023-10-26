@@ -7,11 +7,13 @@ import os
 import secrets
 import warnings
 from datetime import datetime, timezone
+from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.table import Table
+from bokeh.resources import INLINE
 from dotenv import dotenv_values
 from logzero import logger
 
@@ -64,11 +66,12 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
     return df_input, dict_load
 
 
-# def upload_file(df, origname=None, outdir=".", secret_token=None, upload_time=None):
 def upload_file(
     df_target,
     df_psl,
     df_ppc,
+    df_target_summary,
+    ppp_fig,
     outdir_prefix=".",
     origname="example.csv",
     origdata=None,
@@ -105,6 +108,7 @@ def upload_file(
 
     # convert pandas.DataFrame to astropy.Table
     tb_target = Table.from_pandas(df_target)
+    tb_target_summary = Table.from_pandas(df_target_summary)
     if ppp_status:
         tb_psl = Table.from_pandas(df_psl)
         tb_ppc = Table.from_pandas(df_ppc)
@@ -134,8 +138,14 @@ def upload_file(
             }
         )
 
-    for file_prefix, tb in zip(["target", "psl", "ppc"], [tb_target, tb_psl, tb_ppc]):
+    outfiles = []
+
+    for file_prefix, tb in zip(
+        ["target", "target_summary", "psl", "ppc"],
+        [tb_target, tb_target_summary, tb_psl, tb_ppc],
+    ):
         outfile = f"{file_prefix}_{secret_token}.ecsv"
+        outfiles.append(outfile)
         # add metadata
         tb.meta["original_filename"] = origname
         tb.meta["upload_id"] = secret_token
@@ -151,10 +161,31 @@ def upload_file(
         )
         logger.info(f"File {outfile} is saved under {outdir}.")
 
+    if ppp_status:
+        outfile = f"ppp_figure_{secret_token}.html"
+        outfiles.append(outfile)
+        logger.info(f"PPP figure is saved as {outfile} under {outdir}")
+        ppp_fig.save(
+            os.path.join(outdir, outfile),
+            resources=INLINE,
+            # embed=True,
+            title=f"Pointing Result for the Upload ID {secret_token}",
+        )
+
     outfile_orig = origname
+    outfiles.append(outfile_orig)
+
     with open(os.path.join(outdir, outfile_orig), "wb") as f:
         f.write(origdata)
         logger.info(f"Original target list is saved as {outfile_orig} in {outdir}.")
+
+    outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
+    with ZipFile(os.path.join(outdir, f"{outfile_zip_prefix}.zip"), "w") as zipfile:
+        for outfile in outfiles:
+            absname = os.path.join(outdir, outfile)
+            arcname = os.path.join(outfile_zip_prefix, os.path.basename(outfile))
+            zipfile.write(absname, arcname=arcname)
+    logger.info(f"Zip all output files in {outfile_zip_prefix}.zip in {outdir}")
 
     return outdir, upload_time, secret_token
 
