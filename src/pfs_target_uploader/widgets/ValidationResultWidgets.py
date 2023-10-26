@@ -100,6 +100,10 @@ class ValidationResultWidgets:
             self.title, self.error_pane, self.warning_pane, self.info_pane
         )
 
+        self.is_error = False
+        self.is_warning = False
+        self.is_info = False
+
     def reset(self):
         for t in [
             self.error_text_success,
@@ -139,58 +143,58 @@ class ValidationResultWidgets:
         self.warning_pane.objects.clear()
         self.info_pane.objects.clear()
 
-        # self.pane.objects.clear()
+        self.is_error = False
+        self.is_warning = False
+        self.is_info = False
 
-    def append_title(self, flag, status_str):
+    def append_title(self, status_str):
         if status_str == "error":
-            if not flag:
+            if not self.is_error:
                 self.error_pane.append(self.error_title)
-                flag = True
+                self.is_error = True
         if status_str == "warning":
-            if not flag:
+            if not self.is_warning:
                 self.warning_pane.append(self.warning_title)
-                flag = True
+                self.is_warning = True
         if status_str == "info":
-            if not flag:
+            if not self.is_info:
                 self.info_pane.append(self.info_title)
-                flag = True
-        return flag
+                self.is_info = True
 
     def show_results(self, df, validation_status):
-        # self.pane.append(self.title)
-
-        is_error = False
-        is_warning = False
-        is_info = False
+        # reset title flags
+        self.is_error = False
+        self.is_warning = False
+        self.is_info = False
 
         if validation_status["status"]:
             self.error_title.visible = False
 
         # Errors on missing required keys
         if not validation_status["required_keys"]["status"]:
+            self.append_title("error")
             self.error_text_keys.object = (
                 "<font size=4><u>Missing required columns</u></font>\n"
             )
             for desc in validation_status["required_keys"]["desc_error"]:
                 self.error_text_keys.object += f"- <font size='3'>{desc}</font>\n"
-            is_error = self.append_title(is_error, "error")
             self.error_pane.append(self.error_text_keys)
 
         # Warnings on missing optional keys
         if not validation_status["optional_keys"]["status"]:
+            self.append_title("warning")
             self.warning_text_keys.object = (
                 "<font size=4><u>Missing optional columns</u></font>\n"
             )
             for desc in validation_status["optional_keys"]["desc_warning"]:
                 self.warning_text_keys.object += f"- <font size='3'>{desc}</font>\n"
-            is_warning = self.append_title(is_warning, "warning")
             self.warning_pane.append(self.warning_text_keys)
 
         # Info on discovered keys
         n_req_success = len(validation_status["required_keys"]["desc_success"])
         n_opt_success = len(validation_status["optional_keys"]["desc_success"])
         if n_req_success + n_opt_success > 0:
-            is_info = self.append_title(is_info, "info")
+            self.append_title("info")
             self.info_text_keys.object = (
                 "<font size=4><u>Discovered columns</u></font>\n"
             )
@@ -208,13 +212,13 @@ class ValidationResultWidgets:
         if validation_status["str"]["status"] is None:
             pass
         elif validation_status["str"]["status"]:
-            is_info = self.append_title(is_info, "info")
+            self.append_title("info")
             self.info_text_str.object = """<font size=4><u>String values</u></font>
 
 <font size=3>All string values consist of `[A-Za-z0-9_-+.]` </font>"""
             self.info_pane.append(self.info_text_str)
         elif not validation_status["str"]["status"]:
-            is_error = self.append_title(is_error, "error")
+            self.append_title("error")
             self.error_text_str.object = """<font size=4><u>Invalid characters in string values</u></font>
 
 <font size=3>String values must consist of `[A-Za-z0-9_-+.]`. The following entries must be fixed.</font>"""
@@ -239,14 +243,14 @@ class ValidationResultWidgets:
         if validation_status["values"]["status"] is None:
             pass
         elif validation_status["values"]["status"]:
-            is_info = self.append_title(is_info, "info")
+            self.append_title("info")
             self.info_text_vals.object = """<font size=4><u>Data ranges</u></font>
 
 <font size=3>All values of `ra`, `dec`, `priority`, `exptime`, and `resolution` satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>
 """
             self.info_pane.append(self.info_text_vals)
         elif not validation_status["values"]["status"]:
-            is_error = self.append_title(is_error, "error")
+            self.append_title("error")
             self.error_text_vals.object = """<font size=4><u>Value errors</u></font>
 
 <font size=3>Invalid values are detected for the following columns in the following entries (see [documentation](doc/validation.html)).</font>
@@ -282,7 +286,7 @@ class ValidationResultWidgets:
         # flux columns
         # TODO: show a list of detected/undetected flux columns
         if validation_status["flux"]["status"]:
-            is_info = self.append_title(is_info, "info")
+            self.append_title("info")
             self.info_text_flux.object = "<font size=4><u>Flux information</u></font>\n\n<font size=3>All `ob_code`s have at least one flux information. The detected filters are the following: </font>"
             for f in validation_status["flux"]["filters"]:
                 self.info_text_flux.object += f"<font size=3>`{f}`</font>, "
@@ -291,7 +295,7 @@ class ValidationResultWidgets:
             self.info_pane.append(self.info_text_flux)
             self.error_table_flux.visible = False
         else:
-            is_error = self.append_title(is_error, "error")
+            self.append_title("error")
             # add an error message and data table for duplicates
             self.error_text_flux.object = "<font size=4><u>Missing flux information</u></font>\n\n<font size=3>No flux information found in the following `ob_code`s. Detected filters are the following: </font>"
             for f in validation_status["flux"]["filters"]:
@@ -313,11 +317,11 @@ class ValidationResultWidgets:
         # TODO: add begin_date and end_date in the message
         if validation_status["visibility"]["status"]:
             if np.all(validation_status["visibility"]["success"]):
-                is_info = self.append_title(is_info, "info")
+                self.append_title("info")
                 self.info_text_visibility.object = "<font size=4><u>Visibility</u></font>\n\n<font size=3>All `ob_code`s are visible in the input observing period.</font>"
                 self.info_pane.append(self.info_text_visibility)
             elif np.any(validation_status["visibility"]["success"]):
-                is_warning = self.append_title(is_warning, "warning")
+                self.append_title("warning")
                 n_invisible = np.count_nonzero(
                     ~validation_status["visibility"]["success"]
                 )
@@ -341,19 +345,19 @@ class ValidationResultWidgets:
                 self.warning_table_visibility.visible = True
             self.error_table_visibility.visible = False
         else:
-            is_error = self.append_title(is_error, "error")
+            self.append_title("error")
             # add an error message and data table for duplicates
             self.error_text_visibility.object = "<font size=4><u>Visibility</u></font>\n\n<font size='3'>None of `ob_code`s in the list is visible in the input observing period.</font>"
             self.error_pane.append(self.error_text_visibility)
 
         # Duplication
         if validation_status["unique"]["status"]:
-            is_info = self.append_title(is_info, "info")
+            self.append_title("info")
             self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`s</u></font>\n\n<font size=3>All `ob_code` are unique.</font>"
             self.info_pane.append(self.info_text_dups)
             self.error_table_dups.visible = False
         else:
-            is_error = self.append_title(is_error, "error")
+            self.append_title("error")
             # add an error message and data table for duplicates
             self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code`s </u></font>\n\n<font size=3>Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets</font>"
             self.error_table_dups.frozen_columns = []
