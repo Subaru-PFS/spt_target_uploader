@@ -953,6 +953,13 @@ def ppp_result(
     cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2, d_pfi=1.38
 ):
     r_pfi = d_pfi / 2.0
+    tabulator_stylesheet = """
+    .tabulator-row-odd { background-color: #ffffff !important; }
+    .tabulator-row-even { background-color: #ffffff !important; }
+    .tabulator-row-odd:hover { color: #000000 !important; background-color: #ffffff !important; }
+    .tabulator-row-even:hover { color: #000000 !important; background-color: #ffffff !important; }
+
+    """
 
     def overheads(n_sci_frame):
         # in seconds
@@ -1220,10 +1227,14 @@ def ppp_result(
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
+            stylesheets=[tabulator_stylesheet],
         )
 
         p_result_ppc = pn.widgets.Tabulator(
-            pn.bind(ppp_res_tab2, nppc), visible=False, disabled=True
+            pn.bind(ppp_res_tab2, nppc),
+            visible=False,
+            disabled=True,
+            stylesheets=[tabulator_stylesheet],
         )
 
         return nppc, p_result_fig, p_result_tab, p_result_ppc
@@ -1281,12 +1292,14 @@ def ppp_result(
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
+            stylesheets=[tabulator_stylesheet],
         )
 
         p_result_ppc_fin = pn.widgets.Tabulator(
             pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
             visible=False,
             disabled=True,
+            stylesheets=[tabulator_stylesheet],
         )
 
         logger.info("creating PPP figures finished ")
