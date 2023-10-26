@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+import os
+
 import panel as pn
 from logzero import logger
 
 
 class UploadNoteWidgets:
     # TODO: perhaps I can refactor to make it simple...
-    def __init__(self, secret_token, uploaded_time, ppp_status):
+    def __init__(self, secret_token, uploaded_time, ppp_status, outdir, outfile_zip):
         if ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
@@ -19,6 +21,7 @@ class UploadNoteWidgets:
                 theme="#3A7D7E",
                 margin=20,
                 width=720,
+                height=350,
             )
 
             # JS on-click actions
@@ -54,9 +57,12 @@ class UploadNoteWidgets:
 
             messages = [
                 pn.pane.Markdown(
-                    "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following.</font>"
+                    "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size='4'>  Upload successful! Your **Upload ID** is the following. </font>"
                 ),
                 self.copy_source_button,
+                pn.pane.Markdown(
+                    f"<a href='{os.path.join(outdir, outfile_zip)}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                ),
                 pn.pane.Markdown(
                     f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
                 ),
@@ -125,6 +131,9 @@ class UploadNoteWidgets:
                     "<i class='fa-solid fa-triangle-exclamation fa-2xl' style='color: #98741E;'></i><font size='4' color='#98741E'>  Upload successful **_WITHOUT_** pointing simulation! Your **Upload ID** is the following.</font>"
                 ),
                 self.copy_source_button,
+                pn.pane.Markdown(
+                    f"<a href='{os.path.join(outdir, outfile_zip)}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                ),
                 pn.pane.Markdown(
                     f"<font size='4' color='#98741E'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
                 ),

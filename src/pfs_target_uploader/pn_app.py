@@ -251,7 +251,7 @@ def target_uploader_app():
             df_ppc = None
             ppp_fig = None
 
-        _, _, _ = upload_file(
+        outdir, outfile_zip, _, _ = upload_file(
             df_validated,
             df_psl,
             df_ppc,
@@ -264,7 +264,9 @@ def target_uploader_app():
             upload_time=upload_time,
             ppp_status=panel_ppp.ppp_status,
         )
-        panel_notes = UploadNoteWidgets(secret_token, upload_time, panel_ppp.ppp_status)
+        panel_notes = UploadNoteWidgets(
+            secret_token, upload_time, panel_ppp.ppp_status, outdir, outfile_zip
+        )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
         panel_submit_button.submit.disabled = True
