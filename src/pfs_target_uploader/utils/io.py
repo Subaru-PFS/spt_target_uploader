@@ -187,7 +187,7 @@ def upload_file(
             zipfile.write(absname, arcname=arcname)
     logger.info(f"Zip all output files in {outfile_zip_prefix}.zip in {outdir}")
 
-    return outdir, upload_time, secret_token
+    return outdir, f"{outfile_zip_prefix}.zip", upload_time, secret_token
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
