@@ -63,7 +63,7 @@ class UploadNoteWidgets:
                 ),
                 self.copy_source_button,
                 pn.pane.Markdown(
-                    f"<a href='{href_zip}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                    f"<a href='{href_zip}' target='_blank'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
                 ),
                 pn.pane.Markdown(
                     f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
@@ -134,7 +134,7 @@ class UploadNoteWidgets:
                 ),
                 self.copy_source_button,
                 pn.pane.Markdown(
-                    f"<a href='{href_zip}'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
+                    f"<a href='{href_zip}' target='_blank'><i class='fa-solid fa-download fa-2xl'></i><font size=4>  Download the results as a zip file</a></font>"
                 ),
                 pn.pane.Markdown(
                     f"<font size='4' color='#98741E'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
