@@ -20,7 +20,7 @@ class FileInputWidgets(param.Parameterized):
             filename=None,
             accept=".csv,.ecsv",
             multiple=False,
-            sizing_mode="stretch_width",
+            height=50,
         )
 
         # store previous information for input comparison
@@ -32,9 +32,19 @@ class FileInputWidgets(param.Parameterized):
         self.secret_token = None
 
         self.pane = pn.Column(
-            """# Step 1:
-## Select a target list (<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)""",
+            pn.pane.Markdown(
+                "<font size=5>**Select an input CSV file**</font> "
+                "<font size=4>(<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)</font>",
+                # styles={
+                #     "border-left": "10px solid #3A7D7E",
+                #     "border-bottom": "1px solid #3A7D7E",
+                #     "padding-left": "0.5em",
+                # },
+            ),
+            #             """# Step 1:
+            # ## Select a target list (<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)""",
             self.file_input,
+            margin=(10, 0, 0, 0),
         )
 
     def reset(self):

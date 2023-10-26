@@ -42,9 +42,11 @@ def target_uploader_app():
         os.makedirs(config["OUTPUT_DIR"])
         logger.info(f"{config['OUTPUT_DIR']} created.")
 
-    template = pn.template.VanillaTemplate(
+    template = pn.template.MaterialTemplate(
+        # template = pn.template.BootstrapTemplate(
         title="PFS Target Uploader",
-        sidebar_width=400,
+        # sidebar_width=400,
+        sidebar_width=420,
         header_background="#3A7D7E",
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
@@ -75,13 +77,30 @@ def target_uploader_app():
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
 
+    loading_spinner = pn.indicators.LoadingSpinner(
+        value=False, size=50, margin=(10, 0, 0, 0), color="secondary"
+    )
+
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
         panel_input.pane,
-        panel_validate_button.pane,
-        panel_status.pane,
-        panel_ppp_button.pane,
-        panel_submit_button.pane,
+        pn.Column(
+            pn.pane.Markdown(
+                "<font size=5>**Select an operation**</font>",
+            ),
+            pn.Row(
+                panel_validate_button.pane,
+                panel_ppp_button.pane,
+                panel_submit_button.pane,
+                sizing_mode="stretch_width",
+            ),
+            margin=(10, 0, 0, 0),
+        ),
+        pn.Column(
+            pn.Row("<font size=5>**Validation status**</font>", loading_spinner),
+            panel_status.pane,
+            margin=(10, 0, 0, 0),
+        ),
     )
 
     sidebar_configs = pn.Column(panel_dates.pane)
@@ -98,14 +117,20 @@ def target_uploader_app():
         ("Pointing Simulation", panel_ppp.pane),
     )
 
+    sidepanel_column = pn.Column(
+        panel_doc.pane,
+        tab_sidebar,
+    )
+
     main_column = pn.Column(
         placeholder_floatpanel,
-        panel_doc.pane,
         tab_panels,
+        margin=(30, 0, 0, 0),
     )
 
     # put them into the template
-    template.sidebar.append(tab_sidebar)
+    # template.sidebar.append(panel_doc.pane)
+    template.sidebar.append(sidepanel_column)
     template.main.append(main_column)
 
     tab_panels.visible = False
@@ -125,12 +150,14 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
+        loading_spinner.value = True
         validation_status, df_input, df_output = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
 
         _toggle_buttons(button_set, disabled=False)
+        loading_spinner.value = False
 
         if validation_status is None:
             return
@@ -143,7 +170,8 @@ def target_uploader_app():
         tab_panels.visible = True
 
         if validation_status["status"]:
-            panel_submit_button.submit.disabled = False
+            panel_submit_button.enable_button(panel_ppp.ppp_status)
+            # panel_submit_button.submit.disabled = False
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
@@ -157,6 +185,8 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
+        loading_spinner.value = True
+
         validation_status, df_input_, df_validated = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
@@ -164,6 +194,7 @@ def target_uploader_app():
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
+            loading_spinner.value = False
             return
 
         if not validation_status["visibility"]["status"]:
@@ -173,6 +204,7 @@ def target_uploader_app():
                 duration=0,
             )
             _toggle_buttons(button_set, disabled=False)
+            loading_spinner.value = False
             return
 
         panel_status.show_results(df_validated, validation_status)
@@ -193,7 +225,8 @@ def target_uploader_app():
 
             # enable the submit button only with the successful validation
             if validation_status["status"]:
-                panel_submit_button.submit.disabled = False
+                panel_submit_button.enable_button(panel_ppp.ppp_status)
+                # panel_submit_button.submit.disabled = False
 
         except gurobipy.GurobiError as e:
             pn.state.notifications.error(f"{str(e)}", duration=0)
@@ -202,6 +235,7 @@ def target_uploader_app():
         panel_ppp_button.stop()
 
         _toggle_buttons(button_set, disabled=False)
+        loading_spinner.value = False
 
     def cb_submit(event):
         panel_submit_button.submit.disabled = True
@@ -210,6 +244,8 @@ def target_uploader_app():
 
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
+
+        loading_spinner.value = True
 
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
@@ -230,12 +266,14 @@ def target_uploader_app():
             pn.state.notifications.clear()
 
             if validation_status is None:
+                loading_spinner.value = False
                 return
             else:
                 panel_status.show_results(df_validated, validation_status)
                 panel_results.show_results(df_validated, validation_status)
                 panel_targets.show_results(df_validated)
                 tab_panels.visible = True
+                loading_spinner.value = False
                 return
 
         upload_time = datetime.now(timezone.utc)
@@ -274,6 +312,7 @@ def target_uploader_app():
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
         panel_submit_button.submit.disabled = True
+        loading_spinner.value = False
 
     # set callback to the buttons
     panel_validate_button.validate.on_click(cb_validate)

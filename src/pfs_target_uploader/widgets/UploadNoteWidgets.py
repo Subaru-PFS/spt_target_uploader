@@ -30,11 +30,8 @@ class UploadNoteWidgets:
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
             # so far not working...
             stylesheet = """
-        :host {
-            --font-size: 2.5em;
-            --color: darkcyan;
-        }
         .bk-btn-light {
+            font-size: 2.5em !important;
             color: darkcyan;
         }
         """
@@ -96,11 +93,8 @@ class UploadNoteWidgets:
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
             # so far not working...
             stylesheet = """
-        :host {
-            --font-size: 2.5em;
-            --color: #98741E;
-        }
         .bk-btn-light {
+            font-size: 2.5em !important;
             color: #98741E;
             background-color: #FFF3D0;
         }

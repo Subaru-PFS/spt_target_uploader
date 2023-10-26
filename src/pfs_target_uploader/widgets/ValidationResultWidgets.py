@@ -8,10 +8,17 @@ from logzero import logger
 
 class ValidationResultWidgets:
     box_width = 1200
+
+    stylesheet = """
+    .tabulator-row-odd:hover {color: #000000!important; }
+    .tabulator-row-even:hover {color: #000000!important;}
+    """
+
     tabulator_kwargs = dict(
         page_size=50,
         theme="bootstrap",
-        theme_classes=["table-striped", "table-sm"],
+        # theme="simple",
+        # theme_classes=["table-striped", "table-sm"],
         frozen_columns=[],
         pagination="remote",
         header_filters=True,
@@ -19,6 +26,7 @@ class ValidationResultWidgets:
         layout="fit_data_table",
         disabled=True,
         max_width=box_width,
+        stylesheets=[stylesheet],
     )
 
     def __init__(self):
@@ -97,7 +105,11 @@ class ValidationResultWidgets:
         self.info_pane = pn.Column()
 
         self.pane = pn.Column(
-            self.title, self.error_pane, self.warning_pane, self.info_pane
+            self.title,
+            self.error_pane,
+            self.warning_pane,
+            self.info_pane,
+            # raw_css=self.css,
         )
 
         self.is_error = False
