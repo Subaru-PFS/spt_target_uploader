@@ -112,6 +112,7 @@ class StatusWidgets:
             self.summary_table.visible = True
             self.table_footnote.visible = True
 
-        except:
-            logger.error("failed to show the summary table in the side bar.")
-            pass
+        except Exception as e:
+            logger.warning(
+                f"failed to show the summary table in the side bar: {e=}, {type(e)=}"
+            )
