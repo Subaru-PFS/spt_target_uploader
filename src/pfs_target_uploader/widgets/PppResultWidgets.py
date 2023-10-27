@@ -2,6 +2,7 @@
 
 import sys
 
+import numpy as np
 import panel as pn
 from astropy import units as u
 from astropy.table import Table
@@ -13,6 +14,9 @@ from ..utils.ppp import PPPrunStart, ppp_result
 class PppResultWidgets:
     box_width = 1200
 
+    # Maximum ROT can be requested for an openuse normal program
+    max_reqtime_normal = 35.0
+
     def __init__(self):
         # PPP status
         # True if PPP has been run
@@ -22,11 +26,12 @@ class PppResultWidgets:
         self.ppp_title = pn.pane.Markdown(
             """# Results of PFS pointing simulation""",
             dedent=True,
+            max_width=self.box_width,
         )
 
         self.ppp_warning = pn.pane.Alert(
             "<font size=5>⚠️ **Warnings**</font>\n\n"
-            "<font size=3>The total requested time exceeds the 5-night (max. request for a normal program). "
+            "<font size=3>The total requested time exceeds 35 hours (maximum for a normal program). "
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered.</font>",
             alert_type="warning",
@@ -58,15 +63,35 @@ class PppResultWidgets:
 
     def show_results(self):  # , mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
         logger.info("showing PPP results")
+
+        def update_reqtime(df):
+            rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
+            if rot > self.max_reqtime_normal:
+                c = "crimson"
+            else:
+                # c = "#007b43"
+                c = "#3A7D7E"
+            return {"value": rot, "default_color": c}
+
+        # A number indicator showing the current total ROT
+        self.reqtime = pn.indicators.Number(
+            name="Your total request is",
+            format="{value:.1f} <font size=18>h</font>",
+            width=250,
+            refs=pn.bind(update_reqtime, self.p_result_tab),
+            styles={"text-align": "right"},
+            margin=(0, 30, 0, 0),
+        )
+
         self.ppp_figure.append(self.ppp_alert)
         self.ppp_figure.append(
             pn.pane.Markdown(
-                f"""## For the {self.res_mode:s} resolution mode:""",
-                dedent=True,
+                f"""## For the {self.res_mode:s} resolution mode:""", dedent=True
             )
         )
-        self.ppp_figure.append(self.nppc)
-        self.ppp_figure.append(self.p_result_tab)
+        self.ppp_figure.append(
+            pn.Row(self.reqtime, pn.Column(self.nppc, self.p_result_tab))
+        )
         self.ppp_figure.append(self.p_result_fig)
         self.ppp_figure.visible = True
 
@@ -106,7 +131,10 @@ class PppResultWidgets:
             cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
         )
 
-        if self.p_result_tab.value.iloc[-1]["Request time (h)"] > 10 * 5:
+        if (
+            self.p_result_tab.value.iloc[-1]["Request time (h)"]
+            > self.max_reqtime_normal
+        ):
             self.ppp_alert.append(self.ppp_warning)
         else:
             self.ppp_alert.append(self.ppp_success)

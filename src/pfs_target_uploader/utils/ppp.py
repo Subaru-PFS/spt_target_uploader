@@ -1008,7 +1008,7 @@ def ppp_result(
             start=1,
             end=len(cR),
             bar_color="gray",
-            width=500,
+            width=400,
         )
 
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
