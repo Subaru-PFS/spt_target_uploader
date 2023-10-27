@@ -20,7 +20,7 @@ class PppResultWidgets:
         self.ppp_status = True
 
         self.ppp_title = pn.pane.Markdown(
-            """# Results of PPP""",
+            """# Results of PFS pointing simulation""",
             dedent=True,
         )
 
