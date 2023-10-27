@@ -36,6 +36,11 @@ graph TD
 - [Submit target list](submission.md#submit-the-target-list)
 - [Submit PPP outputs](submission.md#submit-the-ppp-outputs)
 
+## [FAQ & Known Issues](issues.md)
+
+- [FAQ](issues.md#faq)
+- [Known Issues](issues.md#known-issues)
+
 
 ## [Contact](contact.md)
 

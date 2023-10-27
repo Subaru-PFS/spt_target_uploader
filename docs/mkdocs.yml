@@ -8,8 +8,8 @@ nav:
   - 'Validation': validation.md
   - 'Time Estimate': PPP.md
   - 'Submission': submission.md
+  - 'FAQ & Known Issues': issues.md
   - 'Contact': contact.md
-  - 'Dev Note': todo.md
 
 use_directory_urls: false
 
