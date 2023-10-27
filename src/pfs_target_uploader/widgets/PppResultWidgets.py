@@ -75,12 +75,12 @@ class PppResultWidgets:
 
         # A number indicator showing the current total ROT
         self.reqtime = pn.indicators.Number(
-            name="You're requesting",
-            format="{value:.1f}<font size=18> h</font>",
-            font_size="72pt",
-            title_size="18pt",
-            max_width=400,
+            name="Your total request is",
+            format="{value:.1f} <font size=18>h</font>",
+            width=250,
             refs=pn.bind(update_reqtime, self.p_result_tab),
+            styles={"text-align": "right"},
+            margin=(0, 30, 0, 0),
         )
 
         self.ppp_figure.append(self.ppp_alert)
