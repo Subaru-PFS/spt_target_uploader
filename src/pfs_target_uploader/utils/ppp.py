@@ -1186,6 +1186,8 @@ def ppp_result(
                 index=[0],
             )
 
+            cR1 = cR1.reindex(["P_all"] + [f"P_{p}" for p in range(10)], axis="columns")
+
             ppc_summary = pd.DataFrame(
                 {
                     "resolution": [RESmode],
@@ -1209,6 +1211,7 @@ def ppp_result(
             obj_alloc.remove_column("PPC_id")
             return Table.to_pandas(obj_alloc)
 
+        # compose figures
         p_result_fig = pn.Row(
             pn.Column(
                 pn.bind(plot_CR, nppc),
@@ -1227,6 +1230,7 @@ def ppp_result(
             ),
         )
 
+        # PPP summary table
         p_result_tab = pn.widgets.Tabulator(
             pn.bind(ppp_res_tab1, nppc),
             page_size=4,
@@ -1245,6 +1249,7 @@ def ppp_result(
             max_width=box_width,
         )
 
+        # PPC table
         p_result_ppc = pn.widgets.Tabulator(
             pn.bind(ppp_res_tab2, nppc),
             visible=False,
@@ -1288,6 +1293,11 @@ def ppp_result(
             ppc_sum.loc[2] = ppc_sum.sum(numeric_only=True)
             ppc_sum.loc[2, "resolution"] = "Total"
             ppc_sum.iloc[2, 6:] = np.nan
+
+            for k in ppc_sum.columns:
+                if ppc_sum.loc[:, k].isna().all():
+                    ppc_sum.drop(columns=[k], inplace=True)
+
             return ppc_sum
 
         def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):

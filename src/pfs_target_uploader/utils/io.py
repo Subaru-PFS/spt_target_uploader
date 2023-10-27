@@ -194,16 +194,16 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     dirs = glob.glob(f"{datadir}/????/??/*")
     n_files = len(dirs)
 
-    orignames = np.zeros(n_files, dtype=object)
-    upload_ids = np.zeros(n_files, dtype=object)
-    timestamps = np.zeros(n_files, dtype="datetime64[s]")
+    orignames = np.full(n_files, None, dtype=object)
+    upload_ids = np.full(n_files, None, dtype=object)
+    timestamps = np.full(n_files, None, dtype="datetime64[s]")
     filesizes = np.zeros(n_files, dtype=float)
     n_obj = np.zeros(n_files, dtype=int)
     t_exp = np.zeros(n_files, dtype=float)
-    links = np.zeros(n_files, dtype=object)
+    links = np.full(n_files, None, dtype=object)
 
-    fullpath_target = np.zeros(n_files, dtype=object)
-    fullpath_psl = np.zeros(n_files, dtype=object)
+    fullpath_target = np.full(n_files, None, dtype=object)
+    fullpath_psl = np.full(n_files, None, dtype=object)
 
     exp_sci_l = np.zeros(n_files, dtype=float)
     exp_sci_m = np.zeros(n_files, dtype=float)
@@ -218,8 +218,15 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             f_target = os.path.join(d, f"target_{uid}.{ext}")
             f_psl = os.path.join(d, f"psl_{uid}.{ext}")
 
-            tb_target = Table.read(f_target)
-            tb_psl = Table.read(f_psl)
+            try:
+                tb_target = Table.read(f_target)
+                tb_psl = Table.read(f_psl)
+                logger.info(f"{f_target} and {f_psl} are found")
+            except FileNotFoundError as e:
+                logger.warning(
+                    f"{e}: {f_target} and/or {f_psl} are not found. Skip them"
+                )
+                continue
 
             filesizes[i] = (os.path.getsize(f_target) * u.byte).to(u.kbyte).value
             # links[i] = f"<a href='{f_target}'><i class='fa-solid fa-download'></i></a>"

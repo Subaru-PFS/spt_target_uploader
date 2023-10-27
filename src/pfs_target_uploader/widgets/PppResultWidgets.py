@@ -6,6 +6,7 @@ import numpy as np
 import panel as pn
 from astropy import units as u
 from astropy.table import Table
+from bokeh.models.widgets.tables import NumberFormatter
 from logzero import logger
 
 from ..utils.ppp import PPPrunStart, ppp_result
@@ -115,7 +116,7 @@ class PppResultWidgets:
             width=250,
             refs=pn.bind(update_reqtime, self.p_result_tab),
             # styles={"text-align": "right"},
-            margin=(0, 0, 0, 0),
+            # margin=(0, 0, 0, 0),
         )
 
         # alert panel is bind to the total request
@@ -130,6 +131,23 @@ class PppResultWidgets:
             refs=pn.bind(update_summary_text, self.p_result_tab),
             max_width=self.box_width,
         )
+
+        # add styling/formatting to the table
+        self.p_result_tab.formatters = {
+            "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
+            "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
+            "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
+            "Used fiber fraction (%)": NumberFormatter(
+                format="0.000", text_align="right"
+            ),
+            "Fraction of PPC < 30% (%)": NumberFormatter(
+                format="0.0", text_align="right"
+            ),
+        }
+        for p in ["all", np.arange(10)]:
+            self.p_result_tab.formatters[f"P_{p}"] = NumberFormatter(
+                format="0.0", text_align="left"
+            )
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
