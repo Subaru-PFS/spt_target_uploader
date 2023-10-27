@@ -950,15 +950,24 @@ def PPPrunStart(uS, weight_para, d_pfi=1.38):
 
 
 def ppp_result(
-    cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2, d_pfi=1.38
+    cR_l,
+    sub_l,
+    obj_allo_l,
+    uS_L2,
+    cR_m,
+    sub_m,
+    obj_allo_m,
+    uS_M2,
+    d_pfi=1.38,
+    box_width=1200.0,
 ):
     r_pfi = d_pfi / 2.0
+
     tabulator_stylesheet = """
     .tabulator-row-odd { background-color: #ffffff !important; }
     .tabulator-row-even { background-color: #ffffff !important; }
     .tabulator-row-odd:hover { color: #000000 !important; background-color: #ffffff !important; }
     .tabulator-row-even:hover { color: #000000 !important; background-color: #ffffff !important; }
-
     """
 
     def overheads(n_sci_frame):
@@ -1232,6 +1241,8 @@ def ppp_result(
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
             stylesheets=[tabulator_stylesheet],
+            max_height=150,
+            max_width=box_width,
         )
 
         p_result_ppc = pn.widgets.Tabulator(
@@ -1313,4 +1324,4 @@ def ppp_result(
             p_result_fig_fin,
             p_result_ppc_fin,
             p_result_tab,
-        )  #'''
+        )

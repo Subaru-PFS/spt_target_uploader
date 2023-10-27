@@ -34,31 +34,12 @@ class PppResultWidgets:
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered.</font>"
         )
-        # alert_type="warning",
-        # max_width=self.box_width,
 
         self.ppp_success_text = (
             "<font size=5>✅ **Success**</font>\n\n"
             "<font size=3>The total requested time is reasonable for normal program. "
             "Note that targets observable in the input period are considered.</font>"
         )
-
-        # self.ppp_warning = pn.pane.Alert(
-        #     "<font size=5>⚠️ **Warnings**</font>\n\n"
-        #     "<font size=3>The total requested time exceeds 35 hours (maximum for a normal program). "
-        #     "Please make sure to adjust it to your requirement before proceeding to the submission. "
-        #     "Note that targets observable in the input observing period are considered.</font>",
-        #     alert_type="warning",
-        #     max_width=self.box_width,
-        # )
-
-        # self.ppp_success = pn.pane.Alert(
-        #     "<font size=5>✅ **Success**</font>\n\n"
-        #     "<font size=3>The total requested time is reasonable for normal program. "
-        #     "Note that targets observable in the input period are considered.</font>",
-        #     alert_type="success",
-        #     max_width=self.box_width,
-        # )
 
         self.ppp_figure = pn.Column()
 
@@ -70,12 +51,11 @@ class PppResultWidgets:
         )
 
     def reset(self):
-        # self.ppp_alert.clear()
         self.ppp_figure.clear()
         self.ppp_figure.visible = False
         self.ppp_status = False
 
-    def show_results(self):  # , mode, nppc, p_result_fig, p_result_tab, ppp_Alert):
+    def show_results(self):
         logger.info("showing PPP results")
 
         def update_alert(df):
@@ -105,27 +85,26 @@ class PppResultWidgets:
 
             try:
                 comp_all_low = df.iloc[0]["P_all"]
-                text_comp_low = f"- <font size=3>The expected **completion rate** for **low-resolution** mode is **{comp_all_low:.0f}%**.</font>"
-
+                text_comp_low = f"- <font size=3>The expected **completion rate** for **low-resolution** mode is **{comp_all_low:.0f}%**.</font>\n"
             except Exception:
                 comp_all_low = None
-                text_comp_low = None
+                text_comp_low = ""
+
             try:
                 comp_all_med = df.iloc[1]["P_all"]
                 text_comp_med = f"- <font size=3>The expected **completion rate** for **medium-resolution** mode is **{comp_all_med:.0f}%**.</font>"
             except Exception:
                 comp_all_med = None
-                text_comp_med = None
+                text_comp_med = ""
 
-            text = f"""
-        - <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>
-        - <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>
-        - <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f}** hours ({int(n_ppc)} x 15 minutes).</font>
-        - <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f}** hours.</font>
-        {text_comp_low}
-        {text_comp_med}
-        """
-            # text_comp_low = f"- <font size=3>Under the nominal condition, 2 out of 3 targets are expected to complete (The expected **completion rate** of **{comp_all_low:.0f}%**).</font>"
+            text = (
+                f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
+                f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
+                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f}** hours ({int(n_ppc)} x 15 minutes).</font>\n"
+                f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f}** hours.</font>\n"
+                f"{text_comp_low}"
+                f"{text_comp_med}"
+            )
 
             return {"object": text}
 
@@ -136,7 +115,7 @@ class PppResultWidgets:
             width=250,
             refs=pn.bind(update_reqtime, self.p_result_tab),
             # styles={"text-align": "right"},
-            margin=(0, 30, 0, 0),
+            margin=(0, 0, 0, 0),
         )
 
         # alert panel is bind to the total request
@@ -197,7 +176,15 @@ class PppResultWidgets:
             self.p_result_ppc,
             self.p_result_tab,
         ) = ppp_result(
-            cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
+            cR_L_,
+            sub_l,
+            obj_allo_L_fin,
+            uS_L2,
+            cR_M_,
+            sub_m,
+            obj_allo_M_fin,
+            uS_M2,
+            box_width=self.box_width,
         )
 
         # if (

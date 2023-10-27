@@ -7,8 +7,9 @@ from logzero import logger
 
 class TargetWidgets:
     stylesheet = """
-    .tabulator-row-odd:hover {color: #000000!important; }
-    .tabulator-row-even:hover {color: #000000!important;}
+    .tabulator-row-even { background-color: #f9f9f9 !important; }
+    .tabulator-row-odd:hover { color: #000000 !important; }
+    .tabulator-row-even:hover { color: #000000 !important; }
     """
 
     def __init__(self):
@@ -31,7 +32,7 @@ class TargetWidgets:
     def show_results(self, df):
         # it seems that frozen_columns must be empty when replacing its value
         self.table_all.frozen_columns = []
-        # self.table_all.value = pd.DataFrame()
+        self.table_all.value = pd.DataFrame()
         self.table_all.value = df
         self.table_all.frozen_columns = ["index"]
         self.table_all.visible = True
