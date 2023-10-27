@@ -1095,7 +1095,11 @@ def ppp_result(
             dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + r_pfi
 
             return (p_ppc * p_tgt).opts(
-                ylim=(dec_min, dec_max), show_grid=True, shared_axes=False
+                xlabel="RA (deg)",
+                ylabel="Dec (deg)",
+                ylim=(dec_min, dec_max),
+                show_grid=True,
+                shared_axes=False,
             )
 
         def plot_CR(nppc_fin):
