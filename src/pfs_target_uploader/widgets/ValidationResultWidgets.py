@@ -10,6 +10,8 @@ class ValidationResultWidgets:
     box_width = 1200
 
     stylesheet = """
+    .tabulator-row-even { background-color: #f9f9f9 !important; }
+
     .tabulator-row-odd:hover {color: #000000!important; }
     .tabulator-row-even:hover {color: #000000!important;}
     """
