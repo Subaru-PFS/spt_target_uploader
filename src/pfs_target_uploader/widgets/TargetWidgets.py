@@ -6,6 +6,11 @@ from logzero import logger
 
 
 class TargetWidgets:
+    stylesheet = """
+    .tabulator-row-odd:hover {color: #000000!important; }
+    .tabulator-row-even:hover {color: #000000!important;}
+    """
+
     def __init__(self):
         self.table_all = pn.widgets.Tabulator(
             None,
@@ -18,6 +23,7 @@ class TargetWidgets:
             visible=False,
             layout="fit_data_table",
             disabled=True,
+            stylesheets=[self.stylesheet],
         )
 
         self.pane = pn.Column(self.table_all)
