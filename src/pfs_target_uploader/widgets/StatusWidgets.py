@@ -8,10 +8,16 @@ from logzero import logger
 
 class StatusWidgets:
     def __init__(self, size=20):
-        self.status = pn.pane.Alert(
-            "<font size=4>Waiting...</font>", alert_type="secondary", height=80
+        self.neutral_text = "<font size=4>Waiting...</font>"
+        self.success_text = "<font size=5>✅ Success</font>"
+        self.warning_text = (
+            "<font size=5>⚠️ Success</font><font size=3>  with warnings</font>"
         )
-        # self.status.visible = False
+        self.error_text = "<font size=5>🚫 Failed</font>"
+
+        self.status = pn.pane.Alert(
+            self.neutral_text, alert_type="secondary", height=80
+        )
 
         stylesheet = """
             .tabulator-row-odd { background-color: #ffffff !important; }
@@ -32,21 +38,9 @@ class StatusWidgets:
             }
         )
 
-        self.df_summary_init.loc[n_priority] = [
-            "Other",
-            0,
-            0,
-            0,
-            0,
-        ]
+        self.df_summary_init.loc[n_priority] = ["Other", 0, 0, 0, 0]
 
-        self.df_summary_init.loc[n_priority + 1] = [
-            "Total",
-            0,
-            0,
-            0,
-            0,
-        ]
+        self.df_summary_init.loc[n_priority + 1] = ["Total", 0, 0, 0, 0]
 
         self.summary_table = pn.widgets.Tabulator(
             self.df_summary_init,
@@ -76,29 +70,24 @@ class StatusWidgets:
 
     def reset(self):
         self.status.alert_type = "light"
-        # self.status.visible = False
-
+        self.status.object = self.neutral_text
         self.summary_table.value = self.df_summary_init
-        # self.summary_table.visible = False
-        # self.table_footnote.visible = False
 
     def show_results(self, df, validation_status):
         if validation_status["status"]:
             if validation_status["optional_keys"]["status"] and np.any(
                 validation_status["visibility"]["success"]
             ):
-                self.status.object = "<font size=5>✅ Success</font>"
+                self.status.object = self.success_object
                 self.status.alert_type = "success"
             else:
                 # self.status.object = "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size=5>  Success</font> <font size=3>with warnings</font>"
                 # self.status.object = "<i class='fa-solid fa-circle-exclamation fa-2xl'></i><font size=5>  Success</font> <font size=3>with warnings</font>"
-                self.status.object = (
-                    "<font size=5>⚠️ Success</font><font size=3>  with warnings</font>"
-                )
+                self.status.object = self.warning_text
                 self.status.alert_type = "success"
                 # self.status.alert_type = "warning"
         elif not validation_status["status"]:
-            self.status.object = "<font size=5>🚫 Failed</font>"
+            self.status.object = self.error_text
             self.status.alert_type = "danger"
 
         # self.status.visible = True

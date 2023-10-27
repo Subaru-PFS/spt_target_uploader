@@ -180,7 +180,8 @@ def target_uploader_app():
 
         placeholder_floatpanel.objects = []
 
-        # reset only PPP result panel
+        # reset some panels
+        panel_status.reset()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
