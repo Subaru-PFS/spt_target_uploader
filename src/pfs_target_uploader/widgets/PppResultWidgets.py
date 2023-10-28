@@ -49,6 +49,7 @@ class PppResultWidgets:
         self.pane = pn.Column(
             self.ppp_title,
             self.ppp_figure,
+            max_width=self.box_width,
         )
 
     def reset(self):
@@ -101,8 +102,8 @@ class PppResultWidgets:
             text = (
                 f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
                 f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
-                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f}** hours ({int(n_ppc)} x 15 minutes).</font>\n"
-                f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f}** hours.</font>\n"
+                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f} hours** ({int(n_ppc)} x 15 minutes).</font>\n"
+                f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f} hours**.</font>\n"
                 f"{text_comp_low}"
                 f"{text_comp_med}"
             )
@@ -151,13 +152,17 @@ class PppResultWidgets:
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
+        # self.ppp_figure.append(
+        #     pn.pane.Markdown(f"""## For the {self.res_mode:s} resolution mode:""")
+        # )
+        self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
         self.ppp_figure.append(
-            pn.pane.Markdown(
-                f"""## For the {self.res_mode:s} resolution mode:""", dedent=True
+            pn.Column(
+                "<font size=4>Number of PFS pointing centers (adjustable with the sliders)</font>",
+                self.nppc,
+                self.p_result_tab,
             )
         )
-        self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
-        self.ppp_figure.append(pn.Column(self.nppc, self.p_result_tab))
         self.ppp_figure.append(self.p_result_fig)
         self.ppp_figure.visible = True
 
