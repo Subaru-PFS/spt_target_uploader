@@ -28,12 +28,6 @@ from sklearn.neighbors import KernelDensity
 import ets_fiber_assigner.netflow as nf
 from ics.cobraOps.Bench import Bench
 
-# from ics.cobraOps import plotUtils
-# from ics.cobraOps.cobraConstants import NULL_TARGET_ID, NULL_TARGET_POSITION
-# from ics.cobraOps.CobrasCalibrationProduct import CobrasCalibrationProduct
-# from ics.cobraOps.CollisionSimulator import CollisionSimulator
-# from ics.cobraOps.TargetGroup import TargetGroup
-
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
@@ -919,19 +913,6 @@ def PPPrunStart(uS, weight_para, d_pfi=1.38):
         out_sub_m = sub_m
         out_obj_allo_M_fin = obj_allo_M_fin
 
-        # return (
-        #     uS_L2,
-        #     cR_L,
-        #     cR_L_,
-        #     sub_l,
-        #     obj_allo_L_fin,
-        #     uS_M2,
-        #     cR_M,
-        #     cR_M_,
-        #     sub_m,
-        #     obj_allo_M_fin,
-        # )
-
     t_ppp_stop = time.time()
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
 
@@ -1112,7 +1093,6 @@ def ppp_result(
                 ylim=(dec_min, dec_max),
                 show_grid=True,
                 shared_axes=False,
-                # toolbar="right",
                 toolbar="left",
                 active_tools=["box_zoom"],
                 height=plot_height,
@@ -1182,7 +1162,6 @@ def ppp_result(
                     (max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])) * 1.15,
                 ),
                 shared_axes=False,
-                # toolbar="right",
                 toolbar="left",
                 active_tools=["box_zoom"],
                 height=plot_height,

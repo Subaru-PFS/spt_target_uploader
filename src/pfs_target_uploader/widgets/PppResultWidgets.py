@@ -116,8 +116,6 @@ class PppResultWidgets:
             format="{value:.1f} <font size=18>h</font>",
             width=250,
             refs=pn.bind(update_reqtime, self.p_result_tab),
-            # styles={"text-align": "right"},
-            # margin=(0, 0, 0, 0),
         )
 
         # alert panel is bind to the total request
@@ -152,13 +150,10 @@ class PppResultWidgets:
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
-        # self.ppp_figure.append(
-        #     pn.pane.Markdown(f"""## For the {self.res_mode:s} resolution mode:""")
-        # )
         self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
         self.ppp_figure.append(
             pn.Column(
-                "<font size=4>Number of PFS pointing centers (adjustable with the sliders)</font>",
+                "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
                 self.nppc,
                 self.p_result_tab,
             )
@@ -209,13 +204,5 @@ class PppResultWidgets:
             uS_M2,
             box_width=self.box_width,
         )
-
-        # if (
-        #     self.p_result_tab.value.iloc[-1]["Request time (h)"]
-        #     > self.max_reqtime_normal
-        # ):
-        #     self.ppp_alert.append(self.ppp_warning)
-        # else:
-        #     self.ppp_alert.append(self.ppp_success)
 
         self.ppp_status = True
