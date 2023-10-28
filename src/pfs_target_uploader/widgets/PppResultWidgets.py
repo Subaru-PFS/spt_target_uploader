@@ -114,7 +114,7 @@ class PppResultWidgets:
         self.reqtime = pn.indicators.Number(
             name="Your total request is",
             format="{value:.1f} <font size=18>h</font>",
-            width=250,
+            max_width=300,
             refs=pn.bind(update_reqtime, self.p_result_tab),
         )
 

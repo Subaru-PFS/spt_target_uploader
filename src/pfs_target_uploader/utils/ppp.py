@@ -1002,14 +1002,18 @@ def ppp_result(
 
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
         # colors for priority 0-9
-        colors_all = ["red"] + sns.color_palette(cc.glasbey_bw_minc_20_maxl_70, 9)
-        # colors = sns.color_palette(cc.glasbey_bw, len(sub) - 1)
+        # red + first colors from glasbey_dark colormap as strings
+        colors_all = ["red"] + cc.b_glasbey_bw_minc_20_maxl_70[:9]
         colors = [colors_all[i] for i in sub]
+
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1)
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
+
+        # add a column to indicate the color for the scatter plot
+        uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
 
         def plot_ppc(nppc_fin):
             def PFS_FoV_plot(ppc_ra, ppc_dec, PA):
@@ -1077,8 +1081,7 @@ def ppp_result(
                 x="ra",
                 y="dec",
                 by="priority",
-                # color=["r"] + colors,
-                color=colors,
+                color="ppc_color",
                 marker="o",
                 s=20,
                 legend=True,
@@ -1107,8 +1110,7 @@ def ppp_result(
                 y=name[:-1],
                 value_label="Completion rate (%)",
                 title="Progress of the completion rate",
-                # color=["k", "r"] + colors,
-                color=["k"] + colors_all,
+                color=["k"] + colors,
                 line_width=[4, 3] + [2] * (len(sub) - 1),
                 line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
                 legend="right",

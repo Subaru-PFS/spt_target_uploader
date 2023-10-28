@@ -23,7 +23,7 @@ class ValidateButtonWidgets:
             button_style="outline",
             button_type="primary",
             icon="stethoscope",
-            height=65,
+            height=60,
             max_width=130,
             stylesheets=[self.stylesheet],
         )
@@ -47,7 +47,7 @@ class RunPppButtonWidgets:
             button_style="outline",
             button_type="primary",
             icon="player-play-filled",
-            height=65,
+            height=60,
             max_width=130,
             stylesheets=[self.stylesheet],
         )
@@ -98,7 +98,7 @@ class SubmitButtonWidgets:
             button_type="primary",
             icon="send",
             disabled=True,
-            height=65,
+            height=60,
             max_width=130,
             stylesheets=[self.stylesheet],
         )

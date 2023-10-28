@@ -55,7 +55,7 @@ class ValidationResultWidgets:
             max_width=self.box_width,
         )
         self.info_title = pn.pane.Alert(
-            """<font size=5>✅ Info</font>\n\n
+            """<font size=5>✅ **Info**</font>\n\n
 <font size=3>The following items are successfully passed the validation.</font>""",
             alert_type="success",
             max_width=self.box_width,
