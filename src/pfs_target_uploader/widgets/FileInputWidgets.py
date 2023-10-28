@@ -20,7 +20,7 @@ class FileInputWidgets(param.Parameterized):
             filename=None,
             accept=".csv,.ecsv",
             multiple=False,
-            height=50,
+            height=40,
         )
 
         # store previous information for input comparison
