@@ -219,6 +219,10 @@ def target_uploader_app():
         panel_ppp_button.start()
 
         try:
+            panel_ppp.origname = panel_input.file_input.filename
+            panel_ppp.origdata = panel_input.file_input.value
+            panel_ppp.df_summary = panel_status.df_summary
+
             panel_ppp.run_ppp(df_validated, validation_status)
             panel_ppp.show_results()
 
@@ -277,6 +281,10 @@ def target_uploader_app():
                 loading_spinner.value = False
                 return
 
+        panel_ppp.origname = panel_input.file_input.filename
+        panel_ppp.origdata = panel_input.file_input.value
+        panel_ppp.df_summary = panel_status.df_summary
+
         upload_time = datetime.now(timezone.utc)
         secret_token = panel_input.secret_token
 
@@ -290,7 +298,7 @@ def target_uploader_app():
             df_ppc = None
             ppp_fig = None
 
-        outdir, outfile_zip, _, _ = upload_file(
+        outdir, outfile_zip, _ = upload_file(
             df_validated,
             df_psl,
             df_ppc,
