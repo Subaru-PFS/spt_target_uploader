@@ -24,10 +24,12 @@ class PppResultWidgets:
         # True if PPP has been run
         # False if PPP has not been run
         self.ppp_status = True
-        self.origname = None
-        self.origdata = None
         self.df_input = None
         self.df_summary = None
+        self.origname = None
+        self.origdata = None
+        self.upload_time = None
+        self.secret_token = None
 
         self.ppp_title = pn.pane.Markdown(
             """# Results of PFS pointing simulation""",
@@ -65,6 +67,8 @@ class PppResultWidgets:
         self.df_summary = None
         self.origname = None
         self.origdata = None
+        self.upload_time = None
+        self.secret_token = None
 
     def show_results(self):
         logger.info("showing PPP results")
@@ -254,3 +258,29 @@ class PppResultWidgets:
         )
 
         self.ppp_status = True
+
+    def upload(self, outdir_prefix=".", export=False):
+        try:
+            df_psl = self.p_result_tab.value
+            df_ppc = self.p_result_ppc.value
+            ppp_fig = self.p_result_fig
+        except AttributeError:
+            df_psl = None
+            df_ppc = None
+            ppp_fig = None
+
+        outdir, outfile_zip, _ = upload_file(
+            self.df_input,
+            df_psl,
+            df_ppc,
+            self.df_summary,
+            ppp_fig,
+            outdir_prefix=outdir_prefix,
+            origname=self.origname,
+            origdata=self.origdata,
+            secret_token=self.secret_token,
+            upload_time=self.upload_time,
+            ppp_status=self.ppp_status,
+        )
+
+        return outdir, outfile_zip, None

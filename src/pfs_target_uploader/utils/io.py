@@ -111,7 +111,7 @@ def upload_file(
             logger.warning(f"{outdir} already exists, strange")
     else:
         secret_token = "export"
-        outdir = None
+        outdir = ""
 
     # convert pandas.DataFrame to astropy.Table
     tb_target = Table.from_pandas(df_target)
@@ -145,37 +145,58 @@ def upload_file(
             }
         )
 
-    outfiles_dict = {"filename": [], "object": [], "type": []}
-
-    for file_prefix, tb in zip(
-        ["target", "target_summary", "psl", "ppc"],
-        [tb_target, tb_target_summary, tb_psl, tb_ppc],
-    ):
-        logger.info("Adding metadata")
-        # add metadata
-        tb.meta["original_filename"] = origname
-        if export:
-            tb.meta["upload_id"] = secret_token
-            tb.meta["upload_at"] = upload_time
-            tb.meta["ppp_status"] = ppp_status
-
-        outfiles_dict["filename"].append(f"{file_prefix}_{secret_token}.ecsv")
-        outfiles_dict["object"].append(tb)
-        outfiles_dict["type"].append("table")
-
-    if ppp_status:
-        outfiles_dict["filename"].append(f"ppp_figure_{secret_token}.html")
-        outfiles_dict["object"].append(ppp_fig)
-        outfiles_dict["type"].append("figure")
-
-    outfiles_dict["filename"].append(origname)
-    outfiles_dict["object"].append(origdata)
-    outfiles_dict["type"].append("original")
-
     if export:
         outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}"
     else:
         outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
+
+    outfiles_dict = {
+        "filename": [],
+        "object": [],
+        "type": [],
+        "absname": [],
+        "arcname": [],
+    }
+
+    for file_prefix, obj, type in zip(
+        ["target", "target_summary", "psl", "ppc", "ppp_figure", ""],
+        [tb_target, tb_target_summary, tb_psl, tb_ppc, ppp_fig, origdata],
+        ["table", "table", "table", "table", "figure", "original"],
+    ):
+        logger.info("Adding metadata")
+        if type == "table":
+            # add metadata
+            obj.meta["original_filename"] = origname
+            if export:
+                obj.meta["upload_id"] = secret_token
+                obj.meta["upload_at"] = upload_time
+                obj.meta["ppp_status"] = ppp_status
+            filename = f"{file_prefix}_{secret_token}.ecsv"
+        elif type == "figure":
+            filename = f"{file_prefix}_{secret_token}.html"
+        elif type == "original":
+            filename = origname
+
+        # if ppp_status:
+        #     outfiles_dict["filename"].append(filename)
+        #     outfiles_dict["object"].append(obj)
+        #     outfiles_dict["type"].append(type)
+        #     outfiles_dict["absname"].append(os.path.join(outdir, filename))
+        #     outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, filename))
+
+        outfiles_dict["filename"].append(filename)
+        outfiles_dict["object"].append(obj)
+        outfiles_dict["type"].append(type)
+        outfiles_dict["absname"].append(os.path.join(outdir, filename))
+        outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, filename))
+
+    # outfiles_dict["filename"].append(origname)
+    # outfiles_dict["object"].append(origdata)
+    # outfiles_dict["type"].append("original")
+    # outfiles_dict["absname"].append(os.path.join(outdir, origname))
+    # outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, origname))
+
+    print(outfiles_dict)
 
     outdir, outfile_zip, sio = upload_write(
         outfiles_dict, outfile_zip_prefix, outdir, export=export
@@ -185,67 +206,57 @@ def upload_file(
 
 
 def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
-    if export is False:
+    if export:
+        zip_buffer = BytesIO()
+    else:
+        zip_buffer = os.path.join(outdir, f"{outfile_zip_prefix}.zip")
+
+    with ZipFile(zip_buffer, "w") as zipfile:
         for i in range(len(outfiles_dict["filename"])):
+            if export:
+                dest = StringIO()
+            else:
+                dest = os.path.join(outdir, outfiles_dict["filename"][i])
+
             if outfiles_dict["type"][i] == "table":
                 outfiles_dict["object"][i].write(
-                    os.path.join(outdir, outfiles_dict["filename"][i]),
+                    dest,
                     delimiter=",",
                     format="ascii.ecsv",
                     overwrite=True,
                 )
             elif outfiles_dict["type"][i] == "figure":
-                outfiles_dict["object"][i].save(
-                    os.path.join(outdir, outfiles_dict["filename"][i]),
-                    resources=INLINE,
-                    title="Pointing Result",
-                )
-            elif outfiles_dict["type"][i] == "original":
-                with open(
-                    os.path.join(outdir, outfiles_dict["filename"][i]), "wb"
-                ) as f:
-                    f.write(outfiles_dict["object"][i])
-            logger.info(f"File {outfiles_dict['filename'][i]} is saved under {outdir}.")
-
-        # put all in a zip file
-        # outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
-        with ZipFile(os.path.join(outdir, f"{outfile_zip_prefix}.zip"), "w") as zipfile:
-            for outfile in outfiles_dict["filename"]:
-                absname = os.path.join(outdir, outfile)
-                arcname = os.path.join(outfile_zip_prefix, os.path.basename(outfile))
-                zipfile.write(absname, arcname=arcname)
-        logger.info(f"Zip all output files in {outfile_zip_prefix}.zip in {outdir}")
-        return outdir, f"{outfile_zip_prefix}.zip", None
-
-    elif export:
-        zip_buffer = BytesIO()
-        with ZipFile(zip_buffer, "w") as zipfile:
-            for i in range(len(outfiles_dict["filename"])):
-                buffer = StringIO()
-                arcname = os.path.join(
-                    outfile_zip_prefix,
-                    os.path.basename(outfiles_dict["filename"][i]),
-                )
-                logger.info(
-                    f"zipping with {outfiles_dict['filename'][i]} and {arcname}"
-                )
-                if outfiles_dict["type"][i] == "table":
-                    outfiles_dict["object"][i].write(
-                        buffer, format="ascii.ecsv", delimiter=","
-                    )
-                    zipfile.writestr(arcname, buffer.getvalue())
-                if outfiles_dict["type"][i] == "figure":
+                if outfiles_dict["object"][i] is not None:
                     outfiles_dict["object"][i].save(
-                        buffer,
+                        dest,
                         resources=INLINE,
                         title="Pointing Result",
                     )
-                    zipfile.writestr(arcname, buffer.getvalue())
+                else:
+                    continue
+
+            absname = outfiles_dict["absname"][i]
+            arcname = outfiles_dict["arcname"][i]
+
+            if export:
                 if outfiles_dict["type"][i] == "original":
                     zipfile.writestr(arcname, outfiles_dict["object"][i])
-        logger.info("zip file made")
+                else:
+                    zipfile.writestr(arcname, dest.getvalue())
+            else:
+                if outfiles_dict["type"][i] == "original":
+                    with open(dest, "wb") as f:
+                        f.write(outfiles_dict["object"][i])
+                zipfile.write(absname, arcname=outfiles_dict["arcname"][i])
+
+            logger.info(f"File {outfiles_dict['filename'][i]} is saved under {outdir}.")
+
+    if export:
         zip_buffer.seek(0)
-        return None, f"{outfile_zip_prefix}.zip", zip_buffer
+
+    logger.info("zip file made")
+
+    return outdir, f"{outfile_zip_prefix}.zip", zip_buffer
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
