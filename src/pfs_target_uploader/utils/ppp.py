@@ -1297,7 +1297,7 @@ def ppp_result(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
 
-        nppc_fin = pn.Row(nppc_l, nppc_m)
+        nppc_fin = pn.Row(nppc_l, nppc_m, max_width=900)
         # p_result_fig_fin = pn.Column(p_result_fig_l, p_result_fig_m)
         p_result_fig_fin = pn.Row(p_result_fig_l, p_result_fig_m)
 

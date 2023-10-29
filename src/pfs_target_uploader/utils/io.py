@@ -5,9 +5,11 @@ import glob
 import math
 import os
 import secrets
+import sys
 import warnings
 from datetime import datetime, timezone
-from zipfile import ZipFile
+from io import BytesIO, StringIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
 import pandas as pd
@@ -78,33 +80,38 @@ def upload_file(
     secret_token=None,
     upload_time=None,
     ppp_status=True,
+    export=False,
 ):
-    if secret_token is None:
-        secret_token = secrets.token_hex(8)
-        logger.warning(
-            f"secret_token {secret_token} is newly generated as None is provided."
-        )
-
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
         upload_time = datetime.now(timezone.utc)
         logger.warning(
             f"upload_time {upload_time.isoformat(timespec='seconds')} is newly generated as None is provided."
         )
-
     dt = upload_time
-    outdir = os.path.join(
-        outdir_prefix,
-        f"{dt.year:4d}",
-        f"{dt.month:02d}",
-        f"{dt:%Y%m%d-%H%M%S}-{secret_token}",
-    )
 
-    if not os.path.exists(outdir):
-        logger.info(f"{outdir} is created")
-        os.makedirs(outdir)
+    if export is False:
+        if secret_token is None:
+            secret_token = secrets.token_hex(8)
+            logger.warning(
+                f"secret_token {secret_token} is newly generated as None is provided."
+            )
+
+        outdir = os.path.join(
+            outdir_prefix,
+            f"{dt.year:4d}",
+            f"{dt.month:02d}",
+            f"{dt:%Y%m%d-%H%M%S}-{secret_token}",
+        )
+
+        if not os.path.exists(outdir):
+            logger.info(f"{outdir} is created")
+            os.makedirs(outdir)
+        else:
+            logger.warning(f"{outdir} already exists, strange")
     else:
-        logger.warning(f"{outdir} already exists, strange")
+        secret_token = "export"
+        outdir = None
 
     # convert pandas.DataFrame to astropy.Table
     tb_target = Table.from_pandas(df_target)
@@ -138,56 +145,107 @@ def upload_file(
             }
         )
 
-    outfiles = []
+    outfiles_dict = {"filename": [], "object": [], "type": []}
 
     for file_prefix, tb in zip(
         ["target", "target_summary", "psl", "ppc"],
         [tb_target, tb_target_summary, tb_psl, tb_ppc],
     ):
-        outfile = f"{file_prefix}_{secret_token}.ecsv"
-        outfiles.append(outfile)
+        logger.info("Adding metadata")
         # add metadata
         tb.meta["original_filename"] = origname
-        tb.meta["upload_id"] = secret_token
-        tb.meta["upload_at"] = upload_time
-        tb.meta["ppp_status"] = ppp_status
+        if export:
+            tb.meta["upload_id"] = secret_token
+            tb.meta["upload_at"] = upload_time
+            tb.meta["ppp_status"] = ppp_status
 
-        # save the table in the output directory as an ECSV file
-        tb.write(
-            os.path.join(outdir, outfile),
-            delimiter=",",
-            format="ascii.ecsv",
-            overwrite=True,
-        )
-        logger.info(f"File {outfile} is saved under {outdir}.")
+        outfiles_dict["filename"].append(f"{file_prefix}_{secret_token}.ecsv")
+        outfiles_dict["object"].append(tb)
+        outfiles_dict["type"].append("table")
 
     if ppp_status:
-        outfile = f"ppp_figure_{secret_token}.html"
-        outfiles.append(outfile)
-        logger.info(f"PPP figure is saved as {outfile} under {outdir}")
-        ppp_fig.save(
-            os.path.join(outdir, outfile),
-            resources=INLINE,
-            # embed=True,
-            title=f"Pointing Result for the Upload ID {secret_token}",
-        )
+        outfiles_dict["filename"].append(f"ppp_figure_{secret_token}.html")
+        outfiles_dict["object"].append(ppp_fig)
+        outfiles_dict["type"].append("figure")
 
-    outfile_orig = origname
-    outfiles.append(outfile_orig)
+    outfiles_dict["filename"].append(origname)
+    outfiles_dict["object"].append(origdata)
+    outfiles_dict["type"].append("original")
 
-    with open(os.path.join(outdir, outfile_orig), "wb") as f:
-        f.write(origdata)
-        logger.info(f"Original target list is saved as {outfile_orig} in {outdir}.")
+    if export:
+        outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}"
+    else:
+        outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
 
-    outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
-    with ZipFile(os.path.join(outdir, f"{outfile_zip_prefix}.zip"), "w") as zipfile:
-        for outfile in outfiles:
-            absname = os.path.join(outdir, outfile)
-            arcname = os.path.join(outfile_zip_prefix, os.path.basename(outfile))
-            zipfile.write(absname, arcname=arcname)
-    logger.info(f"Zip all output files in {outfile_zip_prefix}.zip in {outdir}")
+    outdir, outfile_zip, sio = upload_write(
+        outfiles_dict, outfile_zip_prefix, outdir, export=export
+    )
 
-    return outdir, f"{outfile_zip_prefix}.zip", upload_time, secret_token
+    return outdir, outfile_zip, sio
+
+
+def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
+    if export is False:
+        for i in range(len(outfiles_dict["filename"])):
+            if outfiles_dict["type"][i] == "table":
+                outfiles_dict["object"][i].write(
+                    os.path.join(outdir, outfiles_dict["filename"][i]),
+                    delimiter=",",
+                    format="ascii.ecsv",
+                    overwrite=True,
+                )
+            elif outfiles_dict["type"][i] == "figure":
+                outfiles_dict["object"][i].save(
+                    os.path.join(outdir, outfiles_dict["filename"][i]),
+                    resources=INLINE,
+                    title="Pointing Result",
+                )
+            elif outfiles_dict["type"][i] == "original":
+                with open(
+                    os.path.join(outdir, outfiles_dict["filename"][i]), "wb"
+                ) as f:
+                    f.write(outfiles_dict["object"][i])
+            logger.info(f"File {outfiles_dict['filename'][i]} is saved under {outdir}.")
+
+        # put all in a zip file
+        # outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
+        with ZipFile(os.path.join(outdir, f"{outfile_zip_prefix}.zip"), "w") as zipfile:
+            for outfile in outfiles_dict["filename"]:
+                absname = os.path.join(outdir, outfile)
+                arcname = os.path.join(outfile_zip_prefix, os.path.basename(outfile))
+                zipfile.write(absname, arcname=arcname)
+        logger.info(f"Zip all output files in {outfile_zip_prefix}.zip in {outdir}")
+        return outdir, f"{outfile_zip_prefix}.zip", None
+
+    elif export:
+        zip_buffer = BytesIO()
+        with ZipFile(zip_buffer, "w") as zipfile:
+            for i in range(len(outfiles_dict["filename"])):
+                buffer = StringIO()
+                arcname = os.path.join(
+                    outfile_zip_prefix,
+                    os.path.basename(outfiles_dict["filename"][i]),
+                )
+                logger.info(
+                    f"zipping with {outfiles_dict['filename'][i]} and {arcname}"
+                )
+                if outfiles_dict["type"][i] == "table":
+                    outfiles_dict["object"][i].write(
+                        buffer, format="ascii.ecsv", delimiter=","
+                    )
+                    zipfile.writestr(arcname, buffer.getvalue())
+                if outfiles_dict["type"][i] == "figure":
+                    outfiles_dict["object"][i].save(
+                        buffer,
+                        resources=INLINE,
+                        title="Pointing Result",
+                    )
+                    zipfile.writestr(arcname, buffer.getvalue())
+                if outfiles_dict["type"][i] == "original":
+                    zipfile.writestr(arcname, outfiles_dict["object"][i])
+        logger.info("zip file made")
+        zip_buffer.seek(0)
+        return None, f"{outfile_zip_prefix}.zip", zip_buffer
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
