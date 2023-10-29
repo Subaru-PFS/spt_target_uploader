@@ -128,6 +128,7 @@ class PppResultWidgets:
                 origdata=self.origdata,
                 export=True,
             )
+            self.export_button.filename = outfile_zip
             return sio
 
         # A number indicator showing the current total ROT
