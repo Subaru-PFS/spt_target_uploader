@@ -133,6 +133,7 @@ class PppResultWidgets:
 
         # add styling/formatting to the table
         self.p_result_tab.formatters = {
+            "N_ppc": NumberFormatter(format="0", text_align="right"),
             "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
             "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
             "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
