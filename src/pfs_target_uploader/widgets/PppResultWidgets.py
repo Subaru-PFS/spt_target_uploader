@@ -49,6 +49,7 @@ class PppResultWidgets:
         self.pane = pn.Column(
             self.ppp_title,
             self.ppp_figure,
+            max_width=self.box_width,
         )
 
     def reset(self):
@@ -101,8 +102,8 @@ class PppResultWidgets:
             text = (
                 f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
                 f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
-                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f}** hours ({int(n_ppc)} x 15 minutes).</font>\n"
-                f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f}** hours.</font>\n"
+                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f} hours** ({int(n_ppc)} x 15 minutes).</font>\n"
+                f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f} hours**.</font>\n"
                 f"{text_comp_low}"
                 f"{text_comp_med}"
             )
@@ -113,10 +114,8 @@ class PppResultWidgets:
         self.reqtime = pn.indicators.Number(
             name="Your total request is",
             format="{value:.1f} <font size=18>h</font>",
-            width=250,
+            max_width=300,
             refs=pn.bind(update_reqtime, self.p_result_tab),
-            # styles={"text-align": "right"},
-            # margin=(0, 0, 0, 0),
         )
 
         # alert panel is bind to the total request
@@ -134,6 +133,7 @@ class PppResultWidgets:
 
         # add styling/formatting to the table
         self.p_result_tab.formatters = {
+            "N_ppc": NumberFormatter(format="0", text_align="right"),
             "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
             "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
             "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
@@ -151,13 +151,14 @@ class PppResultWidgets:
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
+        self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
         self.ppp_figure.append(
-            pn.pane.Markdown(
-                f"""## For the {self.res_mode:s} resolution mode:""", dedent=True
+            pn.Column(
+                "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
+                self.nppc,
+                self.p_result_tab,
             )
         )
-        self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
-        self.ppp_figure.append(pn.Column(self.nppc, self.p_result_tab))
         self.ppp_figure.append(self.p_result_fig)
         self.ppp_figure.visible = True
 
@@ -204,13 +205,5 @@ class PppResultWidgets:
             uS_M2,
             box_width=self.box_width,
         )
-
-        # if (
-        #     self.p_result_tab.value.iloc[-1]["Request time (h)"]
-        #     > self.max_reqtime_normal
-        # ):
-        #     self.ppp_alert.append(self.ppp_warning)
-        # else:
-        #     self.ppp_alert.append(self.ppp_success)
 
         self.ppp_status = True

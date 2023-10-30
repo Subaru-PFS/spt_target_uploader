@@ -221,7 +221,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             try:
                 tb_target = Table.read(f_target)
                 tb_psl = Table.read(f_psl)
-                logger.info(f"{f_target} and {f_psl} are found")
+                # logger.info(f"{f_target} and {f_psl} are found")
             except FileNotFoundError as e:
                 logger.warning(
                     f"{e}: {f_target} and/or {f_psl} are not found. Skip them"

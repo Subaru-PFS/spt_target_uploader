@@ -28,12 +28,6 @@ from sklearn.neighbors import KernelDensity
 import ets_fiber_assigner.netflow as nf
 from ics.cobraOps.Bench import Bench
 
-# from ics.cobraOps import plotUtils
-# from ics.cobraOps.cobraConstants import NULL_TARGET_ID, NULL_TARGET_POSITION
-# from ics.cobraOps.CobrasCalibrationProduct import CobrasCalibrationProduct
-# from ics.cobraOps.CollisionSimulator import CollisionSimulator
-# from ics.cobraOps.TargetGroup import TargetGroup
-
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
@@ -919,19 +913,6 @@ def PPPrunStart(uS, weight_para, d_pfi=1.38):
         out_sub_m = sub_m
         out_obj_allo_M_fin = obj_allo_M_fin
 
-        # return (
-        #     uS_L2,
-        #     cR_L,
-        #     cR_L_,
-        #     sub_l,
-        #     obj_allo_L_fin,
-        #     uS_M2,
-        #     cR_M,
-        #     cR_M_,
-        #     sub_m,
-        #     obj_allo_M_fin,
-        # )
-
     t_ppp_stop = time.time()
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
 
@@ -960,6 +941,7 @@ def ppp_result(
     uS_M2,
     d_pfi=1.38,
     box_width=1200.0,
+    plot_height=400,
 ):
     r_pfi = d_pfi / 2.0
 
@@ -1009,24 +991,29 @@ def ppp_result(
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
         nppc = pn.widgets.IntSlider(
-            name="You can modify the number of pointings for the "
-            + RESmode
-            + " resolution",
+            name=(f"{RESmode.capitalize()}-resolution mode"),
             value=len(cR),
             step=1,
             start=1,
             end=len(cR),
             bar_color="gray",
-            width=400,
+            max_width=450,
         )
 
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
-        colors = sns.color_palette(cc.glasbey_bw, len(sub) - 1)
+        # colors for priority 0-9
+        # red + first colors from glasbey_dark colormap as strings
+        colors_all = ["red"] + cc.b_glasbey_bw_minc_20_maxl_70[:9]
+        colors = [colors_all[i] for i in sub]
+
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1)
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
+
+        # add a column to indicate the color for the scatter plot
+        uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
 
         def plot_ppc(nppc_fin):
             def PFS_FoV_plot(ppc_ra, ppc_dec, PA):
@@ -1074,7 +1061,7 @@ def ppp_result(
                     x="RA",
                     y="DEC",
                     by="PA",
-                    title="Distribution of targets & PPC",
+                    title="Distributions of targets & pointing centers",
                     fill_color="lightgray",
                     line_color="black",
                     marker="s",
@@ -1094,14 +1081,14 @@ def ppp_result(
                 x="ra",
                 y="dec",
                 by="priority",
-                color=["r"] + colors,
+                color="ppc_color",
                 marker="o",
                 s=20,
                 legend=True,
             )
 
-            dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - r_pfi
-            dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + r_pfi
+            dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
+            dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
 
             return (p_ppc * p_tgt).opts(
                 xlabel="RA (deg)",
@@ -1109,6 +1096,9 @@ def ppp_result(
                 ylim=(dec_min, dec_max),
                 show_grid=True,
                 shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
             )
 
         def plot_CR(nppc_fin):
@@ -1119,11 +1109,11 @@ def ppp_result(
                 x="PPC_id",
                 y=name[:-1],
                 value_label="Completion rate (%)",
-                title=f"{RESmode:s}-resolution mode",
-                color=["k", "r"] + colors,
-                line_width=[3, 2] + [1] * (len(sub) - 1),
+                title="Progress of the completion rate",
+                color=["k"] + colors,
+                line_width=[4, 3] + [2] * (len(sub) - 1),
                 line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
-                legend=True,
+                legend="right",
             )
             p2 = hv.Rectangles([(30, 88, 95, 100)]).opts(
                 color="orange", line_width=0, alpha=0.2
@@ -1134,10 +1124,13 @@ def ppp_result(
             p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
 
             return (p1 * p2 * p3 * p4).opts(
-                xlim=(0, len(obj_allo) + 1),
+                xlim=(0, len(obj_allo) + 0.5),
                 ylim=(0, 105),
                 show_grid=True,
                 shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
             )
 
         def plot_FE(nppc_fin):
@@ -1145,7 +1138,7 @@ def ppp_result(
             p1 = obj_allo2.hvplot.bar(
                 "PPC_id",
                 "Fiber usage fraction (%)",
-                title=f"{RESmode:s}-resolution mode",
+                title="Fiber usage fraction by pointing",
                 rot=90,
                 width=1,
                 color="tomato",
@@ -1157,13 +1150,23 @@ def ppp_result(
                     int(len(cR) * 0.85), mean_FE * 1.5, "{:.2f}%".format(mean_FE)
                 ).opts(color="red")
             )
-            p3 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
+            p3 = hv.VLine(nppc_fin - 0.5).opts(
+                color="gray", line_dash="dashed", line_width=5
+            )
 
             return (p1 * p2 * p3).opts(
                 fontsize={"xticks": "0pt"},
-                xlim=(0, len(obj_allo) + 1),
-                ylim=(0, max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) + 1),
+                # TODO: xlim with hvplot's bar chart does not work properly.
+                # ref: https://github.com/holoviz/hvplot/issues/946
+                # xlim=(0, len(obj_allo) + 10),
+                ylim=(
+                    0,
+                    (max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])) * 1.15,
+                ),
                 shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
             )
 
         def ppp_res_tab1(nppc_fin):
@@ -1212,31 +1215,41 @@ def ppp_result(
             return Table.to_pandas(obj_alloc)
 
         # compose figures
-        p_result_fig = pn.Row(
+        p_result_fig = pn.Column(
+            f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
             pn.Column(
-                pn.bind(plot_CR, nppc),
-                width=700,
-                height=300,
-            ),
-            pn.Column(
-                pn.bind(plot_FE, nppc),
-                width=500,
-                height=285,
-            ),
-            pn.Column(
-                pn.bind(plot_ppc, nppc),
-                width=600,
-                height=300,
+                pn.Column(pn.bind(plot_CR, nppc), max_width=600),
+                pn.Column(pn.bind(plot_FE, nppc), max_width=520),
+                pn.Column(pn.bind(plot_ppc, nppc), max_width=600),
             ),
         )
+        # p_result_fig = pn.Column(
+        #     f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
+        #     pn.Row(
+        #         pn.Column(
+        #             pn.bind(plot_CR, nppc),
+        #             width=700,
+        #             height=300,
+        #         ),
+        #         pn.Column(
+        #             pn.bind(plot_FE, nppc),
+        #             width=500,
+        #             height=285,
+        #         ),
+        #         pn.Column(
+        #             pn.bind(plot_ppc, nppc),
+        #             width=600,
+        #             height=300,
+        #         ),
+        #     ),
+        # )
 
         # PPP summary table
         p_result_tab = pn.widgets.Tabulator(
             pn.bind(ppp_res_tab1, nppc),
-            page_size=4,
             theme="bootstrap",
             theme_classes=["table-sm"],
-            pagination="remote",
+            pagination=None,
             visible=True,
             layout="fit_data_table",
             hidden_columns=["index"],
@@ -1246,7 +1259,6 @@ def ppp_result(
             disabled=True,
             stylesheets=[tabulator_stylesheet],
             max_height=150,
-            max_width=box_width,
         )
 
         # PPC table
@@ -1286,7 +1298,8 @@ def ppp_result(
         )
 
         nppc_fin = pn.Row(nppc_l, nppc_m)
-        p_result_fig_fin = pn.Column(p_result_fig_l, p_result_fig_m)
+        # p_result_fig_fin = pn.Column(p_result_fig_l, p_result_fig_m)
+        p_result_fig_fin = pn.Row(p_result_fig_l, p_result_fig_m)
 
         def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
             ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
@@ -1306,10 +1319,9 @@ def ppp_result(
 
         p_result_tab = pn.widgets.Tabulator(
             pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
-            page_size=4,
             theme="bootstrap",
             theme_classes=["table-sm"],
-            pagination="remote",
+            pagination=None,
             visible=True,
             layout="fit_data_table",
             hidden_columns=["index"],
@@ -1318,6 +1330,7 @@ def ppp_result(
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
             stylesheets=[tabulator_stylesheet],
+            max_height=150,
         )
 
         p_result_ppc_fin = pn.widgets.Tabulator(
