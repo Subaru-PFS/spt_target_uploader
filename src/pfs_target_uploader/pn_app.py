@@ -151,7 +151,7 @@ def target_uploader_app():
         pn.state.notifications.clear()
 
         loading_spinner.value = True
-        validation_status, df_input, df_output = panel_input.validate(
+        validation_status, df_input, df_validated = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -162,16 +162,18 @@ def target_uploader_app():
         if validation_status is None:
             return
 
-        panel_status.show_results(df_output, validation_status)
-        panel_targets.show_results(df_output)
-        panel_results.show_results(df_output, validation_status)
+        panel_status.show_results(df_validated, validation_status)
+        panel_targets.show_results(df_validated)
+        panel_results.show_results(df_validated, validation_status)
+
+        panel_ppp.df_input = df_validated
+        panel_ppp.df_summary = panel_status.df_summary
 
         tab_panels.active = 1
         tab_panels.visible = True
 
         if validation_status["status"]:
             panel_submit_button.enable_button(panel_ppp.ppp_status)
-            # panel_submit_button.submit.disabled = False
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
@@ -219,6 +221,10 @@ def target_uploader_app():
         panel_ppp_button.start()
 
         try:
+            panel_ppp.origname = panel_input.file_input.filename
+            panel_ppp.origdata = panel_input.file_input.value
+            panel_ppp.df_summary = panel_status.df_summary
+
             panel_ppp.run_ppp(df_validated, validation_status)
             panel_ppp.show_results()
 
@@ -227,7 +233,7 @@ def target_uploader_app():
             # enable the submit button only with the successful validation
             if validation_status["status"]:
                 panel_submit_button.enable_button(panel_ppp.ppp_status)
-                # panel_submit_button.submit.disabled = False
+                panel_submit_button.submit.disabled = False
 
         except gurobipy.GurobiError as e:
             pn.state.notifications.error(f"{str(e)}", duration=0)
@@ -277,35 +283,17 @@ def target_uploader_app():
                 loading_spinner.value = False
                 return
 
-        upload_time = datetime.now(timezone.utc)
-        secret_token = panel_input.secret_token
+        panel_ppp.origname = panel_input.file_input.filename
+        panel_ppp.origdata = panel_input.file_input.value
+        panel_ppp.df_summary = panel_status.df_summary
+        panel_ppp.upload_time = datetime.now(timezone.utc)
+        panel_ppp.secret_token = panel_input.secret_token
 
-        try:
-            df_psl = panel_ppp.p_result_tab.value
-            df_ppc = panel_ppp.p_result_ppc.value
-            ppp_fig = panel_ppp.p_result_fig
-            # ppp_fig = panel_ppp.ppp_figure
-        except AttributeError:
-            df_psl = None
-            df_ppc = None
-            ppp_fig = None
+        outdir, outfile_zip, _ = panel_ppp.upload(outdir_prefix=config["OUTPUT_DIR"])
 
-        outdir, outfile_zip, _, _ = upload_file(
-            df_validated,
-            df_psl,
-            df_ppc,
-            panel_status.df_summary,
-            ppp_fig,
-            outdir_prefix=config["OUTPUT_DIR"],
-            origname=panel_input.file_input.filename,
-            origdata=panel_input.file_input.value,
-            secret_token=secret_token,
-            upload_time=upload_time,
-            ppp_status=panel_ppp.ppp_status,
-        )
         panel_notes = UploadNoteWidgets(
-            secret_token,
-            upload_time,
+            panel_ppp.secret_token,
+            panel_ppp.upload_time,
             panel_ppp.ppp_status,
             outdir.replace(config["OUTPUT_DIR"], "data", 1),
             outfile_zip,
