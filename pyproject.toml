@@ -30,6 +30,9 @@ dependencies = [
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "wheel>=0.41.2",
+    "dask>=2023.10.1",
+    "datashader>=0.16.0",
+    "spatialpandas>=0.4.9",
 ]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"

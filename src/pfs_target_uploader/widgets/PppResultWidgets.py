@@ -73,7 +73,7 @@ class PppResultWidgets:
     def show_results(self):
         logger.info("showing PPP results")
 
-        print(self.df_summary)
+        # print(self.df_summary)
 
         def update_alert(df):
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
@@ -239,6 +239,7 @@ class PppResultWidgets:
             obj_allo_M_fin,
         ) = PPPrunStart(tb_visible, weights)
 
+        # print(cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2)
         (
             self.res_mode,
             self.nppc,
