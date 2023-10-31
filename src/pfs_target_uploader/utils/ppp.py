@@ -1005,7 +1005,8 @@ def ppp_result(
         colors = [colors_all[i] for i in sub]
 
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
-        obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1)
+        # obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1)
+        obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
@@ -1045,7 +1046,10 @@ def ppp_result(
         ppc_coord_polygon_array = PolygonArray(ppc_coord)
         df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
 
-        # this is a static plot
+        #
+        # The following p_ are static plots and neeed to be created only once
+        #
+        # for sky distributions
         p_tgt = uS_.hvplot.scatter(
             x="ra",
             y="dec",
@@ -1059,9 +1063,41 @@ def ppp_result(
         dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
         dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
 
+        # for fiber efficiency
+        p_fiber_eff_bar = obj_allo2.hvplot.bar(
+            "PPC_id",
+            "Fiber usage fraction (%)",
+            title="Fiber usage fraction by pointing",
+            rot=90,
+            width=1,
+            color="tomato",
+            alpha=0.5,
+            line_width=0,
+        )
+
+        # for completion rates
+        cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
+        cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
+        p_comp_rate = cR__.hvplot.line(
+            x="PPC_id",
+            y=name[:-1],
+            value_label="Completion rate (%)",
+            title="Progress of the completion rate",
+            color=["k"] + colors,
+            line_width=[4, 3] + [2] * (len(sub) - 1),
+            line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
+            legend="right",
+        )
+        p_comp_rect1 = hv.Rectangles([(30, 88, 95, 100)]).opts(
+            color="orange", line_width=0, alpha=0.2
+        )
+        p_comp_rect2 = hv.Rectangles([(20, 43, 130, 93)]).opts(
+            color="dodgerblue", line_width=0, alpha=0.2
+        )
+
         def plot_ppc(nppc_fin):
             def PFS_FoV_plot(ppc_ra, ppc_dec, PA, ppc_fovs):
-                hvpolys = hv.Polygons(ppc_fovs).opts(
+                hv_polys = hv.Polygons(ppc_fovs).opts(
                     color="gray", alpha=0.2, line_width=0
                 )
                 pd_ppc = pd.DataFrame({"RA": ppc_ra, "DEC": ppc_dec, "PA": PA})
@@ -1076,7 +1112,7 @@ def ppp_result(
                     s=60,
                     legend=False,
                 )
-                return hvpolys * p1
+                return hv_polys * p1
 
             p_ppc = PFS_FoV_plot(
                 obj_allo1["ppc_ra"][:nppc_fin],
@@ -1099,29 +1135,9 @@ def ppp_result(
             return p_tot
 
         def plot_CR(nppc_fin):
-            cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
-            cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
-
-            p1 = cR__.hvplot.line(
-                x="PPC_id",
-                y=name[:-1],
-                value_label="Completion rate (%)",
-                title="Progress of the completion rate",
-                color=["k"] + colors,
-                line_width=[4, 3] + [2] * (len(sub) - 1),
-                line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
-                legend="right",
-            )
-            p2 = hv.Rectangles([(30, 88, 95, 100)]).opts(
-                color="orange", line_width=0, alpha=0.2
-            )
-            p3 = hv.Rectangles([(20, 43, 130, 93)]).opts(
-                color="dodgerblue", line_width=0, alpha=0.2
-            )
             p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
-
-            return (p1 * p2 * p3 * p4).opts(
-                xlim=(0, len(obj_allo) + 0.5),
+            return (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p4).opts(
+                xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
                 show_grid=True,
                 shared_axes=False,
@@ -1132,34 +1148,30 @@ def ppp_result(
 
         def plot_FE(nppc_fin):
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
-            p1 = obj_allo2.hvplot.bar(
-                "PPC_id",
-                "Fiber usage fraction (%)",
-                title="Fiber usage fraction by pointing",
-                rot=90,
-                width=1,
-                color="tomato",
-                alpha=0.5,
-                line_width=0,
-            )
-            p2 = (hv.HLine(mean_FE).opts(color="red", line_width=3)) * (
+            p2 = (
+                hv.HLine(mean_FE).opts(
+                    color="red",
+                    line_width=3,
+                )
+            ) * (
                 hv.Text(
-                    int(len(cR) * 0.85), mean_FE * 1.5, "{:.2f}%".format(mean_FE)
+                    int(len(cR) * 0.85),
+                    mean_FE * 1.5,
+                    "{:.2f}%".format(mean_FE),
                 ).opts(color="red")
             )
             p3 = hv.VLine(nppc_fin - 0.5).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
 
-            return (p1 * p2 * p3).opts(
+            ymax = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.15
+
+            return (p_fiber_eff_bar * p2 * p3).opts(
                 fontsize={"xticks": "0pt"},
                 # TODO: xlim with hvplot's bar chart does not work properly.
                 # ref: https://github.com/holoviz/hvplot/issues/946
                 # xlim=(0, len(obj_allo) + 10),
-                ylim=(
-                    0,
-                    (max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])) * 1.15,
-                ),
+                ylim=(0, ymax),
                 shared_axes=False,
                 toolbar="left",
                 active_tools=["box_zoom"],
@@ -1255,7 +1267,6 @@ def ppp_result(
             "low", cR_l, sub_l, obj_allo_l, uS_L2
         )
         logger.info("creating PPP figures finished ")
-
         return "low", nppc_l, p_result_fig_l, p_result_ppc_l, p_result_tab_l
 
     elif len(cR_m) > 0 and len(cR_l) == 0:
@@ -1263,11 +1274,6 @@ def ppp_result(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
         logger.info("creating PPP figures finished ")
-
-        # print(f"{nppc_m=}")
-        # print(f"{p_result_ppc_m.value=}")
-        # print(f"{p_result_tab_m.value=}")
-
         return "medium", nppc_m, p_result_fig_m, p_result_ppc_m, p_result_tab_m
 
     elif len(cR_l) > 0 and len(cR_m) > 0:
@@ -1279,7 +1285,6 @@ def ppp_result(
         )
 
         nppc_fin = pn.Row(nppc_l, nppc_m, max_width=900)
-        # p_result_fig_fin = pn.Column(p_result_fig_l, p_result_fig_m)
         p_result_fig_fin = pn.Row(p_result_fig_l, p_result_fig_m)
 
         def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
