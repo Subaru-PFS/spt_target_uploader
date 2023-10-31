@@ -6,7 +6,6 @@ import numpy as np
 import panel as pn
 from astropy import units as u
 from astropy.table import Table
-from bokeh.models.widgets.tables import NumberFormatter
 from logzero import logger
 
 from ..utils.io import upload_file
@@ -179,24 +178,6 @@ class PppResultWidgets:
             max_width=150,
             stylesheets=[stylesheet],
         )
-
-        # add styling/formatting to the table
-        self.p_result_tab.formatters = {
-            "N_ppc": NumberFormatter(format="0", text_align="right"),
-            "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
-            "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
-            "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
-            "Used fiber fraction (%)": NumberFormatter(
-                format="0.000", text_align="right"
-            ),
-            "Fraction of PPC < 30% (%)": NumberFormatter(
-                format="0.0", text_align="right"
-            ),
-        }
-        for p in ["all", np.arange(10)]:
-            self.p_result_tab.formatters[f"P_{p}"] = NumberFormatter(
-                format="0.0", text_align="left"
-            )
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)

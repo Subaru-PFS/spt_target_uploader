@@ -19,6 +19,7 @@ import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
+from bokeh.models.widgets.tables import NumberFormatter
 from logzero import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
@@ -948,6 +949,20 @@ def ppp_result(
     .tabulator-row-even:hover { color: #000000 !important; background-color: #ffffff !important; }
     """
 
+    # add styling/formatting to the table
+    tabulator_formatters = {
+        "N_ppc": NumberFormatter(format="0", text_align="right"),
+        "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
+        "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Used fiber fraction (%)": NumberFormatter(format="0.000", text_align="right"),
+        "Fraction of PPC < 30% (%)": NumberFormatter(format="0.0", text_align="right"),
+    }
+    for p in ["all"] + np.arange(10).tolist():
+        tabulator_formatters[f"P_{p}"] = NumberFormatter(
+            format="0.0", text_align="right"
+        )
+
     def overheads(n_sci_frame):
         # in seconds
         t_exp_sci: float = 900.0
@@ -1248,6 +1263,7 @@ def ppp_result(
             disabled=True,
             stylesheets=[tabulator_stylesheet],
             max_height=150,
+            formatters=tabulator_formatters,
         )
 
         # PPC table
@@ -1317,6 +1333,7 @@ def ppp_result(
             disabled=True,
             stylesheets=[tabulator_stylesheet],
             max_height=150,
+            formatters=tabulator_formatters,
         )
 
         p_result_ppc_fin = pn.widgets.Tabulator(
