@@ -74,6 +74,7 @@ class PppResultWidgets:
 
         # print(self.df_summary)
 
+        @pn.io.profile("update_alert")
         def update_alert(df):
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             if rot > self.max_reqtime_normal:
@@ -84,6 +85,7 @@ class PppResultWidgets:
                 type = "success"
             return {"object": text, "alert_type": type}
 
+        @pn.io.profile("update_reqtime")
         def update_reqtime(df):
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             if rot > self.max_reqtime_normal:
@@ -93,6 +95,7 @@ class PppResultWidgets:
                 c = "#3A7D7E"
             return {"value": rot, "default_color": c}
 
+        @pn.io.profile("update_summary_text")
         def update_summary_text(df):
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             n_ppc = df.iloc[-1]["N_ppc"]
@@ -120,6 +123,7 @@ class PppResultWidgets:
             )
             return {"object": text}
 
+        @pn.io.profile("stream_export_files")
         def stream_export_files(df_psl, df_ppc, p_fig):
             _, outfile_zip, sio = upload_file(
                 self.df_input,
