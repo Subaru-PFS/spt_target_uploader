@@ -20,6 +20,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from bokeh.models.widgets.tables import NumberFormatter
+from holoviews import dim, opts
 from logzero import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
@@ -1065,30 +1066,61 @@ def ppp_result(
         # The following p_ are static plots and neeed to be created only once
         #
         # for sky distributions
+        ra_min = np.min([obj_allo1["ppc_ra"].min(), uS_["ra"].min()]) - d_pfi
+        ra_max = np.max([obj_allo1["ppc_ra"].max(), uS_["ra"].max()]) + d_pfi
+        dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
+        dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
         p_tgt = uS_.hvplot.scatter(
             x="ra",
             y="dec",
             by="priority",
             color="ppc_color",
             marker="o",
-            s=20,
+            # s=20,
+            s=60,
+            line_color="white",
+            line_width=0.5,
             legend=True,
         )
 
-        dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
-        dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
-
-        # for fiber efficiency
-        p_fiber_eff_bar = obj_allo2.hvplot.bar(
-            "PPC_id",
-            "Fiber usage fraction (%)",
-            title="Fiber usage fraction by pointing",
-            rot=90,
-            width=1,
-            color="tomato",
-            alpha=0.5,
-            line_width=0,
+        obj_allo2_for_ppcplot = obj_allo2.rename(
+            columns={"ppc_ra": "RA", "ppc_dec": "Dec", "ppc_pa": "PA"}
         )
+
+        @pn.io.profile("plot_ppc")
+        def plot_ppc(nppc_fin):
+            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
+                fill_color="darkgray",
+                line_color="dimgray",
+                line_width=0.5,
+                alpha=0.2,
+            )
+            # logger.info(f"ppc plot updated\n{obj_allo2_for_ppcplot.iloc[:nppc_fin,:]}")
+            p_ppc_center = hv.Scatter(
+                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
+                kdims=["RA"],
+                vdims=["Dec", "PA"],
+            ).opts(
+                tools=["hover"],
+                fill_color="lightgray",
+                line_color="gray",
+                size=10,
+                marker="s",
+                show_legend=False,
+            )
+            p_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
+                title="Distributions of targets & pointing centers",
+                xlabel="RA (deg)",
+                ylabel="Dec (deg)",
+                xlim=(ra_max, ra_min),
+                ylim=(dec_min, dec_max),
+                toolbar="left",
+                active_tools=["box_zoom"],
+                show_grid=True,
+                shared_axes=False,
+                height=plot_height,
+            )
+            return p_tot
 
         # for completion rates
         cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
@@ -1110,45 +1142,7 @@ def ppp_result(
             color="dodgerblue", line_width=0, alpha=0.2
         )
 
-        def plot_ppc(nppc_fin):
-            def PFS_FoV_plot(ppc_ra, ppc_dec, PA, ppc_fovs):
-                hv_polys = hv.Polygons(ppc_fovs).opts(
-                    color="gray", alpha=0.2, line_width=0
-                )
-                pd_ppc = pd.DataFrame({"RA": ppc_ra, "DEC": ppc_dec, "PA": PA})
-                p1 = pd_ppc.hvplot.scatter(
-                    x="RA",
-                    y="DEC",
-                    by="PA",
-                    title="Distributions of targets & pointing centers",
-                    fill_color="lightgray",
-                    line_color="black",
-                    marker="s",
-                    s=60,
-                    legend=False,
-                )
-                return hv_polys * p1
-
-            p_ppc = PFS_FoV_plot(
-                obj_allo1["ppc_ra"][:nppc_fin],
-                obj_allo1["ppc_dec"][:nppc_fin],
-                obj_allo1["ppc_pa"][:nppc_fin],
-                df_polygon.iloc[:nppc_fin, :],
-            )
-
-            p_tot = (p_ppc * p_tgt).opts(
-                xlabel="RA (deg)",
-                ylabel="Dec (deg)",
-                ylim=(dec_min, dec_max),
-                show_grid=True,
-                shared_axes=False,
-                toolbar="left",
-                active_tools=["box_zoom"],
-                height=plot_height,
-            )
-
-            return p_tot
-
+        @pn.io.profile("plot_CR")
         def plot_CR(nppc_fin):
             p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
             return (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p4).opts(
@@ -1161,6 +1155,19 @@ def ppp_result(
                 height=plot_height,
             )
 
+        # for fiber efficiency
+        p_fiber_eff_bar = obj_allo2.hvplot.bar(
+            "PPC_id",
+            "Fiber usage fraction (%)",
+            title="Fiber usage fraction by pointing",
+            rot=90,
+            width=1,
+            color="tomato",
+            alpha=0.5,
+            line_width=0,
+        )
+
+        @pn.io.profile("plot_FE")
         def plot_FE(nppc_fin):
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
             p2 = (
@@ -1193,6 +1200,7 @@ def ppp_result(
                 height=plot_height,
             )
 
+        @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * 15.0 / 60.0  # hour
             Fhour_tot = (
@@ -1231,6 +1239,7 @@ def ppp_result(
 
             return ppc_summary_fin
 
+        @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2(nppc_fin):
             obj_alloc = obj_allo1[:nppc_fin]
             obj_alloc.remove_column("allocated_targets")
@@ -1303,6 +1312,7 @@ def ppp_result(
         nppc_fin = pn.Row(nppc_l, nppc_m, max_width=900)
         p_result_fig_fin = pn.Row(p_result_fig_l, p_result_fig_m)
 
+        @pn.io.profile("p_result_tab_tot")
         def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
             ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
             ppc_sum.loc[2] = ppc_sum.sum(numeric_only=True)
@@ -1315,6 +1325,7 @@ def ppp_result(
 
             return ppc_sum
 
+        @pn.io.profile("p_result_ppc_tot")
         def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
             ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
             return ppc_lst

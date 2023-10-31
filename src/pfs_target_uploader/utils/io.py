@@ -196,7 +196,7 @@ def upload_file(
     # outfiles_dict["absname"].append(os.path.join(outdir, origname))
     # outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, origname))
 
-    print(outfiles_dict)
+    # print(outfiles_dict)
 
     outdir, outfile_zip, sio = upload_write(
         outfiles_dict, outfile_zip_prefix, outdir, export=export

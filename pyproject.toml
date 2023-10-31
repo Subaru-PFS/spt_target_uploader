@@ -33,6 +33,9 @@ dependencies = [
     "dask>=2023.10.1",
     "datashader>=0.16.0",
     "spatialpandas>=0.4.9",
+    "pyinstrument>=4.6.0",
+    "snakeviz>=2.2.0",
+    "memray>=1.10.0",
 ]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
