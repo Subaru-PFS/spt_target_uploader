@@ -8,13 +8,14 @@ from itertools import chain
 
 import colorcet as cc
 import holoviews as hv
-import hvplot.pandas  # need to run pandas.DataFrame.hvplot
+import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
 import matplotlib.pyplot as plt
 import multiprocess
 import numpy as np
 import pandas as pd
 import panel as pn
 import seaborn as sns
+import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
@@ -22,19 +23,12 @@ from logzero import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
+from spatialpandas.geometry import PolygonArray
 
 # below for netflow
 # isort: split
 import ets_fiber_assigner.netflow as nf
 from ics.cobraOps.Bench import Bench
-
-# below for qplan
-# isort: split
-from qplan.entity import StaticTarget
-from qplan.util.site import site_subaru as observer
-
-warnings.filterwarnings("ignore")
-
 
 # check bokeh version
 # ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
@@ -44,6 +38,8 @@ from pkg_resources import parse_version
 
 if parse_version(bokeh.__version__) < parse_version("3.3"):
     hv.renderer("bokeh").webgl = False
+
+warnings.filterwarnings("ignore")
 
 
 def PPPrunStart(uS, weight_para, d_pfi=1.38):
@@ -990,12 +986,14 @@ def ppp_result(
         return Toverheads_tot_best / 3600.0
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
-        nppc = pn.widgets.IntSlider(
+        nppc = pn.widgets.EditableIntSlider(
             name=(f"{RESmode.capitalize()}-resolution mode"),
             value=len(cR),
             step=1,
             start=1,
             end=len(cR),
+            fixed_start=1,
+            fixed_end=len(cR),
             bar_color="gray",
             max_width=450,
         )
@@ -1015,47 +1013,57 @@ def ppp_result(
         # add a column to indicate the color for the scatter plot
         uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
 
+        # create polygons for PFS FoVs for each pointing
+        ppc_coord = []
+        # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
+        for ii in range(len(obj_allo1["ppc_ra"])):
+            ppc_ra_t, ppc_dec_t, pa_t = (
+                obj_allo1["ppc_ra"][ii],
+                obj_allo1["ppc_dec"][ii],
+                obj_allo1["ppc_pa"][ii],
+            )
+            center = SkyCoord(ppc_ra_t * u.deg, ppc_dec_t * u.deg)
+            hexagon = center.directional_offset_by(
+                np.array([deg + pa_t for deg in [30, 90, 150, 210, 270, 330, 30]])
+                * u.deg,
+                r_pfi * u.deg,
+            )
+            ra_h = hexagon.ra.deg
+            dec_h = hexagon.dec.deg
+            # for pointings around RA~0 or 360, parts of it will move to the opposite side (e.g., [[1,0],[-1,0]] -->[[1,0],[359,0]])
+            # correct for it
+            ra_h_in = np.where(np.fabs(ra_h - center.ra.deg) > 180)
+            if len(ra_h_in[0]) > 0:
+                if ra_h[ra_h_in[0][0]] > 180:
+                    ra_h[ra_h_in[0]] -= 360
+                elif ra_h[ra_h_in[0][0]] < 180:
+                    ra_h[ra_h_in[0]] += 360
+            ppc_coord_one = []
+            for a, d in zip(ra_h, dec_h):
+                ppc_coord_one += [a, d]
+            ppc_coord.append([np.array(ppc_coord_one)])
+        ppc_coord_polygon_array = PolygonArray(ppc_coord)
+        df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
+
+        # this is a static plot
+        p_tgt = uS_.hvplot.scatter(
+            x="ra",
+            y="dec",
+            by="priority",
+            color="ppc_color",
+            marker="o",
+            s=20,
+            legend=True,
+        )
+
+        dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
+        dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
+
         def plot_ppc(nppc_fin):
-            def PFS_FoV_plot(ppc_ra, ppc_dec, PA):
-                ppc_coord = []
-
-                # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
-                for ii in range(len(ppc_ra)):
-                    ppc_ra_t, ppc_dec_t, pa_t = ppc_ra[ii], ppc_dec[ii], PA[ii]
-                    center = SkyCoord(ppc_ra_t * u.deg, ppc_dec_t * u.deg)
-
-                    hexagon = center.directional_offset_by(
-                        [
-                            30 + pa_t,
-                            90 + pa_t,
-                            150 + pa_t,
-                            210 + pa_t,
-                            270 + pa_t,
-                            330 + pa_t,
-                            30 + pa_t,
-                        ]
-                        * u.deg,
-                        r_pfi * u.deg,
-                    )
-                    ra_h = hexagon.ra.deg
-                    dec_h = hexagon.dec.deg
-
-                    # for pointings around RA~0 or 360, parts of it will move to the opposite side (e.g., [[1,0],[-1,0]] -->[[1,0],[359,0]])
-                    # correct for it
-                    ra_h_in = np.where(np.fabs(ra_h - center.ra.deg) > 180)
-                    if len(ra_h_in[0]) > 0:
-                        if ra_h[ra_h_in[0][0]] > 180:
-                            ra_h[ra_h_in[0]] -= 360
-                        elif ra_h[ra_h_in[0][0]] < 180:
-                            ra_h[ra_h_in[0]] += 360
-
-                    ppc_coord.append([[ra_h[o], dec_h[o]] for o in range(len(ra_h))])
-
-                ppc_tot_plot = [
-                    hv.Area(ii).opts(color="gray", alpha=0.2, line_width=0)
-                    for ii in ppc_coord
-                ]
-
+            def PFS_FoV_plot(ppc_ra, ppc_dec, PA, ppc_fovs):
+                hvpolys = hv.Polygons(ppc_fovs).opts(
+                    color="gray", alpha=0.2, line_width=0
+                )
                 pd_ppc = pd.DataFrame({"RA": ppc_ra, "DEC": ppc_dec, "PA": PA})
                 p1 = pd_ppc.hvplot.scatter(
                     x="RA",
@@ -1068,29 +1076,16 @@ def ppp_result(
                     s=60,
                     legend=False,
                 )
-
-                return hv.Overlay(ppc_tot_plot) * p1
+                return hvpolys * p1
 
             p_ppc = PFS_FoV_plot(
                 obj_allo1["ppc_ra"][:nppc_fin],
                 obj_allo1["ppc_dec"][:nppc_fin],
                 obj_allo1["ppc_pa"][:nppc_fin],
+                df_polygon.iloc[:nppc_fin, :],
             )
 
-            p_tgt = uS_.hvplot.scatter(
-                x="ra",
-                y="dec",
-                by="priority",
-                color="ppc_color",
-                marker="o",
-                s=20,
-                legend=True,
-            )
-
-            dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
-            dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
-
-            return (p_ppc * p_tgt).opts(
+            p_tot = (p_ppc * p_tgt).opts(
                 xlabel="RA (deg)",
                 ylabel="Dec (deg)",
                 ylim=(dec_min, dec_max),
@@ -1100,6 +1095,8 @@ def ppp_result(
                 active_tools=["box_zoom"],
                 height=plot_height,
             )
+
+            return p_tot
 
         def plot_CR(nppc_fin):
             cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
@@ -1223,26 +1220,6 @@ def ppp_result(
                 pn.Column(pn.bind(plot_ppc, nppc), max_width=600),
             ),
         )
-        # p_result_fig = pn.Column(
-        #     f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
-        #     pn.Row(
-        #         pn.Column(
-        #             pn.bind(plot_CR, nppc),
-        #             width=700,
-        #             height=300,
-        #         ),
-        #         pn.Column(
-        #             pn.bind(plot_FE, nppc),
-        #             width=500,
-        #             height=285,
-        #         ),
-        #         pn.Column(
-        #             pn.bind(plot_ppc, nppc),
-        #             width=600,
-        #             height=300,
-        #         ),
-        #     ),
-        # )
 
         # PPP summary table
         p_result_tab = pn.widgets.Tabulator(
@@ -1286,6 +1263,10 @@ def ppp_result(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
         logger.info("creating PPP figures finished ")
+
+        # print(f"{nppc_m=}")
+        # print(f"{p_result_ppc_m.value=}")
+        # print(f"{p_result_tab_m.value=}")
 
         return "medium", nppc_m, p_result_fig_m, p_result_ppc_m, p_result_tab_m
 
