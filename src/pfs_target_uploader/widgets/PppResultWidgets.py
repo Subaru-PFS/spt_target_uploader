@@ -224,9 +224,7 @@ class PppResultWidgets:
             obj_allo_M_fin,
         ) = PPPrunStart(tb_visible, weights)
 
-        # print(cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2)
         (
-            self.res_mode,
             self.nppc,
             self.p_result_fig,
             self.p_result_ppc,
