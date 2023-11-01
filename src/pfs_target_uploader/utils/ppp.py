@@ -977,11 +977,11 @@ def ppp_result(
         t_overhead_misc: float = 60.0
         t_overhead_fiber: float = 180.0
 
-        n_frame_bias: float = 10.0
-        n_frame_dark: float = 10.0
-        n_frame_flat: float = 10.0
-        n_frame_arc: float = 10.0
-        n_focus: float = 3.0
+        n_frame_bias: int = 10
+        n_frame_dark: int = 10
+        n_frame_flat: int = 10
+        n_frame_arc: int = 10
+        n_focus: int = 3
 
         # t_tot_bias = (t_exp_bias + t_overhead_misc) * n_frame_bias
         # t_tot_dark = (t_exp_dark + t_overhead_misc) * n_frame_dark
@@ -1029,6 +1029,9 @@ def ppp_result(
 
         # add a column to indicate the color for the scatter plot
         uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
+
+        cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
+        cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
 
         # create polygons for PFS FoVs for each pointing
         ppc_coord = []
@@ -1087,44 +1090,7 @@ def ppp_result(
             columns={"ppc_ra": "RA", "ppc_dec": "Dec", "ppc_pa": "PA"}
         )
 
-        @pn.io.profile("plot_ppc")
-        def plot_ppc(nppc_fin):
-            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
-                fill_color="darkgray",
-                line_color="dimgray",
-                line_width=0.5,
-                alpha=0.2,
-            )
-            # logger.info(f"ppc plot updated\n{obj_allo2_for_ppcplot.iloc[:nppc_fin,:]}")
-            p_ppc_center = hv.Scatter(
-                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
-                kdims=["RA"],
-                vdims=["Dec", "PA"],
-            ).opts(
-                tools=["hover"],
-                fill_color="lightgray",
-                line_color="gray",
-                size=10,
-                marker="s",
-                show_legend=False,
-            )
-            p_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
-                title="Distributions of targets & pointing centers",
-                xlabel="RA (deg)",
-                ylabel="Dec (deg)",
-                xlim=(ra_max, ra_min),
-                ylim=(dec_min, dec_max),
-                toolbar="left",
-                active_tools=["box_zoom"],
-                show_grid=True,
-                shared_axes=False,
-                height=plot_height,
-            )
-            return p_tot
-
-        # for completion rates
-        cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
-        cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
+        # static part for compolation rate plot
         p_comp_rate = cR__.hvplot.line(
             x="PPC_id",
             y=name[:-1],
@@ -1142,10 +1108,60 @@ def ppp_result(
             color="dodgerblue", line_width=0, alpha=0.2
         )
 
-        @pn.io.profile("plot_CR")
-        def plot_CR(nppc_fin):
-            p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
-            return (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p4).opts(
+        # static part for fiber usage fraction plot
+        p_fibereff_bar = hv.Bars(
+            obj_allo2,
+            kdims=["PPC_id"],
+            vdims=["Fiber usage fraction (%)"],
+        ).opts(
+            title="Fiber usage fraction by pointing",
+            width=1,
+            color="tomato",
+            alpha=0.5,
+            line_width=0,
+            # xlabel="",
+            tools=["hover"],
+        )
+
+        @pn.io.profile("update_ppp_figures")
+        def update_ppp_figures(nppc_fin):
+            # update the plot of sky distribution of pointings and targets
+            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
+                fill_color="darkgray",
+                line_color="dimgray",
+                line_width=0.5,
+                alpha=0.2,
+            )
+            p_ppc_center = hv.Scatter(
+                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
+                kdims=["RA"],
+                vdims=["Dec", "PA"],
+            ).opts(
+                tools=["hover"],
+                fill_color="lightgray",
+                line_color="gray",
+                size=10,
+                marker="s",
+                show_legend=False,
+            )
+            p_ppc_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
+                title="Distributions of targets & pointing centers",
+                xlabel="RA (deg)",
+                ylabel="Dec (deg)",
+                xlim=(ra_max, ra_min),
+                ylim=(dec_min, dec_max),
+                toolbar="left",
+                active_tools=["box_zoom"],
+                show_grid=True,
+                shared_axes=False,
+                height=plot_height,
+            )
+
+            # update completion rates as a function of PPC ID
+            p_comp_nppc = hv.VLine(nppc_fin).opts(
+                color="gray", line_dash="dashed", line_width=5
+            )
+            p_comp_tot = (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
                 show_grid=True,
@@ -1155,49 +1171,44 @@ def ppp_result(
                 height=plot_height,
             )
 
-        # for fiber efficiency
-        p_fiber_eff_bar = obj_allo2.hvplot.bar(
-            "PPC_id",
-            "Fiber usage fraction (%)",
-            title="Fiber usage fraction by pointing",
-            rot=90,
-            width=1,
-            color="tomato",
-            alpha=0.5,
-            line_width=0,
-        )
-
-        @pn.io.profile("plot_FE")
-        def plot_FE(nppc_fin):
+            # update fiber efficiency as a function of PPC ID
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
-            p2 = (
+            p_fibereff_mean = (
                 hv.HLine(mean_FE).opts(
                     color="red",
                     line_width=3,
                 )
             ) * (
                 hv.Text(
-                    int(len(cR) * 0.85),
-                    mean_FE * 1.5,
+                    int(len(cR) * 0.9),
+                    mean_FE * 1.15,
+                    # mean_FE * 1.5,
                     "{:.2f}%".format(mean_FE),
                 ).opts(color="red")
             )
-            p3 = hv.VLine(nppc_fin - 0.5).opts(
+            p_fibereff_nppc = hv.VLine(nppc_fin - 0.5).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
 
-            ymax = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.15
+            ymax_fibereff = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.25
 
-            return (p_fiber_eff_bar * p2 * p3).opts(
+            p_fibereff_tot = (p_fibereff_bar * p_fibereff_mean * p_fibereff_nppc).opts(
                 fontsize={"xticks": "0pt"},
                 # TODO: xlim with hvplot's bar chart does not work properly.
                 # ref: https://github.com/holoviz/hvplot/issues/946
                 # xlim=(0, len(obj_allo) + 10),
-                ylim=(0, ymax),
+                ylim=(0, ymax_fibereff),
                 shared_axes=False,
                 toolbar="left",
                 active_tools=["box_zoom"],
                 height=plot_height,
+            )
+
+            # return after putting all plots into a column
+            return pn.Column(
+                pn.panel(p_comp_tot, linked_axes=False, width=600),
+                pn.panel(p_fibereff_tot, linked_axes=False, width=600),
+                pn.panel(p_ppc_tot, linked_axes=False, width=600),
             )
 
         @pn.io.profile("ppp_res_tab1")
@@ -1250,29 +1261,12 @@ def ppp_result(
         # compose figures
         p_result_fig = pn.Column(
             f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
-            pn.Column(
-                pn.Column(pn.bind(plot_CR, nppc), max_width=600),
-                pn.Column(pn.bind(plot_FE, nppc), max_width=520),
-                pn.Column(pn.bind(plot_ppc, nppc), max_width=600),
-            ),
+            pn.bind(update_ppp_figures, nppc),
         )
 
         # PPP summary table
         p_result_tab = pn.widgets.Tabulator(
             pn.bind(ppp_res_tab1, nppc),
-            theme="bootstrap",
-            theme_classes=["table-sm"],
-            pagination=None,
-            visible=True,
-            layout="fit_data_table",
-            hidden_columns=["index"],
-            selectable=False,
-            header_align="right",
-            configuration={"columnDefaults": {"headerSort": False}},
-            disabled=True,
-            stylesheets=[tabulator_stylesheet],
-            max_height=150,
-            formatters=tabulator_formatters,
         )
 
         # PPC table
@@ -1280,85 +1274,87 @@ def ppp_result(
             pn.bind(ppp_res_tab2, nppc),
             visible=False,
             disabled=True,
-            stylesheets=[tabulator_stylesheet],
         )
-
         return nppc, p_result_fig, p_result_tab, p_result_ppc
 
     # function starts here
     logger.info("start creating PPP figures")
-    if len(cR_l) > 0 and len(cR_m) == 0:
+
+    # initialize output elements
+    nppc_l = None
+    p_result_fig_l = None
+    p_result_tab_l = None
+    p_result_ppc_l = None
+    nppc_m = None
+    p_result_fig_m = None
+    p_result_tab_m = None
+    p_result_ppc_m = None
+
+    # generate figures and tables for low resolution
+    if len(cR_l) > 0:
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
             "low", cR_l, sub_l, obj_allo_l, uS_L2
         )
-        logger.info("creating PPP figures finished ")
-        return "low", nppc_l, p_result_fig_l, p_result_ppc_l, p_result_tab_l
 
-    elif len(cR_m) > 0 and len(cR_l) == 0:
-        nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
-            "medium", cR_m, sub_m, obj_allo_m, uS_M2
-        )
-        logger.info("creating PPP figures finished ")
-        return "medium", nppc_m, p_result_fig_m, p_result_ppc_m, p_result_tab_m
-
-    elif len(cR_l) > 0 and len(cR_m) > 0:
-        nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
-            "low", cR_l, sub_l, obj_allo_l, uS_L2
-        )
+    # generate figures and tables for medium resolution
+    if len(cR_m) > 0:
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
 
-        nppc_fin = pn.Row(nppc_l, nppc_m, max_width=900)
-        p_result_fig_fin = pn.Row(p_result_fig_l, p_result_fig_m)
+    # define rows
+    nppc_fin = pn.Row(max_width=900)
+    p_result_fig_fin = pn.Row(max_width=900)
 
-        @pn.io.profile("p_result_tab_tot")
-        def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
-            ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
-            ppc_sum.loc[2] = ppc_sum.sum(numeric_only=True)
-            ppc_sum.loc[2, "resolution"] = "Total"
-            ppc_sum.iloc[2, 6:] = np.nan
+    # append components if it is not None
+    for slider in [nppc_l, nppc_m]:
+        if slider is not None:
+            nppc_fin.append(slider)
+    for fig in [p_result_fig_l, p_result_fig_m]:
+        if fig is not None:
+            p_result_fig_fin.append(fig)
 
-            for k in ppc_sum.columns:
-                if ppc_sum.loc[:, k].isna().all():
-                    ppc_sum.drop(columns=[k], inplace=True)
+    @pn.io.profile("p_result_tab_tot")
+    def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
+        ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
+        loc_total = ppc_sum.index.size
+        ppc_sum.loc[loc_total] = ppc_sum.sum(numeric_only=True)
+        ppc_sum.loc[loc_total, "resolution"] = "Total"
+        ppc_sum.iloc[loc_total, 6:] = np.nan
+        for k in ppc_sum.columns:
+            if ppc_sum.loc[:, k].isna().all():
+                ppc_sum.drop(columns=[k], inplace=True)
+        return ppc_sum
 
-            return ppc_sum
+    @pn.io.profile("p_result_ppc_tot")
+    def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
+        ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
+        return ppc_lst
 
-        @pn.io.profile("p_result_ppc_tot")
-        def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
-            ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
-            return ppc_lst
+    p_result_tab = pn.widgets.Tabulator(
+        pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
+        theme="bootstrap",
+        theme_classes=["table-sm"],
+        pagination=None,
+        visible=True,
+        layout="fit_data_table",
+        hidden_columns=["index"],
+        selectable=False,
+        header_align="right",
+        configuration={"columnDefaults": {"headerSort": False}},
+        disabled=True,
+        stylesheets=[tabulator_stylesheet],
+        max_height=150,
+        formatters=tabulator_formatters,
+    )
 
-        p_result_tab = pn.widgets.Tabulator(
-            pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
-            theme="bootstrap",
-            theme_classes=["table-sm"],
-            pagination=None,
-            visible=True,
-            layout="fit_data_table",
-            hidden_columns=["index"],
-            selectable=False,
-            header_align="right",
-            configuration={"columnDefaults": {"headerSort": False}},
-            disabled=True,
-            stylesheets=[tabulator_stylesheet],
-            max_height=150,
-            formatters=tabulator_formatters,
-        )
+    # currently, this table is not displayed
+    p_result_ppc_fin = pn.widgets.Tabulator(
+        pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
+        visible=False,
+        disabled=True,
+    )
 
-        p_result_ppc_fin = pn.widgets.Tabulator(
-            pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
-            visible=False,
-            disabled=True,
-            stylesheets=[tabulator_stylesheet],
-        )
+    logger.info("creating PPP figures finished ")
 
-        logger.info("creating PPP figures finished ")
-        return (
-            "low & medium",
-            nppc_fin,
-            p_result_fig_fin,
-            p_result_ppc_fin,
-            p_result_tab,
-        )
+    return (nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab)
