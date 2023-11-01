@@ -9,11 +9,11 @@ from logzero import logger
 class StatusWidgets:
     def __init__(self, size=20):
         self.neutral_text = "<font size=4>Waiting...</font>"
-        self.success_text = "<font size=5>✅ Success</font>"
+        self.success_text = "<font size=5>✅ **Success**</font>"
         self.warning_text = (
-            "<font size=5>⚠️ Success</font><font size=3>  with warnings</font>"
+            "<font size=5>⚠️ **Success**</font><font size=3>  with warnings</font>"
         )
-        self.error_text = "<font size=5>🚫 Failed</font>"
+        self.error_text = "<font size=5>🚫 **Failed**</font>"
 
         self.status = pn.pane.Alert(
             self.neutral_text, alert_type="secondary", height=80

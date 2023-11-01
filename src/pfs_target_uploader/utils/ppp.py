@@ -20,7 +20,6 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from bokeh.models.widgets.tables import NumberFormatter
-from holoviews import dim, opts
 from logzero import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
