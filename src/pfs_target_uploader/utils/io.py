@@ -167,10 +167,7 @@ def upload_file(
         if type == "table":
             # add metadata
             obj.meta["original_filename"] = origname
-            obj.meta["upload_id"] = secret_token
-            obj.meta["upload_at"] = upload_time
-            obj.meta["ppp_status"] = ppp_status
-            if export:
+            if not export:
                 obj.meta["upload_id"] = secret_token
                 obj.meta["upload_at"] = upload_time
                 obj.meta["ppp_status"] = ppp_status
@@ -180,26 +177,11 @@ def upload_file(
         elif type == "original":
             filename = origname
 
-        # if ppp_status:
-        #     outfiles_dict["filename"].append(filename)
-        #     outfiles_dict["object"].append(obj)
-        #     outfiles_dict["type"].append(type)
-        #     outfiles_dict["absname"].append(os.path.join(outdir, filename))
-        #     outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, filename))
-
         outfiles_dict["filename"].append(filename)
         outfiles_dict["object"].append(obj)
         outfiles_dict["type"].append(type)
         outfiles_dict["absname"].append(os.path.join(outdir, filename))
         outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, filename))
-
-    # outfiles_dict["filename"].append(origname)
-    # outfiles_dict["object"].append(origdata)
-    # outfiles_dict["type"].append("original")
-    # outfiles_dict["absname"].append(os.path.join(outdir, origname))
-    # outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, origname))
-
-    # print(outfiles_dict)
 
     outdir, outfile_zip, sio = upload_write(
         outfiles_dict, outfile_zip_prefix, outdir, export=export
