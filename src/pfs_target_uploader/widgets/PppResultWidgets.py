@@ -132,18 +132,24 @@ class PppResultWidgets:
             n_ppc = df.iloc[-1]["N_ppc"]
             t_exp = df.iloc[-1]["Texp (h)"]
             t_fh = df.iloc[-1]["Texp (fiberhour)"]
-            try:
-                comp_all_low = df.iloc[0]["P_all"]
-                text_comp_low = f"- <font size=3>The expected **completion rate** for **low-resolution** mode is **{comp_all_low:.0f}%**.</font>\n"
-            except Exception:
-                comp_all_low = None
-                text_comp_low = ""
-            try:
-                comp_all_med = df.iloc[1]["P_all"]
-                text_comp_med = f"- <font size=3>The expected **completion rate** for **medium-resolution** mode is **{comp_all_med:.0f}%**.</font>"
-            except Exception:
-                comp_all_med = None
-                text_comp_med = ""
+
+            text_comp_low, text_comp_med = "", ""
+
+            for i in range(2):
+                try:
+                    res = df.iloc[i]["resolution"]
+                    comp_all_ = df.iloc[i]["P_all"]
+                    text_comp_ = (
+                        "- <font size=3>The expected **completion rate** "
+                        f"for **{res}-resolution** mode is **{comp_all_:.0f}%**.</font>\n"
+                    )
+                    if res == "low":
+                        text_comp_low = text_comp_
+                    elif res == "medium":
+                        text_comp_med = text_comp_
+                except Exception:
+                    continue
+
             text = (
                 f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
                 f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
