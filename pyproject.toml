@@ -43,6 +43,7 @@ license = { text = "MIT" }
 
 [project.scripts]
 pfs_validate_targetlist = "pfs_target_uploader.cli.validate_targetlist:main"
+pfs_simulate_pointings = "pfs_target_uploader.cli.simulate_pointings:main"
 
 [build-system]
 requires = ["setuptools", "wheel", "pybind11"]
