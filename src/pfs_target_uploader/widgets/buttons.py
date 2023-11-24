@@ -51,22 +51,9 @@ class RunPppButtonWidgets:
             max_width=130,
             stylesheets=[self.stylesheet],
         )
-        # loading spinner
-        self.gif_pane = pn.pane.GIF(
-            "https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif",
-            width=20,
-        )
-
-        # placeholder for loading spinner
-        self.PPPrunStats = pn.Column("", width=100)
 
         self.pane = self.PPPrun
 
-    def start(self):
-        self.PPPrunStats.append(self.gif_pane)
-
-    def stop(self):
-        self.PPPrunStats.remove(self.gif_pane)
 
 
 class SubmitButtonWidgets:

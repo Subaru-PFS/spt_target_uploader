@@ -35,11 +35,26 @@ class PppResultWidgets:
             dedent=True,
             max_width=self.box_width,
         )
-        self.ppp_warning_text = (
+        self.ppp_warning_text_1 = (
             "<font size=5>⚠️ **Warnings**</font>\n\n"
             "<font size=3>The total requested time exceeds 35 hours (maximum for a normal program). "
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered.</font>"
+        )
+
+        self.ppp_warning_text_2 = (
+            "<font size=5>⚠️ **Warnings**</font>\n\n"
+            "<font size=3>Calculation stops because time (15 min) is running out. "
+            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
+        )
+
+        self.ppp_warning_text_3 = (
+            "<font size=5>⚠️ **Warnings**</font>\n\n"
+            "<font size=3>1. The total requested time exceeds 35 hours (maximum for a normal program). "
+            "Please make sure to adjust it to your requirement before proceeding to the submission. "
+            "Note that targets observable in the input observing period are considered."
+            "\n 2. Calculation stops because time (15 min) is running out."
+            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
         self.ppp_success_text = (
@@ -77,8 +92,14 @@ class PppResultWidgets:
         @pn.io.profile("update_alert")
         def update_alert(df):
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
-            if rot > self.max_reqtime_normal:
-                text = self.ppp_warning_text
+            if self.status_ == 999 and rot > self.max_reqtime_normal:
+                text = self.ppp_warning_text_1
+                type = "warning"
+            elif self.status_ == 1 and rot > self.max_reqtime_normal:
+                text = self.ppp_warning_text_3
+                type = "warning"
+            elif self.status_ == 1 and rot <= self.max_reqtime_normal:
+                text = self.ppp_warning_text_2
                 type = "warning"
             else:
                 text = self.ppp_success_text
@@ -202,7 +223,7 @@ class PppResultWidgets:
         )
         logger.info("showing PPP results done")
 
-    def run_ppp(self, df, validation_status, weights=None):
+    def run_ppp(self, df, validation_status, weights=None, exetime=15*60):
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 
@@ -222,7 +243,8 @@ class PppResultWidgets:
             cR_M_,
             sub_m,
             obj_allo_M_fin,
-        ) = PPPrunStart(tb_visible, weights)
+            self.status_,
+        ) = PPPrunStart(tb_visible, weights, exetime)
 
         (
             self.nppc,

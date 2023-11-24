@@ -6,6 +6,7 @@ from .DocLinkWidgets import DocLinkWidgets
 from .FileInputWidgets import FileInputWidgets
 from .PppResultWidgets import PppResultWidgets
 from .StatusWidgets import StatusWidgets
+from .TimerWidgets import TimerWidgets
 from .TargetWidgets import TargetWidgets
 from .UploadNoteWidgets import UploadNoteWidgets
 from .ValidationResultWidgets import ValidationResultWidgets
@@ -19,6 +20,7 @@ __all__ = [
     "FileInputWidgets",
     "PppResultWidgets",
     "StatusWidgets",
+    "TimerWidgets",
     "TargetWidgets",
     "UploadNoteWidgets",
     "ValidationResultWidgets",
