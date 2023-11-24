@@ -223,7 +223,7 @@ class PppResultWidgets:
         )
         logger.info("showing PPP results done")
 
-    def run_ppp(self, df, validation_status, weights=None, exetime=15*60):
+    def run_ppp(self, df, validation_status, weights=None, exetime=15*60): #tentatively set to 15 min
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 
