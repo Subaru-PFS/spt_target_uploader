@@ -9,8 +9,10 @@ import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
 from logzero import logger
+from threading import Thread
 
 from .utils.io import load_file_properties, upload_file
+from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
@@ -19,6 +21,7 @@ from .widgets import (
     RunPppButtonWidgets,
     StatusWidgets,
     SubmitButtonWidgets,
+    TimerWidgets,
     TargetWidgets,
     UploadNoteWidgets,
     ValidateButtonWidgets,
@@ -63,6 +66,8 @@ def target_uploader_app():
 
     panel_dates = DatePickerWidgets()
 
+    panel_timer = TimerWidgets()
+
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
     panel_ppp = PppResultWidgets()
@@ -76,10 +81,6 @@ def target_uploader_app():
     ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
-
-    loading_spinner = pn.indicators.LoadingSpinner(
-        value=False, size=50, margin=(10, 0, 0, 0), color="secondary"
-    )
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
@@ -97,7 +98,7 @@ def target_uploader_app():
             margin=(10, 0, 0, 0),
         ),
         pn.Column(
-            pn.Row("<font size=5>**Validation status**</font>", loading_spinner),
+            pn.Row("<font size=5>**Validation status**</font>", panel_timer.pane),
             panel_status.pane,
             margin=(10, 0, 0, 0),
         ),
@@ -150,14 +151,15 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        loading_spinner.value = True
+        panel_timer.timer(True)
+
         validation_status, df_input, df_validated = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
 
         _toggle_buttons(button_set, disabled=False)
-        loading_spinner.value = False
+        panel_timer.timer(False)
 
         if validation_status is None:
             return
@@ -188,7 +190,7 @@ def target_uploader_app():
 
         pn.state.notifications.clear()
 
-        loading_spinner.value = True
+        panel_timer.timer(True)
 
         validation_status, df_input_, df_validated = panel_input.validate(
             date_begin=panel_dates.date_begin.value,
@@ -197,7 +199,7 @@ def target_uploader_app():
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
-            loading_spinner.value = False
+            panel_timer.timer(False)
             return
 
         if not validation_status["visibility"]["status"]:
@@ -207,7 +209,7 @@ def target_uploader_app():
                 duration=0,
             )
             _toggle_buttons(button_set, disabled=False)
-            loading_spinner.value = False
+            panel_timer.timer(False)
             return
 
         panel_status.show_results(df_validated, validation_status)
@@ -216,9 +218,6 @@ def target_uploader_app():
 
         tab_panels.active = 1
         tab_panels.visible = True
-
-        # start progress icon
-        panel_ppp_button.start()
 
         try:
             panel_ppp.origname = panel_input.file_input.filename
@@ -239,10 +238,8 @@ def target_uploader_app():
             pn.state.notifications.error(f"{str(e)}", duration=0)
             pass
 
-        panel_ppp_button.stop()
-
         _toggle_buttons(button_set, disabled=False)
-        loading_spinner.value = False
+        panel_timer.timer(False)
 
     def cb_submit(event):
         panel_submit_button.submit.disabled = True
@@ -252,7 +249,7 @@ def target_uploader_app():
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
 
-        loading_spinner.value = True
+        panel_timer.timer(True)
 
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
@@ -273,14 +270,14 @@ def target_uploader_app():
             pn.state.notifications.clear()
 
             if validation_status is None:
-                loading_spinner.value = False
+                panel_timer.timer(False)
                 return
             else:
                 panel_status.show_results(df_validated, validation_status)
                 panel_results.show_results(df_validated, validation_status)
                 panel_targets.show_results(df_validated)
                 tab_panels.visible = True
-                loading_spinner.value = False
+                panel_timer.timer(False)
                 return
 
         panel_ppp.origname = panel_input.file_input.filename
@@ -301,7 +298,7 @@ def target_uploader_app():
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
         panel_submit_button.submit.disabled = True
-        loading_spinner.value = False
+        panel_timer.timer(False)
 
     # set callback to the buttons
     panel_validate_button.validate.on_click(cb_validate)
@@ -336,135 +333,43 @@ def list_files_app():
         # sidebar_width=400,
     )
 
-    _df_files_tgt, _df_files_psl = load_file_properties(
+    df_files_tgt_psl = load_file_properties(
         config["OUTPUT_DIR"],
         ext="ecsv",
-    )
-
-    # join two dataframes for filtering
-    df_files_tgt = _df_files_tgt.merge(
-        _df_files_psl.loc[:, ["Upload ID", "Time_tot_L (h)", "Time_tot_M (h)"]],
-        how="left",
-        right_on="Upload ID",
-        left_on="upload_id",
-    )
-    df_files_tgt.drop(columns=["Upload ID"], inplace=True)
-
-    df_files_psl = _df_files_psl.merge(
-        _df_files_tgt.loc[:, ["upload_id", "n_obj", "t_exp", "timestamp"]],
-        how="left",
-        right_on="upload_id",
-        left_on="Upload ID",
-    )
-    df_files_psl.drop(columns=["upload_id"], inplace=True)
-    df_files_psl.sort_values(
-        "timestamp", ascending=False, ignore_index=True, inplace=True
     )
 
     # range sliders for filtering
     slider_nobj = pn.widgets.EditableRangeSlider(
         name="N (ob_code)",
-        start=np.floor(df_files_tgt["n_obj"].min() / 10) * 10,
-        end=np.ceil(df_files_tgt["n_obj"].max() / 10) * 10,
-        step=10,
+        start=np.floor(df_files_tgt_psl["n_obj"].min() / 10) * 10,
+        end=np.ceil(df_files_tgt_psl["n_obj"].max() / 10) * 10,
+        step=1,
     )
     slider_fiberhour = pn.widgets.EditableRangeSlider(
         name="Fiberhour (h)",
-        start=np.floor(df_files_tgt["t_exp"].min()),
-        end=np.ceil(df_files_tgt["t_exp"].max()),
+        start=np.floor(df_files_tgt_psl["Exptime_tgt (FH)"].min()),
+        end=np.ceil(df_files_tgt_psl["Exptime_tgt (FH)"].max()),
         step=1,
     )
 
     slider_rot_l = pn.widgets.EditableRangeSlider(
         name="ROT (low, h)",
-        start=np.floor(df_files_psl["Time_tot_L (h)"].min()),
-        end=np.ceil(df_files_psl["Time_tot_L (h)"].max()),
+        start=np.floor(df_files_tgt_psl["Time_tot_L (h)"].min()),
+        end=np.ceil(df_files_tgt_psl["Time_tot_L (h)"].max()),
         step=1,
     )
     slider_rot_m = pn.widgets.EditableRangeSlider(
         name="ROT (medium, h)",
-        start=np.floor(df_files_psl["Time_tot_M (h)"].min()),
-        end=np.ceil(df_files_psl["Time_tot_M (h)"].max()),
+        start=np.floor(df_files_tgt_psl["Time_tot_M (h)"].min()),
+        end=np.ceil(df_files_tgt_psl["Time_tot_M (h)"].max()),
         step=1,
     )
 
     # setup panel components
 
-    # Target summary table
-    table_files_tgt = pn.widgets.Tabulator(
-        df_files_tgt,
-        page_size=500,
-        theme="bootstrap",
-        # theme_classes=["table-striped", "table-sm"],
-        theme_classes=["table-striped"],
-        frozen_columns=["index"],
-        pagination="remote",
-        header_filters=True,
-        titles={
-            "upload_id": "Upload ID",
-            "filenames": "File",
-            "n_obj": "N (ob_code)",
-            "t_exp": "Fiberhour (h)",
-            "origname": "Original filename",
-            "filesize": "Size (kB)",
-            "timestamp": "Timestamp",
-        },
-        hidden_columns=[
-            "index",
-            "fullpath",
-            "link",
-            "Time_tot_L (h)",
-            "Time_tot_M (h)",
-        ],
-        buttons={"download": "<i class='fa-solid fa-download'></i>"},
-        layout="fit_data_table",
-        disabled=True,
-    )
-    table_files_tgt.add_filter(slider_nobj, "n_obj")
-    table_files_tgt.add_filter(slider_fiberhour, "t_exp")
-    table_files_tgt.add_filter(slider_rot_l, "Time_tot_L (h)")
-    table_files_tgt.add_filter(slider_rot_m, "Time_tot_M (h)")
+    # Target & psl summary table
 
-    # PPP summary table
-    table_files_psl = pn.widgets.Tabulator(
-        df_files_psl,
-        page_size=500,
-        theme="bootstrap",
-        theme_classes=["table-striped"],
-        pagination="remote",
-        header_filters=True,
-        layout="fit_data_table",
-        disabled=True,
-        buttons={
-            "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
-            "download": "<i class='fa-solid fa-download'></i>",
-        },
-        hidden_columns=["index", "n_obj", "t_exp", "timestamp", "fullpath"],
-        width=1400,
-    )
-    table_files_psl.add_filter(slider_nobj, "n_obj")
-    table_files_psl.add_filter(slider_fiberhour, "t_exp")
-    table_files_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
-    table_files_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
-
-    table_files_ppc = pn.widgets.Tabulator(
-        page_size=20,
-        theme="bootstrap",
-        theme_classes=["table-striped"],
-        pagination="remote",
-        header_filters=True,
-        layout="fit_data_table",
-        disabled=True,
-        hidden_columns=["index", "Fiber usage fraction (%)", "link"],
-        width=550,
-        visible=False,
-    )
-
-    # Open a file by clicking the download buttons
-    # https://discourse.holoviz.org/t/how-to-make-a-dynamic-link-in-panel/2137
-    js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
-
-    def execute_javascript(script):
+    '''def execute_javascript(script):
         script = f'<script type="text/javascript">{script}</script>'
         js_panel.object = script
         js_panel.object = ""
@@ -476,36 +381,89 @@ def list_files_app():
             )
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{p_href}', '_blank')"
-            execute_javascript(script)
+            execute_javascript(script)#'''
+    
+    column_checkbox = pn.widgets.CheckBoxGroup(
+        name='Columns to show', value=['Upload ID', 'n_obj', 'Time_tot_L (h)', 'Time_tot_M (h)', 'timestamp'], 
+        options=list(df_files_tgt_psl.columns),
+        inline=True
+    )
 
     def open_panel_magnify(event):
         if event.column == "magnify":
-            p_ppc = os.path.split(df_files_psl["fullpath"][event.row])[0]
+            table_ppc.clear()
+            u_id = df_files_tgt_psl['Upload ID'][event.row]
+            p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
             table_ppc_t = Table.read(
-                os.path.join(p_ppc, f"ppc_{df_files_psl['Upload ID'][event.row]}.ecsv")
+                os.path.join(p_ppc, f"ppc_{u_id}.ecsv")
             )
-            table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
-                "ppc_priority", ascending=True, ignore_index=True
+            table_tgt_t = Table.read(
+                os.path.join(p_ppc, f"target_{u_id}.ecsv")
             )
-            table_files_ppc.visible = True
+            nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab = ppp_result_reproduce(
+                table_ppc_t,
+                table_tgt_t,
+            )
 
-        if event.column == "download":
-            p_href = df_files_psl["fullpath"][event.row].replace(
-                config["OUTPUT_DIR"], "data", 1
-            )
-            script = f"window.open('{p_href}', '_blank')"
-            execute_javascript(script)
+            def tab_ppc_save(p_result_ppc_fin):
+                p_result_ppc_fin.to_csv(f"data/temp/{u_id}.csv")
+                return f"data/temp/{u_id}.csv"
 
-    table_files_tgt.on_click(open_panel_download)
-    table_files_psl.on_click(open_panel_magnify)
+            output_status = pn.pane.Markdown(
+                f"<font size=3>You are checking program: Upload id = {u_id} </font>",
+            )
+            fd = pn.widgets.FileDownload(
+                callback=pn.bind(tab_ppc_save,p_result_ppc_fin), filename=f"ppc_{u_id}.csv",
+                button_type='primary',
+                width=250,
+            )
+
+            table_ppc.append(pn.Row(output_status, fd, width = 750))
+            table_ppc.append(pn.Row(pn.Column(p_result_ppc_fin, width=700, height=1000), pn.Column(nppc_fin, p_result_tab, p_result_fig_fin)))
+
+    def Table_files_tgt_psl(column_checkbox):
+        _hidden_columns = list(set(list(df_files_tgt_psl.columns))-set(column_checkbox))
+
+        _table_files_tgt_psl = pn.widgets.Tabulator(
+            df_files_tgt_psl,
+            page_size=500,
+            theme="bootstrap",
+            # theme_classes=["table-striped", "table-sm"],
+            theme_classes=["table-striped"],
+            frozen_columns=["index"],
+            pagination="remote",
+            header_filters=True,
+            buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>"},
+            layout="fit_data_table",
+            hidden_columns=_hidden_columns,
+            disabled=True,
+            selection=[], 
+            selectable='checkbox',
+        )
+    
+        _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
+        _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
+        _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
+        _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
+
+        _table_files_tgt_psl.on_click(open_panel_magnify)
+
+        return _table_files_tgt_psl
+    
+    table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
+
+    # Details of PPC
+    table_ppc = pn.Column()
+
+    #-------------------------------------------------------------------
 
     sidebar_column = pn.Column(
         slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
     )
 
     tab_panels = pn.Tabs(
-        ("Target info", pn.Column(table_files_tgt, js_panel)),
-        ("Program info", pn.Row(table_files_psl, table_files_ppc)),
+        ("Program info", pn.Column(column_checkbox, table_files_tgt_psl)),
+        ("PPC details", table_ppc),
     )
 
     # put them into the template

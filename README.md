@@ -17,7 +17,8 @@ cd pfs_target_uploader
 pip install -r requirements.txt
 pip install -e .
 
-mkdir -p data/{target_lists,psl_lists,ppc_lists}
+mkdir -p data/
+mkdir -p data/temp/
 ```
 
 
