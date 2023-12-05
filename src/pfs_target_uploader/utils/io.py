@@ -333,12 +333,18 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             if len(tb_l) > 0:
                 exp_sci_l[i] = tb_l["Texp (h)"]
                 exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
-                tot_time_l[i] = tb_l["Request time (h)"]
+                try:
+                    tot_time_l[i] = tb_l["Request time (h)"]
+                except KeyError:
+                    tot_time_l[i] = tb_l["Request time 1 (h)"]
 
             if len(tb_m) > 0:
                 exp_sci_m[i] = tb_m["Texp (h)"]
                 exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
-                tot_time_m[i] = tb_m["Request time (h)"]
+                try:
+                    tot_time_m[i] = tb_m["Request time (h)"]
+                except KeyError:
+                    tot_time_m[i] = tb_m["Request time 1 (h)"]
 
     df_psl_tgt = pd.DataFrame(
         {
@@ -360,5 +366,3 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     )
 
     return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)
-
-    
