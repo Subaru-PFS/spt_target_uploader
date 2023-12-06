@@ -292,7 +292,7 @@ def target_uploader_app():
             panel_ppp.secret_token,
             panel_ppp.upload_time,
             panel_ppp.ppp_status,
-            outdir.replace(config["OUTPUT_DIR"], "data", 1),
+            outdir.replace(config["OUTPUT_DIR"], "data/", 1),
             outfile_zip,
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
@@ -409,16 +409,26 @@ def list_files_app():
                 p_result_ppc_fin.to_csv(f"data/temp/{u_id}.csv")
                 return f"data/temp/{u_id}.csv"
 
-            output_status = pn.pane.Markdown(
-                f"<font size=3>You are checking program: Upload id = {u_id} </font>",
-            )
-            fd = pn.widgets.FileDownload(
-                callback=pn.bind(tab_ppc_save,p_result_ppc_fin), filename=f"ppc_{u_id}.csv",
-                button_type='primary',
-                width=250,
-            )
+            if nppc_fin is not None:
+                output_status = pn.pane.Markdown(
+                    f"<font size=3>You are checking program: Upload id = {u_id} </font>",
+                )
 
-            table_ppc.append(pn.Row(output_status, fd, width = 750))
+                fd = pn.widgets.FileDownload(
+                    callback=pn.bind(tab_ppc_save,p_result_ppc_fin), filename=f"ppc_{u_id}.csv",
+                    button_type='primary',
+                    width=250,
+                )
+
+                table_ppc.append(pn.Row(output_status, fd, width = 750))
+            
+            else:
+                output_status = pn.pane.Markdown(
+                    f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
+                )
+
+                table_ppc.append(pn.Row(output_status, width = 750))
+
             table_ppc.append(pn.Row(pn.Column(p_result_ppc_fin, width=700, height=1000), pn.Column(nppc_fin, p_result_tab, p_result_fig_fin)))
 
     def Table_files_tgt_psl(column_checkbox):
