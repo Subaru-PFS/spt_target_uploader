@@ -91,7 +91,11 @@ class PppResultWidgets:
 
         @pn.io.profile("update_alert")
         def update_alert(df):
-            rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
+            if df is None:
+                rot = 0
+            else:
+                rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
+
             if self.status_ == 999 and rot > self.max_reqtime_normal:
                 text = self.ppp_warning_text_1
                 type = "warning"
@@ -108,6 +112,9 @@ class PppResultWidgets:
 
         @pn.io.profile("update_reqtime")
         def update_reqtime(df):
+            if df is None:
+                return {"value": 0, "default_color": "#3A7D7E"}
+            
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             if rot > self.max_reqtime_normal:
                 c = "crimson"
@@ -118,6 +125,9 @@ class PppResultWidgets:
 
         @pn.io.profile("update_summary_text")
         def update_summary_text(df):
+            if df is None:
+                return {"object": " "}
+            
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             n_ppc = df.iloc[-1]["N_ppc"]
             t_exp = df.iloc[-1]["Texp (h)"]
@@ -186,34 +196,38 @@ class PppResultWidgets:
             border-color: #3A7D7E !important;
             text-align: left !important;
         }"""
-        self.export_button = pn.widgets.FileDownload(
-            name="Export the results",
-            callback=pn.bind(
-                stream_export_files,
-                self.p_result_tab.value,
-                self.p_result_ppc.value,
-                self.p_result_fig,
-            ),
-            filename="pfs_target.zip",
-            button_style="outline",
-            button_type="primary",
-            icon="download",
-            icon_size="1.5em",
-            label="",
-            max_width=150,
-            stylesheets=[stylesheet],
-        )
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
         self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
-        self.ppp_figure.append(
-            pn.Column(
-                "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
-                pn.Row(self.export_button, self.nppc),
-                self.p_result_tab,
+
+        if self.p_result_tab is not None:
+            self.export_button = pn.widgets.FileDownload(
+                name="Export the results",
+                callback=pn.bind(
+                    stream_export_files,
+                    self.p_result_tab.value,
+                    self.p_result_ppc.value,
+                    self.p_result_fig,
+                ),
+                filename="pfs_target.zip",
+                button_style="outline",
+                button_type="primary",
+                icon="download",
+                icon_size="1.5em",
+                label="",
+                max_width=150,
+                stylesheets=[stylesheet],
             )
-        )
+
+            self.ppp_figure.append(
+                pn.Column(
+                    "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
+                    pn.Row(self.export_button, self.nppc),
+                    self.p_result_tab,
+                )
+            )
+
         self.ppp_figure.append(self.p_result_fig)
         self.ppp_figure.visible = True
 
@@ -223,7 +237,7 @@ class PppResultWidgets:
         )
         logger.info("showing PPP results done")
 
-    def run_ppp(self, df, validation_status, weights=None, exetime=15*60): #tentatively set to 15 min
+    def run_ppp(self, df, validation_status, weights=None, exetime=60*15): #tentatively set to 15 min
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 
