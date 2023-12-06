@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import panel as pn
-from logzero import logger
-from param import descendents
 
 
 class ValidateButtonWidgets:
@@ -53,7 +51,6 @@ class RunPppButtonWidgets:
         )
 
         self.pane = self.PPPrun
-
 
 
 class SubmitButtonWidgets:

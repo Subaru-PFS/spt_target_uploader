@@ -6,7 +6,7 @@ import numpy as np
 import panel as pn
 from astropy import units as u
 from astropy.table import Table
-from logzero import logger
+from loguru import logger
 
 from ..utils.io import upload_file
 from ..utils.ppp import PPPrunStart, ppp_result
@@ -91,7 +91,11 @@ class PppResultWidgets:
 
         @pn.io.profile("update_alert")
         def update_alert(df):
-            rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
+            if df is None:
+                rot = 0
+            else:
+                rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
+
             if self.status_ == 999 and rot > self.max_reqtime_normal:
                 text = self.ppp_warning_text_1
                 type = "warning"
@@ -108,6 +112,9 @@ class PppResultWidgets:
 
         @pn.io.profile("update_reqtime")
         def update_reqtime(df):
+            if df is None:
+                return {"value": 0, "default_color": "#3A7D7E"}
+
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             if rot > self.max_reqtime_normal:
                 c = "crimson"
@@ -118,22 +125,31 @@ class PppResultWidgets:
 
         @pn.io.profile("update_summary_text")
         def update_summary_text(df):
+            if df is None:
+                return {"object": " "}
+
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             n_ppc = df.iloc[-1]["N_ppc"]
             t_exp = df.iloc[-1]["Texp (h)"]
             t_fh = df.iloc[-1]["Texp (fiberhour)"]
-            try:
-                comp_all_low = df.iloc[0]["P_all"]
-                text_comp_low = f"- <font size=3>The expected **completion rate** for **low-resolution** mode is **{comp_all_low:.0f}%**.</font>\n"
-            except Exception:
-                comp_all_low = None
-                text_comp_low = ""
-            try:
-                comp_all_med = df.iloc[1]["P_all"]
-                text_comp_med = f"- <font size=3>The expected **completion rate** for **medium-resolution** mode is **{comp_all_med:.0f}%**.</font>"
-            except Exception:
-                comp_all_med = None
-                text_comp_med = ""
+
+            text_comp_low, text_comp_med = "", ""
+
+            for i in range(2):
+                try:
+                    res = df.iloc[i]["resolution"]
+                    comp_all_ = df.iloc[i]["P_all"]
+                    text_comp_ = (
+                        "- <font size=3>The expected **completion rate** "
+                        f"for **{res}-resolution** mode is **{comp_all_:.0f}%**.</font>\n"
+                    )
+                    if res == "low":
+                        text_comp_low = text_comp_
+                    elif res == "medium":
+                        text_comp_med = text_comp_
+                except Exception:
+                    continue
+
             text = (
                 f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
                 f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
@@ -184,36 +200,42 @@ class PppResultWidgets:
         stylesheet = """
         .bk-btn a {
             border-color: #3A7D7E !important;
-            text-align: left !important;
+            display: inline;
         }"""
-        self.export_button = pn.widgets.FileDownload(
-            name="Export the results",
-            callback=pn.bind(
-                stream_export_files,
-                self.p_result_tab.value,
-                self.p_result_ppc.value,
-                self.p_result_fig,
-            ),
-            filename="pfs_target.zip",
-            button_style="outline",
-            button_type="primary",
-            icon="download",
-            icon_size="1.5em",
-            label="",
-            max_width=150,
-            stylesheets=[stylesheet],
-        )
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
         self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
-        self.ppp_figure.append(
-            pn.Column(
-                "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
-                pn.Row(self.export_button, self.nppc),
-                self.p_result_tab,
+
+        if self.p_result_tab is not None:
+            self.export_button = pn.widgets.FileDownload(
+                name="Export the results",
+                callback=pn.bind(
+                    stream_export_files,
+                    self.p_result_tab.value,
+                    self.p_result_ppc.value,
+                    self.p_result_fig,
+                ),
+                # filename="pfs_target.zip",
+                filename="",
+                button_style="outline",
+                button_type="primary",
+                icon="download",
+                icon_size="1.2em",
+                label="",
+                max_width=150,
+                height=60,
+                stylesheets=[stylesheet],
             )
-        )
+
+            self.ppp_figure.append(
+                pn.Column(
+                    "<font size=4><u>Number of PFS pointing centers (adjustable with the sliders)</u></font>",
+                    pn.Row(self.export_button, self.nppc),
+                    self.p_result_tab,
+                )
+            )
+
         self.ppp_figure.append(self.p_result_fig)
         self.ppp_figure.visible = True
 
@@ -223,7 +245,9 @@ class PppResultWidgets:
         )
         logger.info("showing PPP results done")
 
-    def run_ppp(self, df, validation_status, weights=None, exetime=15*60): #tentatively set to 15 min
+    def run_ppp(
+        self, df, validation_status, weights=None, exetime=15 * 60
+    ):  # tentatively set to 15 min
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 

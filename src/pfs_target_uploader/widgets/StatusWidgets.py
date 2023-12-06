@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 import panel as pn
-from logzero import logger
+from loguru import logger
 
 
 class StatusWidgets:
@@ -139,7 +139,8 @@ class StatusWidgets:
 
             logger.info(f"Summary Table:\n{self.df_summary}")
 
-            self.summary_table.value = pd.DataFrame()
+            if self.summary_table.value is not None:
+                self.summary_table.value.iloc[0:0]
             self.summary_table.value = self.df_summary
             # self.summary_table.visible = True
             # self.table_footnote.visible = True

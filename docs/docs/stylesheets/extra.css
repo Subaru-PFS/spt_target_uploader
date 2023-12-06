@@ -1,0 +1,6 @@
+
+/* to align figures side-by-side in <figure> environment */
+/* https://github.com/squidfunk/mkdocs-material/discussions/3408 */
+.md-typeset figure img {
+    display: inline;
+}

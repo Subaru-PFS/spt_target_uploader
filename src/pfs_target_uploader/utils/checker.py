@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 from dateutil import parser, tz
-from logzero import logger
+from loguru import logger
 
 # below for qplan
 # isort: split
@@ -249,10 +249,10 @@ def check_keys(
             optional_desc_success.append(desc)
             logger.info(desc)
         else:
-            desc = f"Optional column `{k}` is missing. The default value, {optional_keys_default[k]}, will be used."
+            desc = f"Optional column `{k}` is missing. The default value, `{optional_keys_default[k]}`, will be used."
             optional_status.append(False)
             optional_desc_warning.append(desc)
-            logger.warn(desc)
+            logger.warning(desc)
 
     dict_required_keys = dict(
         status=np.all(required_status),  # True for success
@@ -413,6 +413,8 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                             )
                     except KeyError:
                         pass
+                    except TypeError:
+                        pass
 
         return s, is_found_filter, filters_found_one
 
@@ -475,7 +477,7 @@ def check_visibility(
     else:
         is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
         print(is_visible)
-        
+
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")
         dict_visibility["status"] = True

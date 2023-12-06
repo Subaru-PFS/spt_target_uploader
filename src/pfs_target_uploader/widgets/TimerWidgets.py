@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import panel as pn
-import time
 
 
 class TimerWidgets:
@@ -10,13 +9,11 @@ class TimerWidgets:
             value=False, size=40, margin=(10, 0, 0, -10), color="secondary"
         )
 
-        #self.timer_init = pn.pane.Markdown("00:00")
-
         self.pane = pn.Column(self.loading_spinner, width=40, height=40)
 
     def timer(self, on=False):
-        if on == True:
-            '''
+        if on is True:
+            """
             x = 0
             while x < 20:#15 * 60:
                 self.loading_spinner.value = True
@@ -24,10 +21,7 @@ class TimerWidgets:
                 self.timer_init.object = '{:02d}:{:02d}'.format(mins, secs)
                 x += 1
                 time.sleep(1)
-            #'''
+            #"""
             self.loading_spinner.value = True
-        elif on == False:
+        elif on is False:
             self.loading_spinner.value = False
-
-
-    

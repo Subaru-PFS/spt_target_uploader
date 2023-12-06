@@ -4,7 +4,6 @@ from datetime import datetime
 
 import panel as pn
 import param
-from logzero import logger
 from zoneinfo import ZoneInfo
 
 from ..utils.checker import get_semester_daterange

@@ -1,43 +1,95 @@
 # Input Target List
 
-## Contents of the list
+## File format
 
-There are required and optional fields. String values must consist of `[A-Za-z0-9_-+.]`.
+An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
+the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
 
+## Content
+
+Here the word "target" is a combination of values of the fields described below. There are required and optional fields. String values must consist of `[A-Za-z0-9_-+.]`.
+
+### Quick example
+
+[An example CSV file](examples/example_perseus_cluster_r60arcmin.csv) containing 539 galaxies within 60 arcmin from the Perseus cluster ([Meusinger et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...640A..30M/abstract)) is available.
+
+A quick example of the content is shown below.
+
+| ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution |     g_hsc | g_hsc_error |
+|-------------|-------:|-------------------:|-------------------:|--------:|---------:|------------|----------:|------------:|
+| ob_00000000 |      0 |  278.6241774801468 |  56.29564017478978 |  3600.0 |        9 | L          |   3093.21 |      388.14 |
+| ob_00000001 |      1 | 157.99623831073885 |  31.71664232033844 |  3600.0 |        7 | M          | 108911.74 |    30452.86 |
+| ob_00000002 |      2 | 309.09525116809766 | -6.329978341797448 |  3600.0 |        3 | M          |  11842.32 |     2905.20 |
 
 ### Required fields
 
 Mandatory fields are listed below.
 
-| Name       | Datatype   | Unit   | Description                                                                                        |
-|------------|------------|--------|----------------------------------------------------------------------------------------------------|
-| ob_code    | str        |        | A unique string to identify the entry                                                              |
-| obj_id     | 64 bit int |        | Object ID                                                                                          |
-| ra         | float      | degree | Right Ascension (J2000.0)                                                                          |
-| dec        | float      | degree | Declination (J2000.0)                                                                              |
-| exptime    | float      | second | Exposure time requested for the object                                                             |
-| priority   | int        |        | Priority (0-9) for the object within the list. Smaller value for higher priority                   |
-| resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+| Name       | Datatype   | Unit   | Description                                                                                              |
+|------------|------------|--------|----------------------------------------------------------------------------------------------------------|
+| ob_code    | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                       |
+| obj_id     | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                |
+| ra         | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                 |
+| dec        | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                     |
+| exptime    | float      | second | Exposure time requested for the object under the nominal observing condition.                            |
+| priority   | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority |
+| resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution       |
 
-#### Equinox
+#### About `ob_code`
 
-It is users' responsibility to make sure the coordinates are in J2000.0.
+In a given target list, each `ob_code` must be unique. Some examples of good cases are shown below.
 
-#### Flux information
+A standard case.
 
-Flux columns must conform the following requirements.
+| ob_code | obj_id |
+|---------|-------:|
+| ob_1    |      1 |
+| ob_2    |      2 |
+
+You can request to observe an object with both `L` and `M` resolutions, but you need to use a different `ob_code` for each case.
+
+| ob_code | obj_id | resolution |
+|---------|-------:|------------|
+| ob_1_L  |      1 | L          |
+| ob_1_M  |      1 | M          |
+
+You can request to observe an object multiple times instead of summing up the exposure time, but you need to use a different `ob_code` for each case.
+
+| ob_code     | obj_id | exptime |
+|-------------|-------:|--------:|
+| ob_1_900s_1 |      1 |     900 |
+| ob_1_900s_2 |      1 |     900 |
+| ob_1_900s_3 |      1 |     900 |
+| ob_1_900s_4 |      1 |     900 |
+
+This is essentially equivalent to the following.
+
+| ob_code    | obj_id | exptime |
+|------------|-------:|--------:|
+| ob_1_3600s |      1 |    3600 |
+
+#### About astrometry
+
+Since the [Gaia DR3](https://www.cosmos.esa.int/web/gaia/data-release-3) catalog is used to find guide stars,
+coordinates must be in the International Celestial Reference System (ICRS).
+Users are required to make coordinates of targets consistent with the Gaia astrometry at the epoch of 2000.0.
+Note that coordinates in ICRS at the epoch of 2000.0 are known to be consistent with those with equinox J2000.0 represented by the FK5 within the errors of the FK5.
+
+#### About Flux information
+
+Flux columns must conform to the following requirements.
 
 - **At least one** flux information for each `ob_code` is required.
 - **The names of flux columns must be chosen** from the pre-defined [filters](#filters).
 - Filters are categorized as shown in the [filter list](#filters).
-  An `ob_code` cannot have more than one fluxes in the same filter category.
+  An `ob_code` cannot have more than one flux in the same filter category.
 - If more than one flux columns with finite values are found for an `ob_code`,
-  the value of the first column (left-most one in the input CSV file) will be used.
+  the value of the first column (the left-most one in the input CSV file) will be used.
 - Flux values are in the unit of <font size=5>**nJy**</font>.
 - Flux values are assumed to be total flux.
 - Errors can be provided by using column names by adding `_error` following the filter names.
 
-##### Example
+##### Example of flux information
 
 ✅ Good
 
@@ -46,7 +98,6 @@ Flux columns must conform the following requirements.
 | 1       | 10000 | 100         |       |             |       |             |
 | 2       | 20000 | 200         | 20000 |             |       |             |
 | 3       |       |             |       |             | 30000 | 300         |
-
 
 ⚠️ OK
 
@@ -68,9 +119,6 @@ Flux columns must conform the following requirements.
 | 2       | 20000 | 200         | 20000 |             |       |             |
 | 3       |       |             |       |             | 30000 | 300         |
 
-
-
-
 ### Optional fields
 
 Optional fields are listed below.
@@ -80,12 +128,17 @@ Optional fields are listed below.
 | pmra     | float    | mas/year | 0       | Proper motion in right ascension direction |
 | pmdec    | float    | mas/year | 0       | Proper motion in declination direction     |
 | parallax | float    | mas      | 1e-7    | Parallax                                   |
-| tract    | int      |          |         | Tract ID                                   |
-| patch    | int      |          |         | Patch name                                 |
+| tract    | int      |          | None    | Tract ID                                   |
+| patch    | int      |          | None    | Patch ID                                   |
+
+Note that, if provided, `tract` and `patch` are expected to follow the output of [the HSC pipeline](https://hsc.mtk.nao.ac.jp/pipedoc_e/).
+See the [relevant section](https://hsc.mtk.nao.ac.jp/pipedoc/pipedoc_8_e/tutorial_e/basic_info.html#tract-patch) of the pipeline.
+If they are not provided, `None` will be used as the default value.
 
 ### Filters
 
 Currently, the following filters are registered in our database. Filters are categorized as follows.
+Specifying filters not in the following will be ignored.
 
 #### `g` category filters
 
@@ -134,12 +187,3 @@ Currently, the following filters are registered in our database. Filters are cat
 #### `j` category filters
 
 TBD
-
-## File format
-
-Input target list must be a Comma-separated values (CSV) file.
-
-
-## Example
-
-An example CSV file containing 100 random entries can be found in [this link](examples/example_targetlist_random100.csv).

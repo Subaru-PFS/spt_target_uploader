@@ -7,7 +7,7 @@ from io import BytesIO
 
 import panel as pn
 import param
-from logzero import logger
+from loguru import logger
 
 from ..utils.checker import validate_input
 from ..utils.io import load_input
@@ -34,7 +34,7 @@ class FileInputWidgets(param.Parameterized):
         self.pane = pn.Column(
             pn.pane.Markdown(
                 "<font size=5>**Select an input CSV file**</font> "
-                "<font size=4>(<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)</font>",
+                "<font size=4>(<a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
                 # styles={
                 #     "border-left": "10px solid #3A7D7E",
                 #     "border-bottom": "1px solid #3A7D7E",
