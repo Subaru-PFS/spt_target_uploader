@@ -114,7 +114,7 @@ class PppResultWidgets:
         def update_reqtime(df):
             if df is None:
                 return {"value": 0, "default_color": "#3A7D7E"}
-            
+
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             if rot > self.max_reqtime_normal:
                 c = "crimson"
@@ -127,7 +127,7 @@ class PppResultWidgets:
         def update_summary_text(df):
             if df is None:
                 return {"object": " "}
-            
+
             rot = np.ceil(df.iloc[-1]["Request time (h)"] * 10.0) / 10.0
             n_ppc = df.iloc[-1]["N_ppc"]
             t_exp = df.iloc[-1]["Texp (h)"]
@@ -237,7 +237,9 @@ class PppResultWidgets:
         )
         logger.info("showing PPP results done")
 
-    def run_ppp(self, df, validation_status, weights=None, exetime=60*15): #tentatively set to 15 min
+    def run_ppp(
+        self, df, validation_status, weights=None, exetime=15 * 60
+    ):  # tentatively set to 15 min
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 

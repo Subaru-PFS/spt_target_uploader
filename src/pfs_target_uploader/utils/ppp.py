@@ -41,6 +41,7 @@ if parse_version(bokeh.__version__) < parse_version("3.3"):
 
 warnings.filterwarnings("ignore")
 
+
 def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
     r_pfi = d_pfi / 2.0
 
@@ -338,23 +339,25 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             status = 1
             logger.info("PPP stopped since the time is running out [PPP_centers s1]")
             return sample_f, status
-        
+
         peak = []
 
         for sample in target_DBSCAN(sample_f, d_pfi):
-
             if (time.time() - starttime) > exetime:
                 status = 1
-                logger.info("PPP stopped since the time is running out [PPP_centers s2]")
+                logger.info(
+                    "PPP stopped since the time is running out [PPP_centers s2]"
+                )
                 continue
 
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
             while any(sample_s["exptime_PPP"] > 0):
-                
                 if (time.time() - starttime) > exetime:
                     status = 1
-                    logger.info("PPP stopped since the time is running out [PPP_centers s2_1]")
+                    logger.info(
+                        "PPP stopped since the time is running out [PPP_centers s2_1]"
+                    )
                     break
 
                 # -------------------------------
@@ -396,7 +399,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         sample_f.meta["PPC"] = np.array(peak)
 
         return sample_f, status
-    
+
     def point_DBSCAN(sample):
         """separate pointings into different group
 
@@ -717,8 +720,13 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         n_sub = len(sub_l)
 
         if len(point_l) == 0:
-            return sample, np.array([[0]*(n_sub+1)]), np.array([[0]*(n_sub+1)]), sub_l
-        
+            return (
+                sample,
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
+                sub_l,
+            )
+
         point_l_pri = point_l[
             point_l.argsort(keys="ppc_priority")
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
@@ -767,7 +775,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             # if targets can not be successfully assigned with fibers in >5 iterations, then directly stop
             # if total number of ppc >200 (~5 nights), then directly stop
         """
-        
+
         status = 999
 
         if sum(uS["allocate_time"] == uS["exptime_PPP"]) == len(uS):
@@ -785,10 +793,11 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             iter_m2 = 0
 
             while any(uS["allocate_time"] < uS["exptime_PPP"]) and iter_m2 < 10:
-
                 if (time.time() - starttime) > exetime:
                     status = 1
-                    logger.info("PPP stopped since the time is running out [netflow_iter s2]")
+                    logger.info(
+                        "PPP stopped since the time is running out [netflow_iter s2]"
+                    )
                     break
 
                 uS_t1 = uS[uS["allocate_time"] < uS["exptime_PPP"]]
@@ -840,7 +849,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
         obj_allo_L = netflowRun(uS_L_s2)
         uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin, status_  = netflow_iter(uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime)
+        obj_allo_L_fin, status_ = netflow_iter(
+            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+        )
 
         uS_L_s2.remove_column("allocate_time")
         uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
@@ -855,7 +866,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
         obj_allo_M = netflowRun(uS_M_s2)
         uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin, status_  = netflow_iter(uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime)
+        obj_allo_M_fin, status_ = netflow_iter(
+            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+        )
 
         uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
@@ -870,7 +883,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
         obj_allo_L = netflowRun(uS_L_s2)
         uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin, status_  = netflow_iter(uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime)
+        obj_allo_L_fin, status_ = netflow_iter(
+            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+        )
 
         uS_L_s2.remove_column("allocate_time")
         uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
@@ -878,7 +893,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
         obj_allo_M = netflowRun(uS_M_s2)
         uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin, status_  = netflow_iter(uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime)
+        obj_allo_M_fin, status_ = netflow_iter(
+            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+        )
 
         uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
@@ -930,7 +947,7 @@ def ppp_result(
     if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
         logger.info("No PPP results due to running out of time [ppp_result]")
         return (None, None, None, None)
-    
+
     r_pfi = d_pfi / 2.0
 
     tabulator_stylesheet = """
@@ -987,7 +1004,10 @@ def ppp_result(
 
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
-        obj_allo1["ppc_code"] = ['Point_' + RESmode + '_' + str(count) for count in (np.arange(0, len(obj_allo), 1) + 1) ]
+        obj_allo1["ppc_code"] = [
+            "Point_" + RESmode + "_" + str(count)
+            for count in (np.arange(0, len(obj_allo), 1) + 1)
+        ]
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
@@ -1066,12 +1086,12 @@ def ppp_result(
             line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
             legend="right",
         )
-        #p_comp_rect1 = hv.Rectangles([(30, 88, 95, 100)]).opts(
+        # p_comp_rect1 = hv.Rectangles([(30, 88, 95, 100)]).opts(
         #    color="orange", line_width=0, alpha=0.2
-        #)
-        #p_comp_rect2 = hv.Rectangles([(20, 43, 130, 93)]).opts(
+        # )
+        # p_comp_rect2 = hv.Rectangles([(20, 43, 130, 93)]).opts(
         #    color="dodgerblue", line_width=0, alpha=0.2
-        #)
+        # )
 
         # static part for fiber usage fraction plot
         p_fibereff_bar = hv.Bars(
@@ -1126,7 +1146,7 @@ def ppp_result(
             p_comp_nppc = hv.VLine(nppc_fin).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
-            '''
+            """
             p_comp_tot = (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
@@ -1136,7 +1156,7 @@ def ppp_result(
                 active_tools=["box_zoom"],
                 height=plot_height,
             )
-            #'''
+            #"""
             p_comp_tot = (p_comp_rate * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
@@ -1228,9 +1248,20 @@ def ppp_result(
 
         @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2():
-            obj_alloc = obj_allo1["ppc_code", "ppc_ra", "ppc_dec", "ppc_pa", "ppc_resolution", "ppc_priority","Fiber usage fraction (%)", "allocated_targets"]
-            #normalize the priority of ppc to prevent too small value
-            obj_alloc['ppc_priority'] = obj_alloc['ppc_priority']/max(obj_alloc['ppc_priority']) * 1e3 
+            obj_alloc = obj_allo1[
+                "ppc_code",
+                "ppc_ra",
+                "ppc_dec",
+                "ppc_pa",
+                "ppc_resolution",
+                "ppc_priority",
+                "Fiber usage fraction (%)",
+                "allocated_targets",
+            ]
+            # normalize the priority of ppc to prevent too small value
+            obj_alloc["ppc_priority"] = (
+                obj_alloc["ppc_priority"] / max(obj_alloc["ppc_priority"]) * 1e3
+            )
             return Table.to_pandas(obj_alloc)
 
         # compose figures
@@ -1246,7 +1277,7 @@ def ppp_result(
 
         # PPC table
         p_result_ppc = pn.widgets.Tabulator(
-            #pn.bind(ppp_res_tab2, nppc),
+            # pn.bind(ppp_res_tab2, nppc),
             ppp_res_tab2(),
             visible=False,
             disabled=True,
@@ -1338,6 +1369,7 @@ def ppp_result(
 
 ## PPP result reproduction
 
+
 def ppp_result_reproduce(
     obj_allo,
     uS,
@@ -1346,21 +1378,27 @@ def ppp_result_reproduce(
     plot_height=220,
 ):
     # exit if no PPP outputs
-    if None in obj_allo['ppc_code']:
-        logger.info("[Reproduce] No PPP results due to running out of time [ppp_result]")
+    if None in obj_allo["ppc_code"]:
+        logger.info(
+            "[Reproduce] No PPP results due to running out of time [ppp_result]"
+        )
         return (None, None, None, None)
-    
+
     r_pfi = d_pfi / 2.0
 
     def complete_ppc(sample, point_l):
-        
         sample.add_column(0, name="allocate_time")
         sub_l = sorted(list(set(sample["priority"])))
         n_sub = len(sub_l)
 
         if len(point_l) == 0:
-            return sample, np.array([[0]*(n_sub+1)]), np.array([[0]*(n_sub+1)]), sub_l
-        
+            return (
+                sample,
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
+                sub_l,
+            )
+
         point_l_pri = point_l[
             point_l.argsort(keys="ppc_priority")
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
@@ -1398,7 +1436,6 @@ def ppp_result_reproduce(
         return Toverheads_tot_best / 3600.0
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
-
         def nppc2rot(nppc_):
             # in seconds
             t_exp_sci: float = 900.0
@@ -1417,16 +1454,14 @@ def ppp_result_reproduce(
             t_overhead_misc: float = 60.0
             t_overhead_fiber: float = 180.0
 
-            nppc_ = rot * 3600. / (
-                t_exp_sci + t_overhead_misc + t_overhead_fiber
-            ) 
+            nppc_ = rot * 3600.0 / (t_exp_sci + t_overhead_misc + t_overhead_fiber)
 
             return int(np.floor(nppc_))
 
         nppc = pn.widgets.FloatSlider(
             name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
             value=nppc2rot(len(cR)),
-            step= 0.1,
+            step=0.1,
             start=nppc2rot(1),
             end=nppc2rot(len(cR)),
             bar_color="gray",
@@ -1572,7 +1607,7 @@ def ppp_result_reproduce(
             p_comp_nppc = hv.VLine(nppc_fin).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
-        
+
             p_comp_tot = (p_comp_rate * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
@@ -1664,7 +1699,14 @@ def ppp_result_reproduce(
 
         @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2(nppc_fin):
-            obj_alloc = obj_allo1[:nppc_fin]["ppc_code", "ppc_ra", "ppc_dec", "ppc_pa", "ppc_resolution", "ppc_priority"]
+            obj_alloc = obj_allo1[:nppc_fin][
+                "ppc_code",
+                "ppc_ra",
+                "ppc_dec",
+                "ppc_pa",
+                "ppc_resolution",
+                "ppc_priority",
+            ]
             return Table.to_pandas(obj_alloc)
 
         # compose figures
