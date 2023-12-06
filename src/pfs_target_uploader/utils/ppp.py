@@ -41,6 +41,8 @@ if parse_version(bokeh.__version__) < parse_version("3.3"):
 
 warnings.filterwarnings("ignore")
 
+pn.extension(notifications=True)
+
 
 def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
     r_pfi = d_pfi / 2.0
@@ -1377,6 +1379,14 @@ def ppp_result_reproduce(
     box_width=1200.0,
     plot_height=220,
 ):
+    if "ppc_code" not in obj_allo.colnames:
+        pn.state.notifications.error(
+            "This submission is too old and not compatible for the operation.",
+            duration=5000,
+        )
+        logger.error("'ppc_code' not found in the ppc_list. return None")
+        return (None, None, None, None)
+
     # exit if no PPP outputs
     if None in obj_allo["ppc_code"]:
         logger.info(
@@ -1387,6 +1397,16 @@ def ppp_result_reproduce(
     r_pfi = d_pfi / 2.0
 
     def complete_ppc(sample, point_l):
+        if "allocated_targets" not in point_l.colnames:
+            pn.state.notifications.error(
+                "This submission is too old and not compatible for the operation.",
+                duration=5000,
+            )
+            logger.error(
+                "'allocated_targets' not found in the pointing list. raise exception."
+            )
+            raise KeyError  #
+
         sample.add_column(0, name="allocate_time")
         sub_l = sorted(list(set(sample["priority"])))
         n_sub = len(sub_l)
