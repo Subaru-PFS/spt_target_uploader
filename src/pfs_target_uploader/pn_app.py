@@ -86,8 +86,8 @@ def target_uploader_app():
     sidebar_column = pn.Column(
         panel_input.pane,
         pn.Column(
-            pn.pane.Markdown(
-                "<font size=5>**Select an operation**</font>",
+            pn.Row(
+                "<font size=5>**Select an operation**</font>", panel_timer.pane
             ),
             pn.Row(
                 panel_validate_button.pane,
@@ -98,7 +98,7 @@ def target_uploader_app():
             margin=(10, 0, 0, 0),
         ),
         pn.Column(
-            pn.Row("<font size=5>**Validation status**</font>", panel_timer.pane),
+            pn.Row("<font size=5>**Validation status**</font>"),
             panel_status.pane,
             margin=(10, 0, 0, 0),
         ),
