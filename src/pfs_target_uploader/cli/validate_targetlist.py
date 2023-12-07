@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from datetime import date
 
 from logzero import logger
 
@@ -13,6 +14,12 @@ def main():
         description="Validate a target list for PFS openuse"
     )
     parser.add_argument("input", type=str, help="Input file (must be a CSV file)")
+    parser.add_argument(
+        "--date_begin", type=str, default=None, help="Begin date (e.g., 2023-02-01)"
+    )
+    parser.add_argument(
+        "--date_end", type=str, default=None, help="End date (e.g., 2023-07-3  1)"
+    )
 
     args = parser.parse_args()
 
@@ -23,7 +30,13 @@ def main():
             f"Cannot load the input file. Please check the input file format. Error: {dict_load['error']}"
         )
     else:
-        _ = validate_input(df_input)
+        date_begin = (
+            None if args.date_begin is None else date.fromisoformat(args.date_begin)
+        )
+
+        date_end = None if args.date_end is None else date.fromisoformat(args.date_end)
+
+        _, _ = validate_input(df_input, date_begin=date_begin, date_end=date_end)
 
 
 if __name__ == "__main__":
