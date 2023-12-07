@@ -592,12 +592,15 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             Tel_t = Tel[:]
             iter_1 = 0
 
-            while len(index) > 0 and iter_1 < 3:
+            while len(index) > 0 and iter_1 < 5:
                 # shift PPCs with 0.2 deg, but only run three iterations to save computational time
                 # typically one iteration is enough
+                shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
+                shift_dec = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
+
                 for ind in index:
-                    Tel_t[ind, 1] = Tel[ind, 1] + np.random.choice([-0.2, 0.2], 1)[0]
-                    Tel_t[ind, 2] = Tel[ind, 2] + np.random.choice([-0.2, 0.2], 1)[0]
+                    Tel_t[ind, 1] = Tel[ind, 1] + shift_ra
+                    Tel_t[ind, 2] = Tel[ind, 2] + shift_dec
 
                 res, telescope, tgt = netflowRun_single(Tel_t, sample)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
