@@ -126,9 +126,16 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         n_clusters = len(unique_labels)
 
         tgt_group = []
-
+        tgt_pri_ord = []
+        
         for ii in range(n_clusters):
-            tgt_t = sample[labels == ii]
+            tgt_t_pri_tot = sum(sample[labels == ii]['weight'])
+            tgt_pri_ord.append([ii,tgt_t_pri_tot])
+        
+        tgt_pri_ord.sort(key=lambda x: x[1],reverse=True)
+    
+        for jj in np.array(tgt_pri_ord)[:,0]:
+            tgt_t = sample[labels == jj]
             tgt_group.append(tgt_t)
 
         return tgt_group
@@ -350,11 +357,11 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 logger.info(
                     "PPP stopped since the time is running out [PPP_centers s2]"
                 )
-                continue
+                break
 
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
-            while any(sample_s["exptime_PPP"] > 0):
+            while any(sample_s["exptime_PPP"] > 0) and len(peak) <= 200:
                 if (time.time() - starttime) > exetime:
                     status = 1
                     logger.info(
@@ -613,6 +620,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
         if len(sample.meta["PPC"]) == 0:
             point_t = []
+            logger.info('No PPC is determined due to running out of time [netflowRun]')
             return point_t
 
         ppc_g = point_DBSCAN(sample)  # separate ppc into different groups
@@ -699,7 +707,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 np.str_,
             ],
         )
-
+        
         return point_t
 
     def complete_ppc(sample, point_l):
@@ -812,9 +820,11 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if len(obj_allo) > 35 * 4 or iter_m2 >= 10:
-                    # stop if n_ppc>35 * 4
-                    return obj_allo, status
+                if len(obj_allo) > 200 or iter_m2 >= 10:
+                    logger.info(
+                        "PPP stopped since Nppc > 200 [netflow_iter s2]"
+                    )
+                    break
 
                 else:
                     obj_allo = vstack([obj_allo, obj_allo_t])
@@ -945,11 +955,6 @@ def ppp_result(
     box_width=1200.0,
     plot_height=400,
 ):
-    # exit if no PPP outputs
-    if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
-        logger.info("No PPP results due to running out of time [ppp_result]")
-        return (None, None, None, None)
-
     r_pfi = d_pfi / 2.0
 
     tabulator_stylesheet = """
@@ -1299,14 +1304,19 @@ def ppp_result(
     p_result_tab_m = None
     p_result_ppc_m = None
 
+    # exit if no PPP outputs
+    if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
+        logger.info("No PPP results due to running out of time [ppp_result]")
+        return (None, None, None, None)
+    
     # generate figures and tables for low resolution
-    if len(cR_l) > 0:
+    if len(obj_allo_l) > 0:
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
             "low", cR_l, sub_l, obj_allo_l, uS_L2
         )
 
     # generate figures and tables for medium resolution
-    if len(cR_m) > 0:
+    if len(obj_allo_m) > 0:
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
             "medium", cR_m, sub_m, obj_allo_m, uS_M2
         )
