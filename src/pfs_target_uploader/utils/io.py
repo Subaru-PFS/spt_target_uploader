@@ -116,7 +116,7 @@ def upload_file(
     # convert pandas.DataFrame to astropy.Table
     tb_target = Table.from_pandas(df_target)
     tb_target_summary = Table.from_pandas(df_target_summary)
-    if ppp_status:
+    if ppp_status and (df_psl is not None) and (df_ppc is not None):
         tb_psl = Table.from_pandas(df_psl)
         tb_ppc = Table.from_pandas(df_ppc)
     else:
@@ -167,6 +167,9 @@ def upload_file(
         if type == "table":
             # add metadata
             obj.meta["original_filename"] = origname
+            obj.meta["upload_id"] = secret_token
+            obj.meta["upload_at"] = upload_time
+            obj.meta["ppp_status"] = ppp_status
             if export:
                 obj.meta["upload_id"] = secret_token
                 obj.meta["upload_at"] = upload_time
@@ -343,35 +346,23 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 except KeyError:
                     tot_time_m[i] = tb_m["Request time 1 (h)"]
 
-    df_target = pd.DataFrame(
-        {
-            "upload_id": upload_ids,
-            "n_obj": n_obj,
-            "t_exp": t_exp,
-            "origname": orignames,
-            "filesize": filesizes,
-            "timestamp": timestamps,
-            # "link": links,
-            "fullpath": fullpath_target,
-        }
-    )
-
-    df_psl = pd.DataFrame(
+    df_psl_tgt = pd.DataFrame(
         {
             "Upload ID": upload_ids,
-            # "Filename": orignames,
+            "n_obj": n_obj,
+            "Exptime_tgt (FH)": t_exp,
             "Exptime_sci_L (h)": exp_sci_l,
             "Exptime_sci_M (h)": exp_sci_m,
             "Exptime_sci_L (FH)": exp_sci_fh_l,
             "Exptime_sci_M (FH)": exp_sci_fh_m,
             "Time_tot_L (h)": tot_time_l,
             "Time_tot_M (h)": tot_time_m,
-            "fullpath": fullpath_psl,
-            # "timestamp": timestamps,
+            "Filename": orignames,
+            "filesize": filesizes,
+            "timestamp": timestamps,
+            "fullpath_tgt": fullpath_target,
+            "fullpath_psl": fullpath_psl,
         }
     )
 
-    return (
-        df_target.sort_values("timestamp", ascending=False, ignore_index=True),
-        df_psl.sort_values("Upload ID", ascending=False, ignore_index=True),
-    )
+    return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)

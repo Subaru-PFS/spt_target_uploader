@@ -4,9 +4,9 @@ The total exposure time required for an uploaded target list is estimated using 
 
 ## Run
 
-- Press <u>"Start" button</u> to run the online PPP.
+- Press <u>"Simulate" button</u> to run the online PPP.
 
-- The running time ranges from a few minutes to hours. It depends on the length of input target list. Please prevent uploading a huge list.
+- The running time ranges from a few minutes to hours depending on the input target list. To save computional resources, the online PPP will stop if <b>the running time exceeds 15 minutes</b>. Please prevent uploading a huge list.
 
 ## Results
 
@@ -14,21 +14,26 @@ The total exposure time required for an uploaded target list is estimated using 
 
 PPP will give a status report of the outputs.
 
-!!! danger "Warnings are raised in the following cases:"
+!!! warning "Warnings are raised in the following cases:"
 
     - the total requested time exceeds the 5-night upper limit for the normal progam;
-    - some targets can not be completed in the semester due to their visibility, i.e., $\sum(T_\mathrm{observable})<T_\mathrm{request}$.
+    - the online PPP stops due to the running out of time.
 
 For example, 
 
 <figure markdown>
-  ![Status indicators](images/PPP_error.png){ width="600" }
+  ![Status indicators](images/PPP_error.png){ width="800" }
+  <!-- <figcaption>Status indicators</figcaption> -->
+</figure>
+
+<figure markdown>
+  ![Status indicators](images/PPP_exetime.png){ width="1000" }
   <!-- <figcaption>Status indicators</figcaption> -->
 </figure>
 
 If no warnings are reported, it will show 
 <figure markdown>
-  ![Status indicators](images/PPP_success.png){ width="800" }
+  ![Status indicators](images/PPP_success.png){ width="1000" }
   <!-- <figcaption>Status indicators</figcaption> -->
 </figure>
 
@@ -42,8 +47,7 @@ A table including the following information will be displayed, and its contents 
 | N_ppc                 |           | Number of pointings, can be adjusted by the slider                                                 |
 | Texp                  | hour      | Total on-source time requested                                                                     |
 | Texp                  | fiberhour | Total on-source time requested                                                                     |
-| Request time1         | hour      | Total request time including overheads (calibration frames taken for each night)                   |
-| Request time2         | hour      | Total request time including overheads (calibration frames taken for each fiber configuration)     |
+| Request time         | hour      | Total request time including overheads (calibration frames taken for each night)                   |
 | Used fiber fraction   |  %        | Average fiber usage fraction of pointings                                                          |
 | Fraction of PPC <30%  |  %        | Fration of pointings having the fiber usage fraction < 30%                                         |
 | P_all                 |  %        | Completion rate of the entire program                                                              |
@@ -63,8 +67,6 @@ The <u>Completion Rate</u> (left), <u>Fiber Usage Fraction</u> (middle) and <u>T
     - thick <span style="color: red;">red</span> solid line: completion rate of the primary sample (which has the smallest internal priority P) 
     - other lines: completion rate of each priority group   
     - vertical <span style="color: grey;">gray</span> dashed line: number of pointings required, can be adjusted by the slider above
-    - <span style="color: orange;">orange</span> shade: area covered by Grade A programs in the last semester(s)
-    - <span style="color: dodgerblue;">blue</span> shade: area covered by Grade B programs in the last semester(s)
 
 - Fiber Usage Fraction
     - title displays the resolution mode 
