@@ -68,6 +68,19 @@ dev = [
 [tool.pdm.scripts]
 serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
 build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
+gen-requirements = { cmd = [
+    "pdm",
+    "export",
+    "--format",
+    "requirements",
+    "--without-hashes",
+    "--pyproject",
+    "--dev",
+    "--output",
+    "requirements.txt",
+    "--verbose",
+], help = "Generate requirements.txt" }
+
 
 [tool.pdm.options]
 add = ["--no-isolation"]
