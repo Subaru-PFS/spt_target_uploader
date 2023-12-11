@@ -489,7 +489,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample):
+    def netflowRun_single(Tel, sample, otime = "2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
 
         Parameters
@@ -508,10 +508,8 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         bench = Bench(layout="full")
         tgt = sam2netflow(sample)
         classdict = NetflowPreparation(sample)
-        otime = "2024-05-20T08:00:00Z"
 
         telescopes = []
-
         nvisit = len(Telra)
         for ii in range(nvisit):
             telescopes.append(nf.Telescope(Telra[ii], Teldec[ii], Telpa[ii], otime))
@@ -589,23 +587,27 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             # if there are PPCs with no fiber assignment
             index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
-            Tel_t = Tel[:]
+            Tel = np.array(Tel)
+            Tel_t = np.copy(Tel)
+            otime_ = "2024-05-20T08:00:00Z"
             iter_1 = 0
 
-            while len(index) > 0 and iter_1 < 5:
-                # shift PPCs with 0.2 deg, but only run three iterations to save computational time
+            while len(index) > 0 and iter_1 < 8:
+                # shift PPCs with 0.2 deg, but only run 6 iterations to save computational time
                 # typically one iteration is enough
                 shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
                 shift_dec = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
 
-                for ind in index:
-                    Tel_t[ind, 1] = Tel[ind, 1] + shift_ra
-                    Tel_t[ind, 2] = Tel[ind, 2] + shift_dec
+                Tel_t[index,1] = Tel[index,1] + shift_ra
+                Tel_t[index,2] = Tel[index,2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample)
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 iter_1 += 1
+
+                if iter_1 >= 4:
+                    otime_ = "2024-04-20T08:00:00Z"
 
             return res, telescope, tgt
 
@@ -823,7 +825,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if len(obj_allo) > 200 or iter_m2 >= 10:
+                if len(obj_allo) > 200:
                     logger.info(
                         "PPP stopped since Nppc > 200 [netflow_iter s2]"
                     )
