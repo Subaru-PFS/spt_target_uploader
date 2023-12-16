@@ -1,16 +1,16 @@
 # Welcome
 
-The PFS Target Uploader is a web app to validate and submit the target list supplied by users.
+The PFS Target Uploader is a web app to and submit the target list supplied by users with time estimate by a pointing simulation.
 
 ## Workflow
 
 ```mermaid
 graph TD
-  select_file[Step 1\nSelect a target list] --> validate[Step 2\nValidate the list];
-  validate -->|Success| run_ppp[Step 3\nStart pointing simulation];
+  select_file[Select an input target list] --> validate[Validation of the target list];
+  validate -->|Success| run_ppp[Total Exposure Time Estimate];
   validate -->|Fail| fix_errors[Fix the target list];
   fix_errors --> select_file;
-  run_ppp -->|Happy| submit_results[Submit the target and pointing lists];
+  run_ppp -->|Happy| submit_results[Submission of the target and pointing lists];
   run_ppp -->|Unhappy| fix_errors;
   submit_results --> done[Done];
 ```

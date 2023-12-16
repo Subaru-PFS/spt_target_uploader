@@ -9,19 +9,22 @@ There are required and optional fields. String values must consist of `[A-Za-z0-
 
 Mandatory fields are listed below.
 
-| Name       | Datatype   | Unit   | Description                                                                                        |
-|------------|------------|--------|----------------------------------------------------------------------------------------------------|
-| ob_code    | str        |        | A unique string to identify the entry                                                              |
-| obj_id     | 64 bit int |        | Object ID                                                                                          |
-| ra         | float      | degree | Right Ascension (J2000.0)                                                                          |
-| dec        | float      | degree | Declination (J2000.0)                                                                              |
-| exptime    | float      | second | Exposure time requested for the object                                                             |
-| priority   | int        |        | Priority (0-9) for the object within the list. Smaller value for higher priority                   |
-| resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+| Name       | Datatype   | Unit   | Description                                                                                              |
+|------------|------------|--------|----------------------------------------------------------------------------------------------------------|
+| ob_code    | str        |        | A string identifier for the entry. Each `ob_code` must be unique within the list.                        |
+| obj_id     | 64 bit int |        | Object ID.                                                                                               |
+| ra         | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                 |
+| dec        | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                     |
+| exptime    | float      | second | Exposure time requested for the object under the nominal observing condition.                            |
+| priority   | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority |
+| resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution       |
 
-#### Equinox
+### Coordinates
 
-It is users' responsibility to make sure the coordinates are in J2000.0.
+Since the [Gaia DR3](https://www.cosmos.esa.int/web/gaia/data-release-3) catalog is used to find guide stars,
+coordinates must be in the International Celestial Reference System (ICRS).
+Users are required to make coordinates of targets consistent with the Gaia astrometry at the epoch of 2000.0.
+Note that coordinates in ICRS at the epoch of 2000.0 is known to be consistent with those with equinox J2000.0 represented by the FK5 within the errors of the FK5.
 
 #### Flux information
 
@@ -37,7 +40,7 @@ Flux columns must conform the following requirements.
 - Flux values are assumed to be total flux.
 - Errors can be provided by using column names by adding `_error` following the filter names.
 
-##### Example
+##### Example for flux information
 
 ✅ Good
 
