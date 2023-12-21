@@ -12,6 +12,15 @@ Please reload the web app first. If the issue persists, please let us know.
 A night used for the visibility check starts at 18:30 and ends at 5:30 on next day.
 This is subject to change.
 
+### What is the definition of "fiberhour"?
+
+For example, one fiberhour corresponds to observing 1 objects for 1 hour.
+It is actually equivalent to 4 objects for 15 minutes.
+
+### I forgot to record my `Upload ID`. What can I do?
+
+See the note in [the `Submission` page](submission.md#upload-id).
+
 ## Known Issues
 
 ### Result of pointing simulation varies with the identical input targets

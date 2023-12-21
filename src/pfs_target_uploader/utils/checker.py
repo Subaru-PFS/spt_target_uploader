@@ -475,7 +475,7 @@ def check_visibility(
     else:
         is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
         print(is_visible)
-        
+
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")
         dict_visibility["status"] = True
