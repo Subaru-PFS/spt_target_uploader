@@ -17,6 +17,10 @@ This is subject to change.
 For example, one fiberhour corresponds to observing 1 objects for 1 hour.
 It is actually equivalent to 4 objects for 15 minutes.
 
+### I forgot to record my `Upload ID`. What can I do?
+
+See the note in [the `Submission` page](submission.md#upload-id).
+
 ## Known Issues
 
 ### Result of pointing simulation varies with the identical input targets
