@@ -2,7 +2,8 @@
 
 The total exposure time required for an uploaded target list is estimated using the online PFS Pointing Planner (PPP).
 
-The online PPP will carry out the following after the validation of the input target list
+The online PPP will simulate the pointing after the validation of the input target list.
+The procedure is briefly listed below:
 
 1. Create a weight map on the sky for the input objects by using coordinates and priorities.
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
@@ -28,13 +29,15 @@ The online PPP will give a status report of the outputs.
 !!! warning "Warnings are raised in the following cases:"
 
     - The total requested time exceeds the 5-night upper limit for the normal program.
-    - The online PPP stops due to the running out of time.
+    - The running time exceeds 15 minutes.
 
 #### Examples of status
 
 <figure markdown>
+  ![Status indicators](images/ppp_warning_35h.png){ width="1000" }
   ![Status indicators](images/ppp_warning_exetime.png){ width="1000" }
-  <figcaption>A warning to indicate that the total time to complete all targets is estimated to exceed 5 nights (35 on-source hours).</figcaption>
+  <figcaption>(Top) A warning to indicate that the total time to complete all targets is estimated to exceed 5 nights (35 on-source hours).</figcaption>
+  <figcaption>(Bottom) A warning to indicate that the running time exceeds 15 minutes.</figcaption>
 </figure>
 
 <figure markdown>
@@ -72,10 +75,10 @@ A table including the following information will be displayed, and its contents 
 | Fiber usage fraction | %         | Average fiber usage fraction of pointings                                                                          |
 | Fraction of PPC <30% | %         | Fration of pointings having the fiber usage fraction < 30%                                                         |
 | P_all                | %         | Completion rate of the entire program                                                                              |
-| P_[1-9]              | %         | Completion rate of each priority group                                                                             |
+| P_[0-9]              | %         | Completion rate of each priority group                                                                             |
 
 - If only one resolution mode (low or medium) is used, the table will only show information in that mode.
-- If both modes are required, a third row `total` will be displayed.
+- The completion rates are estimated by `N(tgt_complete)/N(tgt)`, where `N(tgt_complete)` means the number count of targets with the requested exposure time __fully__ finished.
 
 ### Interactive plots of the results
 
