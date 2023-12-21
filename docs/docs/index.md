@@ -59,7 +59,7 @@ graph TD
 
     [:octicons-arrow-right-24: FAQ & Known Issues](issues.md)
 
--   :material-account-box-outline:{ .lg .middle } [Contact](contact.md)
+-   :material-account-box-outline:{ .lg .middle } [__Contact__](contact.md)
 
     ---
 
