@@ -15,32 +15,56 @@ graph TD
   submit_results --> done[Done];
 ```
 
-## [Input Target List](inputs.md)
+## Table of Contents
 
-- [File format](inputs.md#file-format)
-- [Content of the list](inputs.md#content)
+<div class="grid cards" markdown>
 
-## [Validation](validation.md)
+- :material-list-box-outline:{ .lg .middle } [__Input Target List__](inputs.md)
 
-- [Validation stages](validation.md#stages)
-- [Understand the results](validation.md#results)
+    ---
 
-## [Total Exposure Time Estimate](PPP.md)
+    Understand the file format and contents of your input target list required for PFS observation.
 
-- [Run](PPP.md#run)
-- [Understand the results](PPP.md#results)
+    [:octicons-arrow-right-24: Input Target List](inputs.md)
 
-## [Submission](submission.md)
+- :material-stethoscope:{ .lg .middle } [__Validation__](validation.md)
 
-- [Submit target list](submission.md#submit-the-target-list)
-- [Submit PPP outputs](submission.md#submit-the-ppp-outputs)
+    ---
 
-## [FAQ & Known Issues](issues.md)
+    Validate your input target list and understand the output messages.
 
-- [FAQ](issues.md#faq)
-- [Known Issues](issues.md#known-issues)
+    [:octicons-arrow-right-24: Validate the input target list](validation.md)
 
+- :material-calculator:{ .lg .middle } [__Total Exposure Time Estimate__](PPP.md)
 
-## [Contact](contact.md)
+    ---
 
-Any feedback is welcome. Please contact Masato Onodera and Wanqiu He (Subaru Telescope, NAOJ) via PFS Slack and/or email (<monodera@naoj.org>, <wanqiu.he@nao.ac.jp>).
+    Estimate the observing time to complete your targets by the PFS pointing planner.
+
+    [:octicons-arrow-right-24: Estimate the observing time](PPP.md)
+
+- :material-file-send-outline:{ .lg .middle } [__Submission__](submission.md)
+
+    ---
+
+    Submit the target list and get `Upload ID` for your proposal.
+
+    [:octicons-arrow-right-24: Submit the target list and time request](submission.md)
+
+-   :material-chat-question-outline:{ .lg .middle } [__FAQ & Known Issues__](issues.md)
+
+    ---
+
+    Frequently Asked Questions and known issues.
+
+    [:octicons-arrow-right-24: FAQ & Known Issues](issues.md)
+
+-   :material-account-box-outline:{ .lg .middle } [Contact](contact.md)
+
+    ---
+
+    If you have any questions, comments, and suggestions, please feel free to contact us.
+
+    [:octicons-arrow-right-24: Contact Us](issues.md)
+
+</div>
