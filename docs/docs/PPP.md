@@ -4,7 +4,7 @@ The total exposure time required for an uploaded target list is estimated using 
 
 The online PPP will carry out the following after the validation of the input target list
 
-1. Create a weight map on the sky for input objects by using coordinates and priorities.
+1. Create a weight map on the sky for the input objects by using coordinates and priorities.
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
 3. Repeat 1 and 2 until all input targets are completed or running time exceeds about 15 minutes.
 
