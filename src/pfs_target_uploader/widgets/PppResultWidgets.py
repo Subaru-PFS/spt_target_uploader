@@ -201,6 +201,7 @@ class PppResultWidgets:
         .bk-btn a {
             border-color: #3A7D7E !important;
             text-align: left !important;
+            display: inline;
         }"""
 
         # compose the pane
@@ -220,9 +221,10 @@ class PppResultWidgets:
                 button_style="outline",
                 button_type="primary",
                 icon="download",
-                icon_size="1.5em",
+                icon_size="1.2em",
                 label="",
                 max_width=150,
+                height=60,
                 stylesheets=[stylesheet],
             )
 
