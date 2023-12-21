@@ -38,7 +38,7 @@ The online PPP will give a status report of the outputs.
 </figure>
 
 <figure markdown>
-  ![Status indicators](images/ppp_success.png){ width="1000" }
+  ![Status indicators](images/PPP_success.png){ width="1000" }
   <figcaption>Status panel when no warning is returned.</figcaption>
 </figure>
 
