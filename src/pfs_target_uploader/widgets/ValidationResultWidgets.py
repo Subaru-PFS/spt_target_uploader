@@ -153,9 +153,9 @@ class ValidationResultWidgets:
             t.value = pd.DataFrame()
             t.visible = False
 
-        self.error_pane.objects.clear()
-        self.warning_pane.objects.clear()
-        self.info_pane.objects.clear()
+        self.error_pane.objects = []
+        self.warning_pane.objects = []
+        self.info_pane.objects = []
 
         self.is_error = False
         self.is_warning = False
@@ -179,14 +179,8 @@ class ValidationResultWidgets:
                 self.info_title.visible = True
 
     def show_results(self, df, validation_status):
-        # reset title flags
-        self.error_pane.objects.clear()
-        self.warning_pane.objects.clear()
-        self.info_pane.objects.clear()
-
-        self.is_error = False
-        self.is_warning = False
-        self.is_info = False
+        # reset title panes
+        self.reset()
 
         if validation_status["status"]:
             self.error_title.visible = False
