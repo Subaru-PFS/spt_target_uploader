@@ -2,7 +2,6 @@
 
 import pandas as pd
 import panel as pn
-from logzero import logger
 
 
 class TargetWidgets:

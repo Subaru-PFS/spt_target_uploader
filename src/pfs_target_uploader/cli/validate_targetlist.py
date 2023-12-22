@@ -3,7 +3,7 @@
 import argparse
 from datetime import date
 
-from logzero import logger
+from loguru import logger
 
 from ..utils.checker import validate_input
 from ..utils.io import load_input

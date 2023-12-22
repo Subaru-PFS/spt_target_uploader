@@ -3,7 +3,6 @@
 import os
 
 import panel as pn
-from logzero import logger
 
 
 class UploadNoteWidgets:

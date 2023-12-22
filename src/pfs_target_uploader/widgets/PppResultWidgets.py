@@ -6,7 +6,7 @@ import numpy as np
 import panel as pn
 from astropy import units as u
 from astropy.table import Table
-from logzero import logger
+from loguru import logger
 
 from ..utils.io import upload_file
 from ..utils.ppp import PPPrunStart, ppp_result

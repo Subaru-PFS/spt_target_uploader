@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import time
-
 import panel as pn
 
 
@@ -10,8 +8,6 @@ class TimerWidgets:
         self.loading_spinner = pn.indicators.LoadingSpinner(
             value=False, size=40, margin=(10, 0, 0, -10), color="secondary"
         )
-
-        # self.timer_init = pn.pane.Markdown("00:00")
 
         self.pane = pn.Column(self.loading_spinner, width=40, height=40)
 

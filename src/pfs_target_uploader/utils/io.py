@@ -17,7 +17,7 @@ from astropy import units as u
 from astropy.table import Table
 from bokeh.resources import INLINE
 from dotenv import dotenv_values
-from logzero import logger
+from loguru import logger
 
 from . import target_datatype
 

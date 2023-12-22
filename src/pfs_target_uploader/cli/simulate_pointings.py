@@ -5,7 +5,7 @@ import os
 from datetime import date
 
 from astropy.table import Table
-from logzero import logger
+from loguru import logger
 
 from ..utils.checker import validate_input
 from ..utils.io import load_input, upload_file
