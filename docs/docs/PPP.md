@@ -1,6 +1,6 @@
-# Total Time Estimate
+# PFS Pointing Simulation
 
-The total exposure time required for an uploaded target list is estimated using the online PFS Pointing Planner (PPP).
+The total exposure time required for a target list can be estimated using the online PFS Pointing Planner (PPP).
 
 The online PPP will simulate the pointing after the validation of the input target list.
 The procedure is briefly listed below:
@@ -9,11 +9,10 @@ The procedure is briefly listed below:
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
 3. Repeat 1 and 2 until all input targets are completed or running time exceeds about 15 minutes.
 
-## Run the simulation for the time estimate
+## Run the online PPP
 
-- Press **_Simulate_** button to run the online PPP.
-
-- The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will stop if **the running time exceeds 15 minutes**. Please prevent uploading a huge list.
+- Press **_Simulate_** button in the sidebar to run the online PPP.
+- The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
 
 ## Understand the results
 
@@ -24,19 +23,19 @@ The procedure is briefly listed below:
 
 ### Simulation status
 
-The online PPP will give a status report of the outputs.
+The online PPP will give a status report of the pointing simulation.
 
 !!! warning "Warnings are raised in the following cases:"
 
-    - The total requested time exceeds the 5-night upper limit for the normal program.
+    - The total requested time exceeds the 5-night upper limit for the normal program (35 hours).
     - The running time exceeds 15 minutes.
 
 #### Examples of status
 
 <figure markdown>
   ![Status indicators](images/ppp_warning_35h.png){ width="1000" }
-  ![Status indicators](images/ppp_warning_exetime.png){ width="1000" }
-  <figcaption>(Top) A warning to indicate that the total time to complete all targets is estimated to exceed 5 nights (35 on-source hours).</figcaption>
+  ![Status indicators](images/ppp_warning_exetime.png){ width="995" }
+  <figcaption>(Top) A warning to indicate that the total time to complete all targets in the list is estimated to exceed 5 nights</figcaption>
   <figcaption>(Bottom) A warning to indicate that the running time exceeds 15 minutes.</figcaption>
 </figure>
 
@@ -45,9 +44,9 @@ The online PPP will give a status report of the outputs.
   <figcaption>Status panel when no warning is returned.</figcaption>
 </figure>
 
-### Summary of the time estimate
+### Summary of the PFS pointing simulation
 
-A summary is shown as a list. The total request time and the following information is highlighted.
+A summary of the pointing simulation is shown as a list. The total request time and the following information is highlighted.
 
 - Number of PFS pointing centers (PPCs)
 - Corresponding fiberhours (i.e., sum of exposure time for assigned targets)
@@ -60,10 +59,12 @@ If the ROT exceeds the 5-night limit for openuse program, the ROT is shown in re
 ### Download the results
 
 Results from the online PPP can be downloaded as a ZIP file by pressing the **_Download_** button.
+See `README.txt` in the ZIP file for the content.
 
 ### Table of the results
 
-A table including the following information will be displayed, and its contents will be changed by dragging the slider above.
+A table including the following information will be displayed.
+The table contents change interactively with the draggable slider(s) above the table.
 
 | Name                 | Unit      | Description                                                                                                        |
 |----------------------|-----------|--------------------------------------------------------------------------------------------------------------------|
@@ -78,7 +79,7 @@ A table including the following information will be displayed, and its contents 
 | P_[0-9]              | %         | Completion rate of each priority group                                                                             |
 
 - If only one resolution mode (low or medium) is used, the table will only show information in that mode.
-- The completion rates are estimated by `N(tgt_complete)/N(tgt)`, where `N(tgt_complete)` means the number count of targets with the requested exposure time __fully__ finished.
+- The completion rates are estimated by `N(tgt_complete)/N(tgt)`, where `N(tgt_complete)` means the number count of targets with the requested exposure time **fully** finished.
 
 ### Interactive plots of the results
 
