@@ -200,7 +200,6 @@ class PppResultWidgets:
         stylesheet = """
         .bk-btn a {
             border-color: #3A7D7E !important;
-            text-align: left !important;
             display: inline;
         }"""
 
@@ -217,7 +216,8 @@ class PppResultWidgets:
                     self.p_result_ppc.value,
                     self.p_result_fig,
                 ),
-                filename="pfs_target.zip",
+                # filename="pfs_target.zip",
+                filename="",
                 button_style="outline",
                 button_type="primary",
                 icon="download",
