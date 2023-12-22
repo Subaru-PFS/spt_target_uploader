@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 from dateutil import parser, tz
-from logzero import logger
+from loguru import logger
 
 # below for qplan
 # isort: split
@@ -252,7 +252,7 @@ def check_keys(
             desc = f"Optional column `{k}` is missing. The default value, {optional_keys_default[k]}, will be used."
             optional_status.append(False)
             optional_desc_warning.append(desc)
-            logger.warn(desc)
+            logger.warning(desc)
 
     dict_required_keys = dict(
         status=np.all(required_status),  # True for success

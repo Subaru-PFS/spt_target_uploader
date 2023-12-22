@@ -19,7 +19,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from bokeh.models.widgets.tables import NumberFormatter
-from logzero import logger
+from loguru import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
@@ -127,14 +127,14 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
         tgt_group = []
         tgt_pri_ord = []
-        
+
         for ii in range(n_clusters):
-            tgt_t_pri_tot = sum(sample[labels == ii]['weight'])
-            tgt_pri_ord.append([ii,tgt_t_pri_tot])
-        
-        tgt_pri_ord.sort(key=lambda x: x[1],reverse=True)
-    
-        for jj in np.array(tgt_pri_ord)[:,0]:
+            tgt_t_pri_tot = sum(sample[labels == ii]["weight"])
+            tgt_pri_ord.append([ii, tgt_t_pri_tot])
+
+        tgt_pri_ord.sort(key=lambda x: x[1], reverse=True)
+
+        for jj in np.array(tgt_pri_ord)[:, 0]:
             tgt_t = sample[labels == jj]
             tgt_group.append(tgt_t)
 
@@ -623,7 +623,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
         if len(sample.meta["PPC"]) == 0:
             point_t = []
-            logger.info('No PPC is determined due to running out of time [netflowRun]')
+            logger.info("No PPC is determined due to running out of time [netflowRun]")
             return point_t
 
         ppc_g = point_DBSCAN(sample)  # separate ppc into different groups
@@ -710,7 +710,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 np.str_,
             ],
         )
-        
+
         return point_t
 
     def complete_ppc(sample, point_l):
@@ -824,9 +824,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 obj_allo_t = netflowRun(uS_t2)
 
                 if len(obj_allo) > 200 or iter_m2 >= 10:
-                    logger.info(
-                        "PPP stopped since Nppc > 200 [netflow_iter s2]"
-                    )
+                    logger.info("PPP stopped since Nppc > 200 [netflow_iter s2]")
                     break
 
                 else:
@@ -1311,7 +1309,7 @@ def ppp_result(
     if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
         logger.info("No PPP results due to running out of time [ppp_result]")
         return (None, None, None, None)
-    
+
     # generate figures and tables for low resolution
     if len(obj_allo_l) > 0:
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(

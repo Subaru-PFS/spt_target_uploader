@@ -7,7 +7,7 @@ from io import BytesIO
 
 import panel as pn
 import param
-from logzero import logger
+from loguru import logger
 
 from ..utils.checker import validate_input
 from ..utils.io import load_input

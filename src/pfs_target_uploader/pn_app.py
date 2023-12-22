@@ -8,10 +8,9 @@ import numpy as np
 import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
-from logzero import logger
-from threading import Thread
+from loguru import logger
 
-from .utils.io import load_file_properties, upload_file
+from .utils.io import load_file_properties
 from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
@@ -21,8 +20,8 @@ from .widgets import (
     RunPppButtonWidgets,
     StatusWidgets,
     SubmitButtonWidgets,
-    TimerWidgets,
     TargetWidgets,
+    TimerWidgets,
     UploadNoteWidgets,
     ValidateButtonWidgets,
     ValidationResultWidgets,
@@ -86,9 +85,7 @@ def target_uploader_app():
     sidebar_column = pn.Column(
         panel_input.pane,
         pn.Column(
-            pn.Row(
-                "<font size=5>**Select an operation**</font>", panel_timer.pane
-            ),
+            pn.Row("<font size=5>**Select an operation**</font>", panel_timer.pane),
             pn.Row(
                 panel_validate_button.pane,
                 panel_ppp_button.pane,
@@ -369,7 +366,7 @@ def list_files_app():
 
     # Target & psl summary table
 
-    '''def execute_javascript(script):
+    """def execute_javascript(script):
         script = f'<script type="text/javascript">{script}</script>'
         js_panel.object = script
         js_panel.object = ""
@@ -381,26 +378,28 @@ def list_files_app():
             )
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
             script = f"window.open('{p_href}', '_blank')"
-            execute_javascript(script)#'''
-    
+            execute_javascript(script)#"""
+
     column_checkbox = pn.widgets.CheckBoxGroup(
-        name='Columns to show', value=['Upload ID', 'n_obj', 'Time_tot_L (h)', 'Time_tot_M (h)', 'timestamp'], 
+        name="Columns to show",
+        value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
         options=list(df_files_tgt_psl.columns),
-        inline=True
+        inline=True,
     )
 
     def open_panel_magnify(event):
         if event.column == "magnify":
             table_ppc.clear()
-            u_id = df_files_tgt_psl['Upload ID'][event.row]
+            u_id = df_files_tgt_psl["Upload ID"][event.row]
             p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
-            table_ppc_t = Table.read(
-                os.path.join(p_ppc, f"ppc_{u_id}.ecsv")
-            )
-            table_tgt_t = Table.read(
-                os.path.join(p_ppc, f"target_{u_id}.ecsv")
-            )
-            nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab = ppp_result_reproduce(
+            table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
+            table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
+            (
+                nppc_fin,
+                p_result_fig_fin,
+                p_result_ppc_fin,
+                p_result_tab,
+            ) = ppp_result_reproduce(
                 table_ppc_t,
                 table_tgt_t,
             )
@@ -415,24 +414,32 @@ def list_files_app():
                 )
 
                 fd = pn.widgets.FileDownload(
-                    callback=pn.bind(tab_ppc_save,p_result_ppc_fin), filename=f"ppc_{u_id}.csv",
-                    button_type='primary',
+                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin),
+                    filename=f"ppc_{u_id}.csv",
+                    button_type="primary",
                     width=250,
                 )
 
-                table_ppc.append(pn.Row(output_status, fd, width = 750))
-            
+                table_ppc.append(pn.Row(output_status, fd, width=750))
+
             else:
                 output_status = pn.pane.Markdown(
                     f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
                 )
 
-                table_ppc.append(pn.Row(output_status, width = 750))
+                table_ppc.append(pn.Row(output_status, width=750))
 
-            table_ppc.append(pn.Row(pn.Column(p_result_ppc_fin, width=700, height=1000), pn.Column(nppc_fin, p_result_tab, p_result_fig_fin)))
+            table_ppc.append(
+                pn.Row(
+                    pn.Column(p_result_ppc_fin, width=700, height=1000),
+                    pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
+                )
+            )
 
     def Table_files_tgt_psl(column_checkbox):
-        _hidden_columns = list(set(list(df_files_tgt_psl.columns))-set(column_checkbox))
+        _hidden_columns = list(
+            set(list(df_files_tgt_psl.columns)) - set(column_checkbox)
+        )
 
         _table_files_tgt_psl = pn.widgets.Tabulator(
             df_files_tgt_psl,
@@ -447,10 +454,10 @@ def list_files_app():
             layout="fit_data_table",
             hidden_columns=_hidden_columns,
             disabled=True,
-            selection=[], 
-            selectable='checkbox',
+            selection=[],
+            selectable="checkbox",
         )
-    
+
         _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
         _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
@@ -459,13 +466,13 @@ def list_files_app():
         _table_files_tgt_psl.on_click(open_panel_magnify)
 
         return _table_files_tgt_psl
-    
+
     table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
 
     # Details of PPC
     table_ppc = pn.Column()
 
-    #-------------------------------------------------------------------
+    # -------------------------------------------------------------------
 
     sidebar_column = pn.Column(
         slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
