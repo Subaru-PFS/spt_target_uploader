@@ -3,7 +3,7 @@
 ## How to submit
 
 Once the validation is finished with success, the **_Submit_** button becomes active.
-Then, you can click it to submit your target list if you are happy with the results of the total time estimate.
+Then, you can click it to submit your target list if you are happy with the results of the pointing simulation and time request.
 
 <figure markdown>
   ![Submit Button (inactive)](images/submit_button_inactive.png){ width="150" }
@@ -11,30 +11,28 @@ Then, you can click it to submit your target list if you are happy with the resu
   <figcaption>(Left) Inactive Submit button. (Right) Active Submit button at mouse over</figcaption>
 </figure>
 
-
 When the Submit button is clicked, the validation process runs again before sending outputs to the observatory.
 The validation fails in rare cases and error messages will be displayed in the sidebar and the Validation tab in the main panel.
-
 
 ## What to be submitted
 
 The following information will be sent to the observatory.
 
 - Original target list
-- Cleaned target list shown in the "Input list" tab as a table
-- Summary of the targets shown in the sidebar as a table
-- Summary of the time estimate shown in the "Pointing Simulation" tab
-- List of PFS pointings derived by the time estimate calculation
-- Figures shown in the "Pointing Simulation" tab
+- The cleaned target list in the "Input list" tab as a table
+- Summary of the targets in the sidebar as a table
+- Summary of the PFS pointing simulation in the "Pointing Simulation" tab as a table
+- List of PFS pointing centers determined by the online PPP
+- Figures in the "Pointing Simulation" tab
 
 ## After the submission
 
 When uploading output files to the observatory's storage is completed,
-a message panel will be popped up to notify the successful submission.
+a message panel will pop up to notify the successful submission.
 
 <figure markdown>
   ![Upload ID](images/success_floatpanel.png){ width="600" }
-  <figcaption>Example of the message panel for successful submission</figcaption>
+  <figcaption>Example of the message panel for a successful submission</figcaption>
 </figure>
 
 ### Upload ID
@@ -46,10 +44,10 @@ Please copy the `Upload ID` by clicking the area around the `Upload ID` and keep
 
     Once you close the message panel without copying the `Upload ID` or downloading the ZIP file,
     there is no trivial way to recover your `Upload ID`.
-    If you forget to record your `Upload ID`, you may want to do the following ways.
+    If you forget to record your `Upload ID`, you may want to do the following.
 
     - [Contact us](contact.md) and the observatory staff will look up `Upload ID`. We would need to know the original filename and approximate time of the submission.
-    - You can repeat the entire process again as a new submission. A new `Upload ID` will be issued and you can use it for subsequent processes.
+    - You can repeat the entire process as a new submission. A new `Upload ID` will be issued and you can use it for subsequent processes.
 
 The `Upload ID` may be used for the following purposes.
 
@@ -60,7 +58,8 @@ The `Upload ID` may be used for the following purposes.
 ### Download the results
 
 You can also download the results following the link "Download the results as a zip file".
-The zip file contains files sent to the observatory as listed in the section above.
-In contrast to the ZIP file downloadable after the time estimate, the files contain `Upload ID` in filenames and header sections of `.ecsv` files.
+The zip file contains files sent to the observatory as listed in the section above (see `README.txt` in the ZIP file).
+In contrast to the ZIP file downloadable after the PFS pointing simulation,
+the files contain `Upload ID` in filenames and header sections of `.ecsv` files.
 
 

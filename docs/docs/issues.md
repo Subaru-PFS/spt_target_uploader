@@ -1,6 +1,5 @@
 # FAQ and Known Issues
 
-
 ## FAQ
 
 ### What should I do if I see unexpected behaviors of the uploader?
@@ -27,14 +26,15 @@ See the note in [the `Submission` page](submission.md#upload-id).
 
 Because the fiber assignment is a non-linear problem, there is some randomness involved in the solution.
 
-
 ### Pointing simulation does not seem to finish
 
-It is a know issue that the plotting library (`hvplot`) cannot render more than 4000 polygons.
+It is a known issue that the plotting library (`hvplot`) cannot render more than 4000 polygons.
 If your target list is large and/or exposure time is long, please consider to reduce them.
 
 In general, computational time is long, but sometimes it freezes due to the excessive use of memory, web server's timeout, etc.
 You can try to reload and start the simulation again.  If you are not sure what's going on, please contact us.
+
+Note that the computation will be terminated once the running time reaches 15 minutes.
 
 ### Large `obj_id` in the tables is not displayed correctly in tables
 
@@ -42,5 +42,5 @@ Javascript is used to display the table and the limitation of integer is $2^{53}
 
 ### Tables are not displayed correctly
 
-Sometimes tables are not rendered correctly with the content not shown. If your table s more than one page, moving to another page usually bring the content back.
-In the case of a single page table, we are still not clear how to recover the content. You can run the varidation and simulation multiple times, which usually solve the issue for some reason.
+Sometimes tables are not rendered correctly. If your table has more than one page, moving to another page usually bring the content back for the first page.
+In the case of a single page table, we are still not clear how to recover the content. You can run the validation and simulation multiple times, which usually solve the issue for some reason.

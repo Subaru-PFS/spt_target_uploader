@@ -6,11 +6,11 @@ The PFS Target Uploader is a web app to and submit the target list supplied by u
 
 ```mermaid
 graph TD
-  select_file[Select an input target list] --> validate[Validation of the target list];
-  validate -->|Success| run_ppp[Total Exposure Time Estimate];
+  select_file[Select an input target list] --> validate[Validate the target list];
+  validate -->|Success| run_ppp[Simulate PFS pointings for time estimate];
   validate -->|Fail| fix_errors[Fix the target list];
   fix_errors --> select_file;
-  run_ppp -->|Happy| submit_results[Submission of the target and pointing lists];
+  run_ppp -->|Happy| submit_results[Submit the target and pointing lists];
   run_ppp -->|Unhappy| fix_errors;
   submit_results --> done[Done];
 ```
@@ -19,7 +19,7 @@ graph TD
 
 <div class="grid cards" markdown>
 
-- :material-list-box-outline:{ .lg .middle } [__Input Target List__](inputs.md)
+- :material-list-box-outline:{ .lg .middle } [__Prepare Your Target List__](inputs.md)
 
     ---
 
@@ -27,27 +27,27 @@ graph TD
 
     [:octicons-arrow-right-24: Input Target List](inputs.md)
 
-- :material-stethoscope:{ .lg .middle } [__Validation__](validation.md)
+- :material-stethoscope:{ .lg .middle } [__Validate Your Target List__](validation.md)
 
     ---
 
-    Validate your input target list and understand the output messages.
+    Check if your input target list meets the requirements and understand errors and warnings.
 
     [:octicons-arrow-right-24: Validate the input target list](validation.md)
 
-- :material-calculator:{ .lg .middle } [__Total Exposure Time Estimate__](PPP.md)
+- :material-calculator:{ .lg .middle } [__Simulate PFS Pointings__](PPP.md)
 
     ---
 
-    Estimate the observing time to complete your targets by the PFS pointing planner.
+    Estimate required observing time to complete your targets by using the PFS pointing planner.
 
-    [:octicons-arrow-right-24: Estimate the observing time](PPP.md)
+    [:octicons-arrow-right-24: Simulate PFS pointings](PPP.md)
 
-- :material-file-send-outline:{ .lg .middle } [__Submission__](submission.md)
+- :material-file-send-outline:{ .lg .middle } [__Submit Your Targets and Pointings__](submission.md)
 
     ---
 
-    Submit the target list and get `Upload ID` for your proposal.
+    Submit the target list and pointing information and receive a `Upload ID`.
 
     [:octicons-arrow-right-24: Submit the target list and time request](submission.md)
 
@@ -55,7 +55,7 @@ graph TD
 
     ---
 
-    Frequently Asked Questions and known issues.
+    Check frequently asked questions and known issues first when you have any troubles with the app.
 
     [:octicons-arrow-right-24: FAQ & Known Issues](issues.md)
 
@@ -63,7 +63,7 @@ graph TD
 
     ---
 
-    If you have any questions, comments, and suggestions, please feel free to contact us.
+    If you have any questions, comments, and suggestions on the app, please feel free to contact us.
 
     [:octicons-arrow-right-24: Contact Us](issues.md)
 
