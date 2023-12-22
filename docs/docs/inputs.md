@@ -11,7 +11,7 @@ Here the word "target" is a combination of values of the fields described below.
 
 ### Quick example
 
-An example CSV file containing 100 random targets can be found in [this link](examples/example_targetlist_random100.csv).
+An example CSV file containing 100 random targets can be found in [this link](examples/example_targetlist_random10.csv).
 A quick example of the content is shown below.
 
 | ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution |     g_hsc | g_hsc_error |
