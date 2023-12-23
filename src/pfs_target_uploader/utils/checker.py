@@ -413,6 +413,8 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                             )
                     except KeyError:
                         pass
+                    except TypeError:
+                        pass
 
         return s, is_found_filter, filters_found_one
 
