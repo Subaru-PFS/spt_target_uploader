@@ -13,6 +13,7 @@ The procedure is briefly listed below:
 
 - Press **_Simulate_** button in the sidebar to run the online PPP.
 - The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
+- In the case of [the example file](examples/example_perseus_cluster_r60arcmin.csv) shown in the [Inputs](inputs.md) section, the computational time would be about 10 seconds.
 
 ## Understand the results
 
