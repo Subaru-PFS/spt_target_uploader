@@ -31,12 +31,14 @@ class TargetWidgets:
     def show_results(self, df):
         # it seems that frozen_columns must be empty when replacing its value
         self.table_all.frozen_columns = []
-        self.table_all.value = pd.DataFrame()
+        if self.table_all.value is not None:
+            self.table_all.value[0:0]
         self.table_all.value = df
         self.table_all.frozen_columns = ["index"]
         self.table_all.visible = True
 
     def reset(self):
         self.table_all.frozen_columns = []
-        self.table_all.value = pd.DataFrame()
+        if self.table_all.value is not None:
+            self.table_all.value[0:0]
         self.table_all.visible = False

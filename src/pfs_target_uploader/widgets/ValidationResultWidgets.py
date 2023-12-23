@@ -69,9 +69,6 @@ class ValidationResultWidgets:
         self.error_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.error_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
-        # self.warning_text_keys = pn.pane.Markdown(
-        #     "<font size=5>Missing optional keys</font>\n", max_width=self.box_width
-        # )
         self.warning_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_str = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
@@ -84,22 +81,34 @@ class ValidationResultWidgets:
         self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
-        self.error_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
-        self.warning_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_str = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+        self.warning_table_str = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
-        self.error_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
-        self.warning_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_vals = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+        self.warning_table_vals = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
-        self.error_table_flux = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_flux = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
         self.error_table_visibility = pn.widgets.Tabulator(
-            None, **self.tabulator_kwargs
+            pd.DataFrame(), **self.tabulator_kwargs
         )
         self.warning_table_visibility = pn.widgets.Tabulator(
-            None, **self.tabulator_kwargs
+            pd.DataFrame(), **self.tabulator_kwargs
         )
 
-        self.error_table_dups = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_dups = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
         self.error_pane = pn.Column()
         self.warning_pane = pn.Column()
@@ -110,7 +119,6 @@ class ValidationResultWidgets:
             self.error_pane,
             self.warning_pane,
             self.info_pane,
-            # raw_css=self.css,
         )
 
         self.is_error = False
@@ -149,7 +157,8 @@ class ValidationResultWidgets:
             self.warning_table_visibility,
             self.error_table_dups,
         ]:
-            t.value = pd.DataFrame()
+            if t.value is not None:
+                t.value[0:0]
             t.visible = False
 
         self.error_pane.objects = []
@@ -242,14 +251,15 @@ class ValidationResultWidgets:
                 ~validation_status["str"]["success_optional"],
             )
             self.error_table_str.frozen_columns = []
-            # self.error_table_str.value = pd.DataFrame()
+            if self.error_table_str.value is not None:
+                self.error_table_str.value[0:0]
             self.error_table_str.value = df.loc[is_invalid_str, :]
             self.error_table_str.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_str)
             self.error_pane.append(self.error_table_str)
             self.error_table_str.visible = True
 
-        # If string validation failed, retrun immediately
+        # If string validation failed, return immediately
         if not validation_status["str"]["status"]:
             return
 
@@ -284,7 +294,8 @@ class ValidationResultWidgets:
                         f"- <font size=3>`{k}` ({v})</font>\n"
                     )
             self.error_table_vals.frozen_columns = []
-            # self.error_table_vals.value = pd.DataFrame()
+            if self.error_table_vals.value is not None:
+                self.error_table_vals.value[0:0]
             self.error_table_vals.value = df.loc[
                 ~validation_status["values"]["success"], :
             ]
@@ -318,7 +329,8 @@ class ValidationResultWidgets:
                 self.error_text_flux.object = self.error_text_flux.object[:-2]
 
             self.error_table_flux.frozen_columns = []
-            # self.error_table_flux.value = pd.DataFrame()
+            if self.error_table_flux.value is not None:
+                self.error_table_flux.value[0:0]
             self.error_table_flux.value = df.loc[
                 ~validation_status["flux"]["success"], :
             ]
@@ -349,7 +361,8 @@ class ValidationResultWidgets:
                 self.warning_text_visibility.object += (
                     "<font size=3> (see the following table).</font>"
                 )
-                # self.warning_text_visibility.value = pd.DataFrame()
+                if self.warning_text_visibility.value is not None:
+                    self.warning_text_visibility.value[0:0]
                 self.warning_table_visibility.frozen_columns = []
                 dfout = df.loc[~validation_status["visibility"]["success"], :]
                 self.warning_table_visibility.value = dfout
@@ -375,7 +388,8 @@ class ValidationResultWidgets:
             # add an error message and data table for duplicates
             self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code`s </u></font>\n\n<font size=3>Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets</font>"
             self.error_table_dups.frozen_columns = []
-            # self.error_table_dups.value = pd.DataFrame()
+            if self.error_table_dups.value is not None:
+                self.error_table_dups.value[0:0]
             self.error_table_dups.value = df.loc[
                 validation_status["unique"]["flags"], :
             ]

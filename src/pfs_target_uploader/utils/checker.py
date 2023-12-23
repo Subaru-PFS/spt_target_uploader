@@ -249,7 +249,7 @@ def check_keys(
             optional_desc_success.append(desc)
             logger.info(desc)
         else:
-            desc = f"Optional column `{k}` is missing. The default value, {optional_keys_default[k]}, will be used."
+            desc = f"Optional column `{k}` is missing. The default value, `{optional_keys_default[k]}`, will be used."
             optional_status.append(False)
             optional_desc_warning.append(desc)
             logger.warning(desc)
