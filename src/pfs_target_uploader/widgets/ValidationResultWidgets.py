@@ -84,22 +84,34 @@ class ValidationResultWidgets:
         self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
 
-        self.error_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
-        self.warning_table_str = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_str = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+        self.warning_table_str = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
-        self.error_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
-        self.warning_table_vals = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_vals = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+        self.warning_table_vals = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
-        self.error_table_flux = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_flux = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
         self.error_table_visibility = pn.widgets.Tabulator(
-            None, **self.tabulator_kwargs
+            pd.DataFrame(), **self.tabulator_kwargs
         )
         self.warning_table_visibility = pn.widgets.Tabulator(
-            None, **self.tabulator_kwargs
+            pd.DataFrame(), **self.tabulator_kwargs
         )
 
-        self.error_table_dups = pn.widgets.Tabulator(None, **self.tabulator_kwargs)
+        self.error_table_dups = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
 
         self.error_pane = pn.Column()
         self.warning_pane = pn.Column()
