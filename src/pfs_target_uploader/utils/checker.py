@@ -4,6 +4,7 @@ import re
 import time
 import warnings
 from datetime import datetime, timedelta
+from typing import Type
 
 import numpy as np
 import pandas as pd
@@ -412,6 +413,8 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                                 f"{b} band flux error ({c}_error) found as {flux_error}"
                             )
                     except KeyError:
+                        pass
+                    except TypeError:
                         pass
 
         return s, is_found_filter, filters_found_one
