@@ -1066,17 +1066,40 @@ def ppp_result(
         ra_max = np.max([obj_allo1["ppc_ra"].max(), uS_["ra"].max()]) + d_pfi
         dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
         dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
-        p_tgt = uS_.hvplot.scatter(
-            x="ra",
-            y="dec",
-            by="priority",
-            color="ppc_color",
-            marker="o",
-            # s=20,
-            s=60,
-            line_color="white",
-            line_width=0.5,
-            legend=True,
+        # p_tgt = uS_.hvplot.scatter(
+        #     x="ra",
+        #     y="dec",
+        #     by="priority",
+        #     color="ppc_color",
+        #     marker="o",
+        #     # s=20,
+        #     s=60,
+        #     line_color="white",
+        #     line_width=0.5,
+        #     legend=True,
+        #     tools=["hover"],
+        # )
+
+        hv_data = hv.Dataset(uS_)
+
+        p_tgt = hv_data.to(
+            hv.Scatter,
+            ["ra"],
+            ["dec", "ppc_color", "priority"],
+            groupby="priority",
+        ).overlay()
+
+        p_tgt.opts(
+            hv.opts.Scatter(
+                fill_color="ppc_color",
+                tools=["hover"],
+                line_color="white",
+                line_width=0.5,
+                size=10,
+                marker="o",
+                show_legend=True,
+                legend_position="right",
+            )
         )
 
         obj_allo2_for_ppcplot = obj_allo2.rename(
@@ -1144,6 +1167,7 @@ def ppp_result(
                 xlim=(ra_max, ra_min),
                 ylim=(dec_min, dec_max),
                 toolbar="left",
+                tools=["hover"],
                 active_tools=["box_zoom"],
                 show_grid=True,
                 shared_axes=False,
