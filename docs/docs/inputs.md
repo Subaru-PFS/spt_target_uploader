@@ -11,7 +11,8 @@ Here the word "target" is a combination of values of the fields described below.
 
 ### Quick example
 
-An example CSV file containing 100 random targets can be found in [this link](examples/example_targetlist_random10.csv).
+[An example CSV file](examples/example_perseus_cluster_r60arcmin.csv) containing 539 galaxies within 60 arcmin from the Perseus cluster ([Meusinger et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...640A..30M/abstract)) is available.
+
 A quick example of the content is shown below.
 
 | ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution |     g_hsc | g_hsc_error |
