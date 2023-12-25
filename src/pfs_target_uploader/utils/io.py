@@ -61,28 +61,54 @@ def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
 
     if format in ["csv", "ecsv"]:
         try:
-            df_input = pd.read_csv(
-                byte_string,
-                encoding="utf8",
-                comment="#",
-                dtype=dtype,
-                converters={
-                    "ob_code": str,
-                    "obj_id": check_integer,
-                    "priority": check_integer,
-                    "resolution": str,
-                    "tract": check_integer,
-                    "patch": check_integer,
-                    "equinox": str,
-                    "comment": str,
-                },
-            )
-            load_status = True
-            load_error = None
+            if format == "csv":
+                df_input = pd.read_csv(
+                    byte_string,
+                    encoding="utf8",
+                    comment="#",
+                    dtype=dtype,
+                    converters={
+                        "ob_code": str,
+                        "obj_id": check_integer,
+                        "priority": check_integer,
+                        "resolution": str,
+                        "tract": check_integer,
+                        "patch": check_integer,
+                        "equinox": str,
+                        "comment": str,
+                    },
+                )
+                load_status = True
+                load_error = None
+            elif format == "ecsv":
+                # NOTE: Perhaps too redundant, but I'd like to use the `converters` options of pandas.read_csv()
+                df_tmp = Table.read(byte_string, format="ascii.ecsv").to_pandas()
+                string_stream = StringIO()
+                df_tmp.to_csv(string_stream, index=False)
+                string_stream.seek(0)
+                df_input = pd.read_csv(
+                    string_stream,
+                    encoding="utf8",
+                    comment="#",
+                    dtype=dtype,
+                    converters={
+                        "ob_code": str,
+                        "obj_id": check_integer,
+                        "priority": check_integer,
+                        "resolution": str,
+                        "tract": check_integer,
+                        "patch": check_integer,
+                        "equinox": str,
+                        "comment": str,
+                    },
+                )
+                load_status = True
+                load_error = None
         except ValueError as e:
             df_input = None
             load_status = False
             load_error = e
+            logger.error(f"{e}")
     else:
         logger.error("Only CSV or ECSV format is supported at this moment.")
         return None, dict(status=False, error="No CSV or ECSV file selected")
