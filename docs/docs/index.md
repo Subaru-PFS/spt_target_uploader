@@ -1,6 +1,6 @@
 # Welcome
 
-The PFS Target Uploader is a web app to and submit the target list supplied by users with time estimate by a pointing simulation.
+The PFS Target Uploader is a web app to validate and submit the target list supplied by users with time estimate by a pointing simulation.
 
 ## Workflow
 
