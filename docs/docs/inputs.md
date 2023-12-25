@@ -62,7 +62,7 @@ You can request to observe an object multiple times instead of summing up the ex
 | ob_1_900s_3 |      1 |     900 |
 | ob_1_900s_4 |      1 |     900 |
 
-This is essentially equivalent to the following if no time constraint is specified.
+This is essentially equivalent to the following.
 
 | ob_code    | obj_id | exptime |
 |------------|-------:|--------:|
