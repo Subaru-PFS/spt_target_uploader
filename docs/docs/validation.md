@@ -2,7 +2,7 @@
 
 ## Validation items
 
-A input target list is validated against the following items.
+An input target list is validated against the following items.
 
 ### Filetype
 
@@ -45,14 +45,14 @@ Along with the comments, a table is shown for rows with invalid values.
 
 ### Data ranges
 
-Value of `ra`, `dec`, `priority`, `exptiem`, and `resolution` are checked whether they are in the allowed ranges.
+Value of `ra`, `dec`, `priority`, `exptime`, and `resolution` are checked whether they are in the allowed ranges.
 Along with the comments, a table is shown for rows with invalid values.
 
 !!! note "Following checks are conducted and errors are raised when violations are detected"
 
     - $0 \le \mathrm{ra} \le 360$.
     - $-90 \le \mathrm{dec} \le 90$.
-    - `priority` must be integer in $[0, 9]$.
+    - `priority` must be an integer in $[0, 9]$.
     - `exptime` must be positive.
     - `resolution` must be either `L` or `M`.
 
@@ -95,7 +95,7 @@ Target visibility is checked by comparing the requested exposure time is shorter
 
 ### Duplicated `ob_code`
 
-`ob_code` are checked not to have duplicates. Along with the error message, invalid rows will be displayed.
+`ob_code`s are checked not to have duplicates. Along with the error message, invalid rows will be displayed.
 
 !!! danger "Errors are raised in the following case"
 
@@ -116,7 +116,7 @@ Target visibility is checked by comparing the requested exposure time is shorter
 
 #### <u>Select an input CSV file</u>
 
-Press "Browse" button to select a CSV or ECSV file to be validated.
+Press the "Browse" button to select a CSV or ECSV file to be validated.
 
 #### <u>Select an operation</u>
 
@@ -151,12 +151,11 @@ Numbers of objects and fiberhours for each priority are displayed for the `L` an
 
 ### `Config` tab in the side panel (left)
 
-You can set the observing period for visibility check. By default the dates are set to the next semester.
+You can set the observing period for visibility check. By default, the dates are set to the next semester.
 
 ## Main panel (right)
 
-The details of validation results are shown in the main panel.
+The details of the validation results are shown in the main panel.
 First, errors are shown, followed by warnings. The successful checks are shown at the bottom.
-Tables containing invalid rows are also shown for each validation process. Please modify them to make acceptable for the uploader.
-
-
+Tables containing invalid rows are also shown for each validation process.
+Please modify them to make them acceptable for the uploader.
