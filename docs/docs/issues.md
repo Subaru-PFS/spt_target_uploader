@@ -47,4 +47,5 @@ In the case of a single-page table, we are still not clear on how to recover the
 
 ### The input file is not read properly after modification
 
-If you use Google Chrome or WebKit-based browsers, you may encounter an issue that the content of the input file is not properly loaded and displayed after some modification of the content following validation errors and/or simulation results. It seems a WebKit-related issue and we have not found a solid solution to this. You can change the filename, switch to a non-WebKit browser such as Firefox, or reload the app to proceed with your modified file.
+Workarounds can be changing the filename, switching to a non-WebKit browser such as Firefox, or reloading the app to proceed with your modified file.
+If you use Google Chrome or WebKit-based browsers, you may encounter an issue that the content of the input file is not properly loaded and displayed after some modification of the content following validation errors and/or simulation results. It seems a WebKit-related issue and we have not found a solid solution to this.
