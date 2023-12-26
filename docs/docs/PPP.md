@@ -7,11 +7,11 @@ The procedure is briefly listed below:
 
 1. Create a weight map on the sky for the input objects by using coordinates and priorities.
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
-3. Repeat 1 and 2 until all input targets are completed or running time exceeds about 15 minutes.
+3. Repeat 1 and 2 until all input targets are completed or the running time exceeds about 15 minutes.
 
 ## Run the online PPP
 
-- Press **_Simulate_** button in the sidebar to run the online PPP.
+- Press the **_Simulate_** button in the sidebar to run the online PPP.
 - The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
 - In the case of [the example file](examples/example_perseus_cluster_r60arcmin.csv) shown in the [Inputs](inputs.md) section, the computational time would be about 10 seconds.
 
@@ -50,12 +50,12 @@ The online PPP will give a status report of the pointing simulation.
 A summary of the pointing simulation is shown as a list. The total request time and the following information is highlighted.
 
 - Number of PFS pointing centers (PPCs)
-- Corresponding fiberhours (i.e., sum of exposure time for assigned targets)
+- Corresponding fiberhours (i.e., the sum of exposure time for assigned targets)
 - Total on-source time to complete the number of PPCs above assuming 15 minutes/pointing
 - Total requested observing time (ROT) including overhead
 - The expected completion rate for low- and medium-resolution modes, respectively
 
-If the ROT exceeds the 5-night limit for openuse program, the ROT is shown in red, otherwise it is shown in green.
+If the ROT exceeds the 5-night limit for an openuse program, the ROT is shown in red, otherwise, it is shown in green.
 
 ### Download the results
 
@@ -84,7 +84,7 @@ The table contents change interactively with the draggable slider(s) above the t
 
 ### Interactive plots of the results
 
-The <u>Completion Rate</u> (top), <u>Fiber Usage Fraction</u> (middle) and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
+The <u>Completion Rate</u> (top), <u>Fiber Usage Fraction</u> (middle), and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
 
 #### Completion Rate
 `PPC_id`
@@ -104,7 +104,7 @@ Vertical <span style="color: grey;">gray</span> dashed line
 
 #### Fiber Usage Fraction
 `PPC_id`
-: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned on them
+: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned to them
 
 Thick <span style="color: red;">red</span> solid line
 : average fiber usage fraction of pointings
@@ -114,5 +114,5 @@ Vertical <span style="color: grey;">gray</span> dashed line
 
 #### Target Distribution
 
-Targets in each priority group are plotted by different colors, with the primary sample (which has the smallest internal priority P) in red.
+Targets in each priority group are plotted in different colors, with the primary sample (which has the smallest internal priority P) in red.
 Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at pointing centers.

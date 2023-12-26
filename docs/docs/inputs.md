@@ -2,7 +2,7 @@
 
 ## File format
 
-Input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
+An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
 the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
 
 ## Content
@@ -37,7 +37,7 @@ Mandatory fields are listed below.
 
 #### About `ob_code`
 
-In a given target list, each `ob_code` must be unique. Some examples for good cases are shown below.
+In a given target list, each `ob_code` must be unique. Some examples of good cases are shown below.
 
 A standard case.
 
@@ -46,14 +46,14 @@ A standard case.
 | ob_1    |      1 |
 | ob_2    |      2 |
 
-You can request to observe an object with both `L` and `M` resolutions, but you need to use different `ob_code` for each case.
+You can request to observe an object with both `L` and `M` resolutions, but you need to use a different `ob_code` for each case.
 
 | ob_code | obj_id | resolution |
 |---------|-------:|------------|
 | ob_1_L  |      1 | L          |
 | ob_1_M  |      1 | M          |
 
-You can request to observe an object multiple times instead of summing up the exposure time, but you need to use different `ob_code` for each case.
+You can request to observe an object multiple times instead of summing up the exposure time, but you need to use a different `ob_code` for each case.
 
 | ob_code     | obj_id | exptime |
 |-------------|-------:|--------:|
@@ -73,23 +73,23 @@ This is essentially equivalent to the following.
 Since the [Gaia DR3](https://www.cosmos.esa.int/web/gaia/data-release-3) catalog is used to find guide stars,
 coordinates must be in the International Celestial Reference System (ICRS).
 Users are required to make coordinates of targets consistent with the Gaia astrometry at the epoch of 2000.0.
-Note that coordinates in ICRS at the epoch of 2000.0 is known to be consistent with those with equinox J2000.0 represented by the FK5 within the errors of the FK5.
+Note that coordinates in ICRS at the epoch of 2000.0 are known to be consistent with those with equinox J2000.0 represented by the FK5 within the errors of the FK5.
 
 #### About Flux information
 
-Flux columns must conform the following requirements.
+Flux columns must conform to the following requirements.
 
 - **At least one** flux information for each `ob_code` is required.
 - **The names of flux columns must be chosen** from the pre-defined [filters](#filters).
 - Filters are categorized as shown in the [filter list](#filters).
-  An `ob_code` cannot have more than one fluxes in the same filter category.
+  An `ob_code` cannot have more than one flux in the same filter category.
 - If more than one flux columns with finite values are found for an `ob_code`,
-  the value of the first column (left-most one in the input CSV file) will be used.
+  the value of the first column (the left-most one in the input CSV file) will be used.
 - Flux values are in the unit of <font size=5>**nJy**</font>.
 - Flux values are assumed to be total flux.
 - Errors can be provided by using column names by adding `_error` following the filter names.
 
-##### Example for flux information
+##### Example of flux information
 
 ✅ Good
 
