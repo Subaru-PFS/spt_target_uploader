@@ -65,6 +65,6 @@ graph TD
 
     If you have any questions, comments, or suggestions on the app, please feel free to contact us.
 
-    [:octicons-arrow-right-24: Contact Us](issues.md)
+    [:octicons-arrow-right-24: Contact Us](contact.md)
 
 </div>
