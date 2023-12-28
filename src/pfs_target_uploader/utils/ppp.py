@@ -489,7 +489,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample):
+    def netflowRun_single(Tel, sample, otime = "2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
 
         Parameters
@@ -508,7 +508,6 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         bench = Bench(layout="full")
         tgt = sam2netflow(sample)
         classdict = NetflowPreparation(sample)
-        otime = "2024-05-20T08:00:00Z"
 
         telescopes = []
 
@@ -589,23 +588,27 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             # if there are PPCs with no fiber assignment
             index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
-            Tel_t = Tel[:]
+            Tel = np.array(Tel)
+            Tel_t = np.copy(Tel)
+            otime_ = "2024-05-20T08:00:00Z"
             iter_1 = 0
 
-            while len(index) > 0 and iter_1 < 5:
-                # shift PPCs with 0.2 deg, but only run three iterations to save computational time
+            while len(index) > 0 and iter_1 < 8:
+                # shift PPCs with 0.2 deg, but only run 6 iterations to save computational time
                 # typically one iteration is enough
                 shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
                 shift_dec = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
 
-                for ind in index:
-                    Tel_t[ind, 1] = Tel[ind, 1] + shift_ra
-                    Tel_t[ind, 2] = Tel[ind, 2] + shift_dec
+                Tel_t[index,1] = Tel[index,1] + shift_ra
+                Tel_t[index,2] = Tel[index,2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample)
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 iter_1 += 1
+
+                if iter_1 >= 4:
+                    otime_ = "2024-04-20T08:00:00Z"
 
             return res, telescope, tgt
 
@@ -817,14 +820,16 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 uS_t1["exptime_PPP"] = (
                     uS_t1["exptime_PPP"] - uS_t1["allocate_time"]
                 )  # remained exposure time
-                uS_t1.remove_column("allocate_time")
 
+                uS_t1.remove_column("allocate_time")
                 uS_t2 = PPP_centers(uS_t1, True, weight_para, starttime, exetime)[0]
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if len(obj_allo) > 200 or iter_m2 >= 10:
-                    logger.info("PPP stopped since Nppc > 200 [netflow_iter s2]")
+                if len(obj_allo) > 200:
+                    logger.info(
+                        "PPP stopped since Nppc > 200 [netflow_iter s2]"
+                    )
                     break
 
                 else:
@@ -1094,13 +1099,8 @@ def ppp_result(
             line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
             legend="right",
         )
-        # p_comp_rect1 = hv.Rectangles([(30, 88, 95, 100)]).opts(
-        #    color="orange", line_width=0, alpha=0.2
-        # )
-        # p_comp_rect2 = hv.Rectangles([(20, 43, 130, 93)]).opts(
-        #    color="dodgerblue", line_width=0, alpha=0.2
-        # )
 
+        """
         # static part for fiber usage fraction plot
         p_fibereff_bar = hv.Bars(
             obj_allo2,
@@ -1115,6 +1115,7 @@ def ppp_result(
             # xlabel="",
             tools=["hover"],
         )
+        #"""
 
         @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
@@ -1154,17 +1155,6 @@ def ppp_result(
             p_comp_nppc = hv.VLine(nppc_fin).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
-            """
-            p_comp_tot = (p_comp_rate * p_comp_rect1 * p_comp_rect2 * p_comp_nppc).opts(
-                xlim=(0.5, len(obj_allo) + 0.5),
-                ylim=(0, 105),
-                show_grid=True,
-                shared_axes=False,
-                toolbar="left",
-                active_tools=["box_zoom"],
-                height=plot_height,
-            )
-            #"""
             p_comp_tot = (p_comp_rate * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
@@ -1175,6 +1165,7 @@ def ppp_result(
                 height=plot_height,
             )
 
+            """
             # update fiber efficiency as a function of PPC ID
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
             p_fibereff_mean = (
@@ -1207,11 +1198,12 @@ def ppp_result(
                 active_tools=["box_zoom"],
                 height=plot_height,
             )
+            #"""
 
             # return after putting all plots into a column
             return pn.Column(
                 pn.panel(p_comp_tot, linked_axes=False, width=600),
-                pn.panel(p_fibereff_tot, linked_axes=False, width=600),
+                #pn.panel(p_fibereff_tot, linked_axes=False, width=600),
                 pn.panel(p_ppc_tot, linked_axes=False, width=600),
             )
 
@@ -1386,6 +1378,7 @@ def ppp_result(
 def ppp_result_reproduce(
     obj_allo,
     uS,
+    tab_psl,
     d_pfi=1.38,
     box_width=1200.0,
     plot_height=220,
@@ -1466,7 +1459,7 @@ def ppp_result_reproduce(
 
         return Toverheads_tot_best / 3600.0
 
-    def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
+    def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr):
         def nppc2rot(nppc_):
             # in seconds
             t_exp_sci: float = 900.0
@@ -1489,7 +1482,7 @@ def ppp_result_reproduce(
 
             return int(np.floor(nppc_))
 
-        nppc = pn.widgets.FloatSlider(
+        nppc = pn.widgets.EditableFloatSlider(
             name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
             value=nppc2rot(len(cR)),
             step=0.1,
@@ -1497,6 +1490,7 @@ def ppp_result_reproduce(
             end=nppc2rot(len(cR)),
             bar_color="gray",
             max_width=450,
+            width=400,
         )
 
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
@@ -1585,6 +1579,7 @@ def ppp_result_reproduce(
             legend="right",
         )
 
+        """
         # static part for fiber usage fraction plot
         p_fibereff_bar = hv.Bars(
             obj_allo2,
@@ -1599,6 +1594,7 @@ def ppp_result_reproduce(
             # xlabel="",
             tools=["hover"],
         )
+        #"""
 
         @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
@@ -1638,8 +1634,11 @@ def ppp_result_reproduce(
             p_comp_nppc = hv.VLine(nppc_fin).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
+            p_comp_nppc_usr = hv.VLine(nppc_usr).opts(
+                color="gray", line_dash="dotted", line_width=3
+            )
 
-            p_comp_tot = (p_comp_rate * p_comp_nppc).opts(
+            p_comp_tot = (p_comp_rate * p_comp_nppc * p_comp_nppc_usr).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
                 show_grid=True,
@@ -1649,6 +1648,7 @@ def ppp_result_reproduce(
                 height=plot_height,
             )
 
+            """
             # update fiber efficiency as a function of PPC ID
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
             p_fibereff_mean = (
@@ -1667,10 +1667,13 @@ def ppp_result_reproduce(
             p_fibereff_nppc = hv.VLine(nppc_fin - 0.5).opts(
                 color="gray", line_dash="dashed", line_width=5
             )
+            p_fibereff_nppc_usr = hv.VLine(nppc_usr - 0.5).opts(
+                color="gray", line_dash="dotted", line_width=3
+            )
 
             ymax_fibereff = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.25
 
-            p_fibereff_tot = (p_fibereff_bar * p_fibereff_mean * p_fibereff_nppc).opts(
+            p_fibereff_tot = (p_fibereff_bar * p_fibereff_mean * p_fibereff_nppc * p_fibereff_nppc_usr).opts(
                 fontsize={"xticks": "0pt"},
                 # TODO: xlim with hvplot's bar chart does not work properly.
                 # ref: https://github.com/holoviz/hvplot/issues/946
@@ -1681,11 +1684,12 @@ def ppp_result_reproduce(
                 active_tools=["box_zoom"],
                 height=plot_height,
             )
+            #"""
 
             # return after putting all plots into a column
             return pn.Column(
                 pn.panel(p_comp_tot, linked_axes=False, width=500),
-                pn.panel(p_fibereff_tot, linked_axes=False, width=500),
+                #pn.panel(p_fibereff_tot, linked_axes=False, width=500),
                 pn.panel(p_ppc_tot, linked_axes=False, width=500),
             )
 
@@ -1730,14 +1734,7 @@ def ppp_result_reproduce(
 
         @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2(nppc_fin):
-            obj_alloc = obj_allo1[:nppc_fin][
-                "ppc_code",
-                "ppc_ra",
-                "ppc_dec",
-                "ppc_pa",
-                "ppc_resolution",
-                "ppc_priority",
-            ]
+            obj_alloc = obj_allo1[:nppc_fin]
             return Table.to_pandas(obj_alloc)
 
         # compose figures
@@ -1756,15 +1753,6 @@ def ppp_result_reproduce(
             pn.bind(ppp_res_tab2, pn.bind(rot2nppc, nppc)),
             visible=False,
             disabled=True,
-            page_size=30,
-            theme="bootstrap",
-            theme_classes=["table-striped"],
-            pagination="remote",
-            header_filters=True,
-            layout="fit_columns",
-            hidden_columns=["index"],
-            width=650,
-            height=800,
         )
         return nppc, p_result_fig, p_result_tab, p_result_ppc
 
@@ -1814,17 +1802,19 @@ def ppp_result_reproduce(
     # generate figures and tables for low resolution
     if len(uS_L) > 0:
         uS_L_, cR_l, cR_l_, sub_l = complete_ppc(uS_L, obj_allo_l)
+        nppc_usr_l = tab_psl[tab_psl['resolution'] == 'low']['N_ppc']
 
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
-            "low", cR_l_, sub_l, obj_allo_l, uS_L_
+            "low", cR_l_, sub_l, obj_allo_l, uS_L_, nppc_usr_l
         )
 
     # generate figures and tables for medium resolution
     if len(uS_M) > 0:
         uS_M_, cR_m, cR_m_, sub_m = complete_ppc(uS_M, obj_allo_m)
+        nppc_usr_m = tab_psl[tab_psl['resolution'] == 'medium']['N_ppc']
 
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
-            "medium", cR_m_, sub_m, obj_allo_m, uS_M_
+            "medium", cR_m_, sub_m, obj_allo_m, uS_M_, nppc_usr_m
         )
 
     # define rows
@@ -1878,6 +1868,15 @@ def ppp_result_reproduce(
         pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
         visible=True,
         disabled=True,
+        page_size=20,
+        theme="bootstrap",
+        theme_classes=["table-striped"],
+        pagination="remote",
+        header_filters=True,
+        layout="fit_columns",
+        hidden_columns=["index", "Fiber usage fraction (%)", "allocated_targets", "PPC_id"],
+        width=650,
+        height=850,
     )
 
     logger.info("[Reproduce] creating PPP figures finished ")
