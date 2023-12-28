@@ -731,7 +731,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
         completion rate: in each user-defined priority + overall
         """
-        sample.add_column(0, name="allocate_time")
+        sample["exptime_assign"] = 0
         sub_l = sorted(list(set(sample["priority"])))
         n_sub = len(sub_l)
 
@@ -748,17 +748,17 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub = [len(sample)] + [sum(sample["priority"] == ll) for ll in sub_l]
-        completeR = []  # count
+        count_sub = [sum(sample["exptime"])/900.0] + [sum(sample[sample["priority"] == ll]["exptime"])/900.0 for ll in sub_l]  # fiber hours
+        completeR = []  # fiber hours
         completeR_ = []  # percentage
 
         for ppc in point_l_pri:
             lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
-            sample["allocate_time"].data[lst] += 900
+            sample["exptime_assign"].data[lst] += 900
 
-            comp_s = np.where(sample["exptime_PPP"] == sample["allocate_time"])[0]
-            comT_t = [len(comp_s)] + [
-                sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
+            # achieved fiber hours (in total, in P[0-9])
+            comT_t = [sum(sample["exptime_assign"])/900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"])/900.0 for ll in sub_l
             ]
             completeR.append(comT_t)
             completeR_.append(
@@ -774,7 +774,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         Parameters
         ==========
         uS: table
-            sample with exptime>allocate_time
+            sample with exptime>exptime_assign
 
         obj_allo: table
             ppc information
@@ -794,7 +794,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
         status = 999
 
-        if sum(uS["allocate_time"] == uS["exptime_PPP"]) == len(uS):
+        if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
             # remove ppc with no fiber assignment
             obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
             return obj_allo, status
@@ -808,7 +808,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
-            while any(uS["allocate_time"] < uS["exptime_PPP"]) and iter_m2 < 10:
+            while any(uS["exptime_assign"] < uS["exptime_PPP"]) and iter_m2 < 10:
                 if (time.time() - starttime) > exetime:
                     status = 1
                     logger.info(
@@ -816,12 +816,11 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                     )
                     break
 
-                uS_t1 = uS[uS["allocate_time"] < uS["exptime_PPP"]]
+                uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
                 uS_t1["exptime_PPP"] = (
-                    uS_t1["exptime_PPP"] - uS_t1["allocate_time"]
+                    uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
                 )  # remained exposure time
 
-                uS_t1.remove_column("allocate_time")
                 uS_t2 = PPP_centers(uS_t1, True, weight_para, starttime, exetime)[0]
 
                 obj_allo_t = netflowRun(uS_t2)
@@ -871,7 +870,6 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
         )
 
-        uS_L_s2.remove_column("allocate_time")
         uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
 
         out_uS_L2 = uS_L2
@@ -888,7 +886,6 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
         )
 
-        uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
 
         out_uS_M2 = uS_M2
@@ -905,7 +902,6 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
         )
 
-        uS_L_s2.remove_column("allocate_time")
         uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
 
         uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
@@ -915,7 +911,6 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
         )
 
-        uS_M_s2.remove_column("allocate_time")
         uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
 
         out_uS_L2 = uS_L2
@@ -1411,7 +1406,7 @@ def ppp_result_reproduce(
             )
             raise KeyError  #
 
-        sample.add_column(0, name="allocate_time")
+        sample["exptime_assign"] = 0
         sub_l = sorted(list(set(sample["priority"])))
         n_sub = len(sub_l)
 
@@ -1428,17 +1423,17 @@ def ppp_result_reproduce(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub = [len(sample)] + [sum(sample["priority"] == ll) for ll in sub_l]
-        completeR = []  # count
+        count_sub = [sum(sample["exptime"])/900.0] + [sum(sample[sample["priority"] == ll]["exptime"])/900.0 for ll in sub_l]  # fiber hours
+        completeR = []  # fiber hours
         completeR_ = []  # percentage
 
         for ppc in point_l_pri:
             lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
-            sample["allocate_time"].data[lst] += 900
+            sample["exptime_assign"].data[lst] += 900
 
-            comp_s = np.where(sample["exptime_PPP"] == sample["allocate_time"])[0]
-            comT_t = [len(comp_s)] + [
-                sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
+            # achieved fiber hours (in total, in P[0-9])
+            comT_t = [sum(sample["exptime_assign"])/900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"])/900.0 for ll in sub_l
             ]
             completeR.append(comT_t)
             completeR_.append(
