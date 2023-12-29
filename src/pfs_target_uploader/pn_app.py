@@ -2,15 +2,17 @@
 
 import os
 from datetime import datetime, timezone
+from io import BytesIO
 
 import gurobipy
 import numpy as np
+import pandas as pd
 import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
 from loguru import logger
 
-from .utils.io import load_file_properties
+from .utils.io import load_file_properties, load_input
 from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
@@ -335,6 +337,20 @@ def list_files_app():
         ext="ecsv",
     )
 
+    psl_info_input = pn.widgets.FileInput(
+        value=None,
+        filename=None,
+        accept=".csv",
+        multiple=False,
+        height=30,
+    )
+
+    psl_info = pn.Column(
+        pn.Row("<font size=4>Please upload the proposal info:</font>", height=50),
+        psl_info_input,
+        height=150,
+    )
+
     # range sliders for filtering
     slider_nobj = pn.widgets.EditableRangeSlider(
         name="N (ob_code)",
@@ -380,13 +396,6 @@ def list_files_app():
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)#"""
 
-    column_checkbox = pn.widgets.CheckBoxGroup(
-        name="Columns to show",
-        value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
-        options=list(df_files_tgt_psl.columns),
-        inline=True,
-    )
-
     def open_panel_magnify(event):
         if event.column == "magnify":
             table_ppc.clear()
@@ -394,19 +403,28 @@ def list_files_app():
             p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
             table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
             table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
+            table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
             (
                 nppc_fin,
                 p_result_fig_fin,
                 p_result_ppc_fin,
                 p_result_tab,
-            ) = ppp_result_reproduce(
-                table_ppc_t,
-                table_tgt_t,
-            )
+            ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
 
-            def tab_ppc_save(p_result_ppc_fin):
-                p_result_ppc_fin.to_csv(f"data/temp/{u_id}.csv")
-                return f"data/temp/{u_id}.csv"
+            def tab_ppc_save(p_result_ppc_fin, p_result_tab):
+                Table.from_pandas(p_result_ppc_fin).write(
+                    f"data/temp/TAC_ppc_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
+                )
+                Table.from_pandas(p_result_tab).write(
+                    f"data/temp/TAC_psl_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
+                )
+                return f"data/temp/TAC_ppc_{u_id}.ecsv"
 
             if nppc_fin is not None:
                 output_status = pn.pane.Markdown(
@@ -414,8 +432,8 @@ def list_files_app():
                 )
 
                 fd = pn.widgets.FileDownload(
-                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin),
-                    filename=f"ppc_{u_id}.csv",
+                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
+                    filename=f"TAC_ppc_{u_id}.csv",
                     button_type="primary",
                     width=250,
                 )
@@ -436,13 +454,26 @@ def list_files_app():
                 )
             )
 
-    def Table_files_tgt_psl(column_checkbox):
+    def Table_files_tgt_psl(column_checkbox_):
+        if psl_info_input.value is not None:
+            df_psl_info = load_input(
+                BytesIO(psl_info_input.value),
+                format="csv",
+            )[0]
+
+            _df_files_tgt_psl = pd.merge(
+                df_files_tgt_psl, df_psl_info, left_on="Upload ID", right_on="Upload ID"
+            )
+
+        else:
+            _df_files_tgt_psl = df_files_tgt_psl
+
         _hidden_columns = list(
-            set(list(df_files_tgt_psl.columns)) - set(column_checkbox)
+            set(list(_df_files_tgt_psl.columns)) - set(column_checkbox_)
         )
 
         _table_files_tgt_psl = pn.widgets.Tabulator(
-            df_files_tgt_psl,
+            _df_files_tgt_psl,
             page_size=500,
             theme="bootstrap",
             # theme_classes=["table-striped", "table-sm"],
@@ -467,6 +498,13 @@ def list_files_app():
 
         return _table_files_tgt_psl
 
+    column_checkbox = pn.widgets.CheckBoxGroup(
+        name="Columns to show",
+        value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
+        options=list(df_files_tgt_psl.columns) + ["proposal ID", "PI name", "rank"],
+        inline=True,
+    )
+
     table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
 
     # Details of PPC
@@ -475,7 +513,7 @@ def list_files_app():
     # -------------------------------------------------------------------
 
     sidebar_column = pn.Column(
-        slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
+        psl_info, slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
     )
 
     tab_panels = pn.Tabs(

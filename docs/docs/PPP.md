@@ -9,6 +9,8 @@ The procedure is briefly listed below:
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
 3. Repeat 1 and 2 until all input targets are completed or the running time exceeds about 15 minutes.
 
+Please be aware that the online PPP only simulates the classic observation mode without fiber-sharing with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after fiber-sharing may differ from the simulated results provided here.
+
 ## Run the online PPP
 
 - Press the **_Simulate_** button in the sidebar to run the online PPP.
@@ -80,7 +82,7 @@ The table contents change interactively with the draggable slider(s) above the t
 | P_[0-9]              | %         | Completion rate of each priority group                                                                             |
 
 - If only one resolution mode (low or medium) is used, the table will only show information in that mode.
-- The completion rates are estimated by `N(tgt_complete)/N(tgt)`, where `N(tgt_complete)` means the number count of targets with the requested exposure time **fully** finished.
+- The completion rates are calculated using `FiberHour_allocated / FiberHour_total`. It's important to note that this calculation includes partially observed targets in each pointing.
 
 ### Interactive plots of the results
 
