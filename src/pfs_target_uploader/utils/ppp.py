@@ -489,7 +489,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime = "2024-05-20T08:00:00Z"):
+    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
 
         Parameters
@@ -599,8 +599,8 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
                 shift_dec = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
 
-                Tel_t[index,1] = Tel[index,1] + shift_ra
-                Tel_t[index,2] = Tel[index,2] + shift_dec
+                Tel_t[index, 1] = Tel[index, 1] + shift_ra
+                Tel_t[index, 2] = Tel[index, 2] + shift_dec
 
                 res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
@@ -748,7 +748,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub = [sum(sample["exptime"])/900.0] + [sum(sample[sample["priority"] == ll]["exptime"])/900.0 for ll in sub_l]  # fiber hours
+        count_sub = [sum(sample["exptime"]) / 900.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        ]  # fiber hours
         completeR = []  # fiber hours
         completeR_ = []  # percentage
 
@@ -757,8 +759,9 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             sample["exptime_assign"].data[lst] += 900
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t = [sum(sample["exptime_assign"])/900.0] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"])/900.0 for ll in sub_l
+            comT_t = [sum(sample["exptime_assign"]) / 900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+                for ll in sub_l
             ]
             completeR.append(comT_t)
             completeR_.append(
@@ -826,9 +829,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
                 obj_allo_t = netflowRun(uS_t2)
 
                 if len(obj_allo) > 200:
-                    logger.info(
-                        "PPP stopped since Nppc > 200 [netflow_iter s2]"
-                    )
+                    logger.info("PPP stopped since Nppc > 200 [netflow_iter s2]")
                     break
 
                 else:
@@ -1198,7 +1199,7 @@ def ppp_result(
             # return after putting all plots into a column
             return pn.Column(
                 pn.panel(p_comp_tot, linked_axes=False, width=600),
-                #pn.panel(p_fibereff_tot, linked_axes=False, width=600),
+                # pn.panel(p_fibereff_tot, linked_axes=False, width=600),
                 pn.panel(p_ppc_tot, linked_axes=False, width=600),
             )
 
@@ -1423,7 +1424,9 @@ def ppp_result_reproduce(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub = [sum(sample["exptime"])/900.0] + [sum(sample[sample["priority"] == ll]["exptime"])/900.0 for ll in sub_l]  # fiber hours
+        count_sub = [sum(sample["exptime"]) / 900.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        ]  # fiber hours
         completeR = []  # fiber hours
         completeR_ = []  # percentage
 
@@ -1432,8 +1435,9 @@ def ppp_result_reproduce(
             sample["exptime_assign"].data[lst] += 900
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t = [sum(sample["exptime_assign"])/900.0] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"])/900.0 for ll in sub_l
+            comT_t = [sum(sample["exptime_assign"]) / 900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+                for ll in sub_l
             ]
             completeR.append(comT_t)
             completeR_.append(
@@ -1684,7 +1688,7 @@ def ppp_result_reproduce(
             # return after putting all plots into a column
             return pn.Column(
                 pn.panel(p_comp_tot, linked_axes=False, width=500),
-                #pn.panel(p_fibereff_tot, linked_axes=False, width=500),
+                # pn.panel(p_fibereff_tot, linked_axes=False, width=500),
                 pn.panel(p_ppc_tot, linked_axes=False, width=500),
             )
 
@@ -1797,7 +1801,7 @@ def ppp_result_reproduce(
     # generate figures and tables for low resolution
     if len(uS_L) > 0:
         uS_L_, cR_l, cR_l_, sub_l = complete_ppc(uS_L, obj_allo_l)
-        nppc_usr_l = tab_psl[tab_psl['resolution'] == 'low']['N_ppc']
+        nppc_usr_l = tab_psl[tab_psl["resolution"] == "low"]["N_ppc"]
 
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
             "low", cR_l_, sub_l, obj_allo_l, uS_L_, nppc_usr_l
@@ -1806,7 +1810,7 @@ def ppp_result_reproduce(
     # generate figures and tables for medium resolution
     if len(uS_M) > 0:
         uS_M_, cR_m, cR_m_, sub_m = complete_ppc(uS_M, obj_allo_m)
-        nppc_usr_m = tab_psl[tab_psl['resolution'] == 'medium']['N_ppc']
+        nppc_usr_m = tab_psl[tab_psl["resolution"] == "medium"]["N_ppc"]
 
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
             "medium", cR_m_, sub_m, obj_allo_m, uS_M_, nppc_usr_m
@@ -1869,7 +1873,12 @@ def ppp_result_reproduce(
         pagination="remote",
         header_filters=True,
         layout="fit_columns",
-        hidden_columns=["index", "Fiber usage fraction (%)", "allocated_targets", "PPC_id"],
+        hidden_columns=[
+            "index",
+            "Fiber usage fraction (%)",
+            "allocated_targets",
+            "PPC_id",
+        ],
         width=650,
         height=850,
     )

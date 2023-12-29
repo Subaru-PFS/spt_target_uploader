@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime, timezone
+from io import BytesIO
 
 import gurobipy
 import numpy as np
@@ -9,7 +10,6 @@ import pandas as pd
 import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
-from io import BytesIO
 from loguru import logger
 
 from .utils.io import load_file_properties, load_input
@@ -346,9 +346,9 @@ def list_files_app():
     )
 
     psl_info = pn.Column(
-        pn.Row("<font size=4>Please upload the proposal info:</font>", height=50), 
-        psl_info_input, 
-        height=150
+        pn.Row("<font size=4>Please upload the proposal info:</font>", height=50),
+        psl_info_input,
+        height=150,
     )
 
     # range sliders for filtering
@@ -409,24 +409,20 @@ def list_files_app():
                 p_result_fig_fin,
                 p_result_ppc_fin,
                 p_result_tab,
-            ) = ppp_result_reproduce(
-                table_ppc_t,
-                table_tgt_t,
-                table_psl_t
-            )
+            ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
 
             def tab_ppc_save(p_result_ppc_fin, p_result_tab):
                 Table.from_pandas(p_result_ppc_fin).write(
-                    f"data/temp/TAC_ppc_{u_id}.ecsv", 
-                    format="ascii.ecsv", 
-                    delimiter=",", 
-                    overwrite=True
+                    f"data/temp/TAC_ppc_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
                 )
                 Table.from_pandas(p_result_tab).write(
-                    f"data/temp/TAC_psl_{u_id}.ecsv", 
-                    format="ascii.ecsv", 
-                    delimiter=",", 
-                    overwrite=True
+                    f"data/temp/TAC_psl_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
                 )
                 return f"data/temp/TAC_ppc_{u_id}.ecsv"
 
@@ -459,18 +455,22 @@ def list_files_app():
             )
 
     def Table_files_tgt_psl(column_checkbox_):
-        if (psl_info_input.value is not None):
+        if psl_info_input.value is not None:
             df_psl_info = load_input(
-                        BytesIO(psl_info_input.value),
-                        format="csv",
+                BytesIO(psl_info_input.value),
+                format="csv",
             )[0]
 
-            _df_files_tgt_psl = pd.merge(df_files_tgt_psl, df_psl_info, left_on='Upload ID', right_on='Upload ID') 
+            _df_files_tgt_psl = pd.merge(
+                df_files_tgt_psl, df_psl_info, left_on="Upload ID", right_on="Upload ID"
+            )
 
         else:
             _df_files_tgt_psl = df_files_tgt_psl
-        
-        _hidden_columns = list(set(list(_df_files_tgt_psl.columns))-set(column_checkbox_))
+
+        _hidden_columns = list(
+            set(list(_df_files_tgt_psl.columns)) - set(column_checkbox_)
+        )
 
         _table_files_tgt_psl = pn.widgets.Tabulator(
             _df_files_tgt_psl,
@@ -485,10 +485,10 @@ def list_files_app():
             layout="fit_data_table",
             hidden_columns=_hidden_columns,
             disabled=True,
-            selection=[], 
+            selection=[],
             selectable="checkbox",
         )
-    
+
         _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
         _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
@@ -497,7 +497,7 @@ def list_files_app():
         _table_files_tgt_psl.on_click(open_panel_magnify)
 
         return _table_files_tgt_psl
-    
+
     column_checkbox = pn.widgets.CheckBoxGroup(
         name="Columns to show",
         value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],

@@ -69,6 +69,22 @@ dev = [
 [tool.pdm.scripts]
 serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
 build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
+serve-app = { cmd = [
+    "pdm",
+    "run",
+    "panel",
+    "serve",
+    "./app.py",
+    "./admin.py",
+    "--static-dirs",
+    "doc=docs/site",
+    "\"uploader/data\"=data",
+    "--prefix=uploader",
+    "--websocket-max-message-size=104857600",
+    "--port",
+    "5008",
+    "--autoreload",
+], help = "Start the dev server for app and admin pages" }
 gen-requirements = { cmd = [
     "pdm",
     "export",
