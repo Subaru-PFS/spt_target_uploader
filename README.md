@@ -1,5 +1,9 @@
-# pfs_target_uploader
+# PFS Target Uploader
 
+The PFS Target Uploader is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
+
+- Web App: https://pfs-etc.naoj.hawaii.edu/uploader/app
+- User Guide: https://pfs-etc.naoj.hawaii.edu/uploader/doc/index.html
 
 ## Install
 
@@ -67,7 +71,7 @@ data/
 #             └── target_5b7849c9ec92703b.ecsv
 ```
 
-`ppc`, `psl`, and `target` files corresponds to the lists of pointing centers, pointing summary, and input targets, respectively.
+`ppc`, `psl`, and `target` files correspond to the lists of pointing centers, the pointing summary, and input targets, respectively.
 The `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
 
 ```
