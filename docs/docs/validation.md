@@ -1,116 +1,161 @@
-# Validation
+# Validation of Target Lists
 
-Validation of a input target list is carried out in 4 stages.
+## Validation items
 
-## Stages
+An input target list is validated against the following items.
 
-<figure markdown>
-  ![Status indicators](images/status_indicators.png){ width="600" }
-  <!-- <figcaption>Status indicators</figcaption> -->
-</figure>
+### Filetype
 
-### Stage 0
-
-At **Stage 0**, whether a proper readable CSV file is provided is checked.
+The input file must be in the CSV (comma-separated values) or ECSV (enhanced character-separated values) formats.
 
 !!! danger "Errors are raised in the following cases"
 
-    - When the `validation`button is clicked without selecting a input file, an error will be raised.
-    - When `pandas.read_csv()` fails to read the input CSV file, an error will be raised. This is likely caused by wrong formats in the fields for numbers.
+    - When the `Validate` or `Simulate` button is clicked without selecting an input file, an error notification will be shown.
+    - When the input file cannot be read, an error notification will be shown. This is likely to be caused by wrong formats in cells.
 
+### Column names
 
-### Stage 1
+The names of columns in the input list are checked against the required and optional keys except for flux-related ones.
 
-At **Stage 1**, the input column names are checked against the required and optional keys.
+!!! danger "Errors message is raised as follows for required columns"
 
-!!! danger "Errors are raised in the following case"
+    - A required keyword `key name` is missing.
 
-    - A mandatory keyword `key name` is missing. Please add them with proper values.
+!!! warning "Warning message is raised as follows for missing optional columns"
 
+    - Optional column `key name` is missing. The default value, `default value`, will be used.
 
-!!! warning "Warnings are raised in the following case"
+!!! success "Info messages are shown as follows for detected columns"
 
-    - A mandatory keyword `key name` is missing. Please add them with proper values.
+    - Required column `key name` is found.
+    - Optional column `key name` is found.
 
-### Stage 2
+### String values
 
-At **Stage 2**, cells with string data will be validated to contain only allowed characters, `[A-Za-z0-9_-+.]`.
+String values are validated whether they contain only allowed characters, `[A-Za-z0-9_-+.]`.
+Along with the comments, a table is shown for rows with invalid values.
 
-!!! danger "Errors are raised in the following case"
+!!! danger "Error message is raised as follows for required columns"
 
-    - Characters not in `[A-Za-z0-9_-+.]` are detected.
+    String values must consist of [A-Za-z0-9_-+.]. The following entries must be fixed.
 
+!!! success "Info message is shown as follows for successful validation"
 
-### Stage 3
+    All string values consist of `[A-Za-z0-9_-+.]`
 
-At **Stage 3**, values are checked whether they are in allowed ranges.
+### Data ranges
+
+Value of `ra`, `dec`, `priority`, `exptime`, and `resolution` are checked whether they are in the allowed ranges.
+Along with the comments, a table is shown for rows with invalid values.
 
 !!! note "Following checks are conducted and errors are raised when violations are detected"
 
     - $0 \le \mathrm{ra} \le 360$.
     - $-90 \le \mathrm{dec} \le 90$.
-    - `equinox` must start with `J` (Julien epoch) or `B` (Besselian epoch) followed by string which can be converted to a float number. Note that down to the first digit after the decimal is considered.
-    - `priority` must be positive.
-    - `exptime`must be positive.
+    - `priority` must be an integer in $[0, 9]$.
+    - `exptime` must be positive.
     - `resolution` must be either `L` or `M`.
 
+!!! danger "Error message is raised as follows"
 
-### Stage 4
+    Invalid values are detected for the following columns in the following entries.
 
-At **Stage 4**, `ob_code` are checked not to have duplicates.
+!!! success "Info message is shown as follows for successful validation"
+
+    All values of `ra`, `dec`, `priority`, `exptime`, and `resolution` satisfy the allowed ranges.
+
+### Flux columns
+
+Flux columns are validated against conditions described in the [Flux Information Section](inputs.md#about-flux-information).
+
+!!! danger "Error message is raised as follows"
+
+    No flux information found in the following `ob_code`s. Detected filters are the following: `<detected filter columns>`
+
+!!! success "Info message is shown as follows"
+
+    All `ob_code`s have at least one flux information. The detected filters are the following: `<detected filter columns>`
+
+
+### Target visibility
+
+Target visibility is checked by comparing the requested exposure time is shorter than the time when the target elevation is more than 30 degrees above the horizon between 18:30 and 5:30+1day. The data range can be configured in the `config` tab in the sidebar. Only visible targets will be considered for the pointing simulation. Along with the error and warning messages, invalid rows will be displayed.
+
+!!! danger "Error message is raised when no `ob_code` is visible"
+
+    None of `ob_code`s in the list is visible in the input observing period.
+
+!!! warning "Warning message is raised when one or more `ob_code`s are not visible"
+
+    `N` `ob_code`s are not visible in the input observing period
+
+!!! success "Info message is shown when all `ob_code`s are visible"
+
+    All `ob_code`s are visible in the input observing period
+
+### Duplicated `ob_code`
+
+`ob_code`s are checked not to have duplicates. Along with the error message, invalid rows will be displayed.
 
 !!! danger "Errors are raised in the following case"
 
-    - Duplicates in `ob_code` are detected. They must be unique within the list.
+    Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets.
 
-## Results
+!!! success "Info message is raised for successful validation"
 
-### Side panel (left)
+    All `ob_code` are unique.
 
-#### <u>Input file selector</u>
-
-Press "Browse" button to select a CSV file to be validated.
-
-#### <u>"Validation" button</u>
-
-Press "Validate" button to start the validation process.
-
-#### <u>Stage indicators</u>
+## Validation Results
 
 <figure markdown>
-  ![Status indicators](images/status_indicators.png){ width="600" }
-  <figcaption>Status indicators shows the results for each stage. The above image tells that Stage 1 returned with warnings, Stage 2 finished successfully, Stage 3 finished with errors, and Stage 4 was not carried out.</figcaption>
+  ![Example screenshot after the validation](images/uploader_validation_example.png)
+  <figcaption>An example output after the validation.</figcaption>
 </figure>
 
+### `Home` tab in the side panel (left)
 
-Circles show the status of each stage. Meaning of each color is the following.
+#### <u>Select an input CSV file</u>
 
-**White**
-: Validation process was not carried out at **Stage** because it failed at an earlier Stage.
+Press the "Browse" button to select a CSV or ECSV file to be validated.
 
-<span style="color: darkorange;">**Yellow**</span>
-: Validation at **Stage** ended with warnings.
+#### <u>Select an operation</u>
 
-<span style="color: teal;">**Green**</span>
-: Validation at **Stage** was successful without errors and warnings.
+##### Validate
 
-#### <u>Number of objects</u>
+A validation process starts if pressed.
 
-Total number of objects in the list is shown.
+##### Simulate
 
+A PFS pointing simulation starts if pressed. Validation of the input file will be carried out before proceeding to the simulation.
 
-#### <u>Number of objects</u>
+##### Submit
 
-Total fiberhours requested in the list is shown.
+Submit the input target list and pointing lists to the observatory. The button will be active after successful validation.
 
-#### <u>Breakdown table by priority</u>
+#### <u>Validation status</u>
 
-A table showing the number of objects and fiberhours in each priority group is presented.
+One of the following validation results will be shown to indicate the validation status.
+
+✅ **Success**
+: Validation is successful without any errors and warnings
+
+⚠️ **Success** with warnings
+: Validation is successful with warnings. Warnings can be ignored, but please make sure whether they are acceptable or not.
+
+🚫 **Failed**
+: Validation is failed. Please check error messages carefully and modify the input target list accordingly.
+
+#### <u>Summary table</u>
+
+Numbers of objects and fiberhours for each priority are displayed for the `L` and `M` resolutions separately.
+
+### `Config` tab in the side panel (left)
+
+You can set the observing period for visibility check. By default, the dates are set to the next semester.
 
 ## Main panel (right)
 
-The details of validation processes are shown in the main panel.
-
+The details of the validation results are shown in the main panel.
 First, errors are shown, followed by warnings. The successful checks are shown at the bottom.
-
-Errors must be fixed before submitting the target list.  Warnings can be ignored, but please consider carefully when ignoring them.
+Tables containing invalid rows are also shown for each validation process.
+Please modify them to make them acceptable for the uploader.

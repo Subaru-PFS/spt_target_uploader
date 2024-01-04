@@ -1,6 +1,9 @@
-# pfs_target_uploader
+# PFS Target Uploader
 
-Note: development main branch is the `dev-main` branch. If you develop the software, it's recommended to start from the `dev-main` branch.
+The PFS Target Uploader is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
+
+- Web App: https://pfs-etc.naoj.hawaii.edu/uploader/app
+- User Guide: https://pfs-etc.naoj.hawaii.edu/uploader/doc/index.html
 
 ## Install
 
@@ -17,7 +20,8 @@ cd pfs_target_uploader
 pip install -r requirements.txt
 pip install -e .
 
-mkdir -p data/target_lists data/psl_lists data/ppc_lists
+mkdir -p data/
+mkdir -p data/temp/
 ```
 
 
@@ -32,7 +36,45 @@ cd ..
 ### Run the app
 
 ```sh
-panel serve ./app.py ./app-admin.py --autoreload --static-dirs docs=./docs/site data=./data
+panel serve ./app.py ./admin.py --autoreload --static-dirs doc=./docs/site data=./data
 ```
 
-Open the target uploader at [http://localhost:5006/app] and the admin page at [http://localhost:5006/app-admin]. Uploaded files will be stored under `data/target_lists`, and the pointing lists will be stored under `data/ppc_lists`. This parameter can be controlled by editing `OUTPUT_DIR_data` and `OUTPUT_DIR_ppc` environment variable in `.env.shared`.
+Open the target uploader at http://localhost:5006/app and the admin page at http://localhost:5006/admin.
+Uploaded files will be stored under `data` with the following structure.
+
+```
+$ tree data/
+data/
+└── <year>
+    └── <month>
+        └── <year month day>-<hour minute second>-<upload_id>
+            ├── ppc_<upload_id>.ecsv
+            ├── psl_<upload_id>.ecsv
+            ├── target_<upload_id>.ecsv
+            └── <original file>
+#
+# data/
+# └── 2023
+#     └── 10
+#         ├── 20231001-055542-fd56fdccf644972f
+#         │   ├── ppc_fd56fdccf644972f.ecsv
+#         │   ├── psl_fd56fdccf644972f.ecsv
+#         │   └── target_fd56fdccf644972f.ecsv
+#         ├── 20231021-010841-ecb95398a3fd10ff
+#         │   ├── ppc_ecb95398a3fd10ff.ecsv
+#         │   ├── psl_ecb95398a3fd10ff.ecsv
+#         │   └── target_ecb95398a3fd10ff.ecsv
+#         └── 20231025-042607-5b7849c9ec92703b
+#             ├── ppc_5b7849c9ec92703b.ecsv
+#             ├── psl_5b7849c9ec92703b.ecsv
+#             ├── random_example_n00010.csv
+#             └── target_5b7849c9ec92703b.ecsv
+```
+
+`ppc`, `psl`, and `target` files correspond to the lists of pointing centers, the pointing summary, and input targets, respectively.
+The `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
+
+```
+# OUTPUT_DIR_PREFIX must be identical to the directory value specified as `data` above.
+OUTPUT_DIR="data"
+```

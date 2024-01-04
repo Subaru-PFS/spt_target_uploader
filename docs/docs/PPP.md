@@ -1,77 +1,120 @@
-# Total Time Estimate
+# PFS Pointing Simulation
 
-The total exposure time required for an uploaded target list is estimated using the online PFS Pointing Planner (PPP).
+The total exposure time required for a target list can be estimated using the online PFS Pointing Planner (PPP).
 
-## Run
+The online PPP will simulate the pointing after the validation of the input target list.
+The procedure is briefly listed below:
 
-- Press <u>"Start" button</u> to run the online PPP.
+1. Create a weight map on the sky for the input objects by using coordinates and priorities.
+2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
+3. Repeat 1 and 2 until all input targets are completed or the running time exceeds about 15 minutes.
 
-- The running time ranges from a few minutes to hours. It depends on the length of input target list. Please prevent uploading a huge list.
+Please be aware that the online PPP only simulates the classic observation mode without fiber-sharing with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after fiber-sharing may differ from the simulated results provided here.
 
-## Results
+## Run the online PPP
 
-### 1. Status
+- Press the **_Simulate_** button in the sidebar to run the online PPP.
+- The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
+- In the case of [the example file](examples/example_perseus_cluster_r60arcmin.csv) shown in the [Inputs](inputs.md) section, the computational time would be about 10 seconds.
 
-PPP will give a status report of the outputs.
-
-!!! danger "Warnings are raised in the following cases:"
-
-    - the total requested time exceeds the 5-night upper limit for the normal progam;
-    - some targets can not be completed in the semester due to their visibility, i.e., $\sum(T_\mathrm{observable})<T_\mathrm{request}$.
-
-For example, 
+## Understand the results
 
 <figure markdown>
-  ![Status indicators](images/PPP_error.png){ width="600" }
-  <!-- <figcaption>Status indicators</figcaption> -->
+  ![PPP results](images/ppp_result_full.png)
+  <figcaption>Screenshot of the online PPP results</figcaption>
 </figure>
 
-If no warnings are reported, it will show 
+### Simulation status
+
+The online PPP will give a status report of the pointing simulation.
+
+!!! warning "Warnings are raised in the following cases:"
+
+    - The total requested time exceeds the 5-night upper limit for the normal program (35 hours).
+    - The running time exceeds 15 minutes.
+
+#### Examples of status
+
 <figure markdown>
-  ![Status indicators](images/PPP_success.png){ width="800" }
-  <!-- <figcaption>Status indicators</figcaption> -->
+  ![Status indicators](images/ppp_warning_35h.png){ width="1000" }
+  ![Status indicators](images/ppp_warning_exetime.png){ width="995" }
+  <figcaption>(Top) A warning to indicate that the total time to complete all targets in the list is estimated to exceed 5 nights</figcaption>
+  <figcaption>(Bottom) A warning to indicate that the running time exceeds 15 minutes.</figcaption>
 </figure>
 
-### 2. Table
+<figure markdown>
+  ![Status indicators](images/PPP_success.png){ width="1000" }
+  <figcaption>Status panel when no warning is returned.</figcaption>
+</figure>
 
-A table including the following information will be displayed, and its contents will be changed by dragging the slider above.
+### Summary of the PFS pointing simulation
 
-| Name                  |  Unit     | Description                                                                                        |
-|-----------------------|-----------|----------------------------------------------------------------------------------------------------|
-| resolution            |           | `low`, `medium` or `total`                                                                         |
-| N_ppc                 |           | Number of pointings, can be adjusted by the slider                                                 |
-| Texp                  | hour      | Total on-source time requested                                                                     |
-| Texp                  | fiberhour | Total on-source time requested                                                                     |
-| Request time1         | hour      | Total request time including overheads (calibration frames taken for each night)                   |
-| Request time2         | hour      | Total request time including overheads (calibration frames taken for each fiber configuration)     |
-| Used fiber fraction   |  %        | Average fiber usage fraction of pointings                                                          |
-| Fraction of PPC <30%  |  %        | Fration of pointings having the fiber usage fraction < 30%                                         |
-| P_all                 |  %        | Completion rate of the entire program                                                              |
-| P_[1-9]               |  %        | Completion rate of each priority group                                                             |
+A summary of the pointing simulation is shown as a list. The total request time and the following information is highlighted.
 
-- if only one resolution mode (low or medium) is requred, the table will only show information in that mode;
-- if both modes are required, a third row `total` will be added
+- Number of PFS pointing centers (PPCs)
+- Corresponding fiberhours (i.e., the sum of exposure time for assigned targets)
+- Total on-source time to complete the number of PPCs above assuming 15 minutes/pointing
+- Total requested observing time (ROT) including overhead
+- The expected completion rate for low- and medium-resolution modes, respectively
 
-### 3. Figures
+If the ROT exceeds the 5-night limit for an openuse program, the ROT is shown in red, otherwise, it is shown in green.
 
-The <u>Completion Rate</u> (left), <u>Fiber Usage Fraction</u> (middle) and <u>Target Distribution</u> (right) will be shown.
+### Download the results
 
-- Completion Rate
-    - title displays the resolution mode 
-    - `PPC_id`: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned on them
-    - thick black solid line: completion rate of the entire program 
-    - thick <span style="color: red;">red</span> solid line: completion rate of the primary sample (which has the smallest internal priority P) 
-    - other lines: completion rate of each priority group   
-    - vertical <span style="color: grey;">gray</span> dashed line: number of pointings required, can be adjusted by the slider above
-    - <span style="color: orange;">orange</span> shade: area covered by Grade A programs in the last semester(s)
-    - <span style="color: dodgerblue;">blue</span> shade: area covered by Grade B programs in the last semester(s)
+Results from the online PPP can be downloaded as a ZIP file by pressing the **_Download_** button.
+See `README.txt` in the ZIP file for the content.
 
-- Fiber Usage Fraction
-    - title displays the resolution mode 
-    - `PPC_id`: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned on them
-    - thick <span style="color: red;">red</span> solid line: average fiber usage fraction of pointings  
-    - vertical <span style="color: grey;">gray</span> dashed line: number of pointings required, can be adjusted by the slider above
+### Table of the results
 
-- Target Distribution
-    - targets in each priority group are plotted by different colors, with the primary sample (which has the smallest internal priority P) in red
-    - transparent <span style="color: grey;">gray</span> hexagons show the pointings 
+A table including the following information will be displayed.
+The table contents change interactively with the draggable slider(s) above the table.
+
+| Name                 | Unit      | Description                                                                                                        |
+|----------------------|-----------|--------------------------------------------------------------------------------------------------------------------|
+| resolution           |           | `low`, `medium` or `total`                                                                                         |
+| N_ppc                |           | Number of pointings, can be adjusted by the slider                                                                 |
+| Texp                 | hour      | Total on-source time requested to complete `N_ppc` pointings                                                       |
+| Texp                 | fiberhour | Total on-source fiberhours requested                                                                               |
+| Request time         | hour      | Total request time including overheads (e.g., calibration frames, fiber configuration, readout, telescope slewing) |
+| Fiber usage fraction | %         | Average fiber usage fraction of pointings                                                                          |
+| Fraction of PPC <30% | %         | Fration of pointings having the fiber usage fraction < 30%                                                         |
+| P_all                | %         | Completion rate of the entire program                                                                              |
+| P_[0-9]              | %         | Completion rate of each priority group                                                                             |
+
+- If only one resolution mode (low or medium) is used, the table will only show information in that mode.
+- The completion rates are calculated using `FiberHour_allocated / FiberHour_total`. It's important to note that this calculation includes partially observed targets in each pointing.
+
+### Interactive plots of the results
+
+The <u>Completion Rate</u> (top), <u>Fiber Usage Fraction</u> (middle), and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
+
+#### Completion Rate
+`PPC_id`
+: ID of PFS pointing center, PPCs are sorted by the total priority of targets assigned on them
+
+Thick black solid line
+: Completion rate of the entire program
+
+Thick <span style="color: red;">red</span> solid line
+: Completion rate of the primary sample (which has the smallest internal priority P)
+
+Other lines
+: Completion rate of each priority group
+
+Vertical <span style="color: grey;">gray</span> dashed line
+: Number of pointings required, can be adjusted by the slider above
+
+#### Fiber Usage Fraction
+`PPC_id`
+: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned to them
+
+Thick <span style="color: red;">red</span> solid line
+: average fiber usage fraction of pointings
+
+Vertical <span style="color: grey;">gray</span> dashed line
+: number of pointings required, can be adjusted by the slider above
+
+#### Target Distribution
+
+Targets in each priority group are plotted in different colors, with the primary sample (which has the smallest internal priority P) in red.
+Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at pointing centers.

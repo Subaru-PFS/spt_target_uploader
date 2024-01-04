@@ -1,60 +1,33 @@
 #!/usr/bin/env python3
 
 import os
-import time
 from datetime import datetime, timezone
 from io import BytesIO
 
 import gurobipy
 import numpy as np
+import pandas as pd
 import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
-from logzero import logger
+from loguru import logger
 
-from .utils.checker import validate_input, visibility_checker
-from .utils.io import load_file_properties, load_input, upload_file
-from .utils.ppp import PPPrunStart, ppp_result
+from .utils.io import load_file_properties, load_input
+from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
     FileInputWidgets,
-    PPPresultWidgets,
-    ResultWidgets,
+    PppResultWidgets,
     RunPppButtonWidgets,
     StatusWidgets,
     SubmitButtonWidgets,
     TargetWidgets,
+    TimerWidgets,
     UploadNoteWidgets,
     ValidateButtonWidgets,
+    ValidationResultWidgets,
 )
-
-
-def _validate_file(panel_input):
-    if panel_input.file_input.filename is not None:
-        logger.info(f"{panel_input.file_input.filename} is selected.")
-        file_format = os.path.splitext(panel_input.file_input.filename)[-1].replace(
-            ".", ""
-        )
-        df_input, dict_load = load_input(
-            BytesIO(panel_input.file_input.value),
-            format=file_format,
-        )
-        # if the input file cannot be read, raise a sticky error notifications
-        if not dict_load["status"]:
-            pn.state.notifications.error(
-                f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
-                duration=0,
-            )
-            return None, None
-    else:
-        logger.info("No file selected.")
-        pn.state.notifications.error("Please select a CSV file.")
-        return None, None
-
-    validation_status = validate_input(df_input)
-
-    return df_input, validation_status
 
 
 def _toggle_buttons(buttons: list, disabled: bool = True):
@@ -67,23 +40,17 @@ def target_uploader_app():
 
     logger.info(f"config params from dotenv: {config}")
 
-    if os.path.exists(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-    ):
-        logger.info(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} already exists."
-        )
+    if os.path.exists(config["OUTPUT_DIR"]):
+        logger.info(f"{config['OUTPUT_DIR']} already exists.")
     else:
-        os.makedirs(
-            os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-        )
-        logger.info(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} created."
-        )
+        os.makedirs(config["OUTPUT_DIR"])
+        logger.info(f"{config['OUTPUT_DIR']} created.")
 
-    template = pn.template.VanillaTemplate(
+    template = pn.template.MaterialTemplate(
+        # template = pn.template.BootstrapTemplate(
         title="PFS Target Uploader",
-        sidebar_width=400,
+        # sidebar_width=400,
+        sidebar_width=420,
         header_background="#3A7D7E",
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
@@ -100,9 +67,11 @@ def target_uploader_app():
 
     panel_dates = DatePickerWidgets()
 
-    panel_results = ResultWidgets()
+    panel_timer = TimerWidgets()
+
+    panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PPPresultWidgets()
+    panel_ppp = PppResultWidgets()
 
     panel_input.reset()
 
@@ -117,10 +86,21 @@ def target_uploader_app():
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
         panel_input.pane,
-        panel_validate_button.pane,
-        panel_status.pane,
-        panel_ppp_button.pane,
-        panel_submit_button.pane,
+        pn.Column(
+            pn.Row("<font size=5>**Select an operation**</font>", panel_timer.pane),
+            pn.Row(
+                panel_validate_button.pane,
+                panel_ppp_button.pane,
+                panel_submit_button.pane,
+                sizing_mode="stretch_width",
+            ),
+            margin=(10, 0, 0, 0),
+        ),
+        pn.Column(
+            pn.Row("<font size=5>**Validation status**</font>"),
+            panel_status.pane,
+            margin=(10, 0, 0, 0),
+        ),
     )
 
     sidebar_configs = pn.Column(panel_dates.pane)
@@ -133,19 +113,24 @@ def target_uploader_app():
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
         ("Input list", panel_targets.pane),
-        ("Results of validation", panel_results.pane),
-        ("Results of PPP", panel_ppp.pane),
+        ("Validation", panel_results.pane),
+        ("Pointing Simulation", panel_ppp.pane),
+    )
+
+    sidepanel_column = pn.Column(
+        panel_doc.pane,
+        tab_sidebar,
     )
 
     main_column = pn.Column(
         placeholder_floatpanel,
-        panel_doc.pane,
         tab_panels,
+        margin=(30, 0, 0, 0),
     )
 
     # put them into the template
-    # template.sidebar.append(sidebar_column)
-    template.sidebar.append(tab_sidebar)
+    # template.sidebar.append(panel_doc.pane)
+    template.sidebar.append(sidepanel_column)
     template.main.append(main_column)
 
     tab_panels.visible = False
@@ -156,33 +141,40 @@ def target_uploader_app():
         _toggle_buttons(button_set, disabled=True)
 
         placeholder_floatpanel.objects = []
-        tab_panels.active = 0
+
         tab_panels.visible = False
+
         panel_status.reset()
         panel_results.reset()
+        panel_ppp.reset()
+
         pn.state.notifications.clear()
 
-        df_input, validation_status = _validate_file(panel_input)
+        panel_timer.timer(True)
 
-        if validation_status is None:
-            _toggle_buttons(button_set, disabled=False)
-            return
-
-        time.sleep(0.1)  # may be removed
-        panel_status.show_results(df_input, validation_status)
-        time.sleep(0.1)  # may be removed
-        panel_targets.show_results(df_input)
-        time.sleep(0.1)  # may be removed
-        panel_results.show_results(df_input, validation_status)
+        validation_status, df_input, df_validated = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
         _toggle_buttons(button_set, disabled=False)
+        panel_timer.timer(False)
 
-        # if validation_status["status"] is False:
-        #     panel_input.file_input.file_name = None
-        #     panel_input.file_input.value = None
+        if validation_status is None:
+            return
 
-        tab_panels.visible = True
+        panel_status.show_results(df_validated, validation_status)
+        panel_targets.show_results(df_validated)
+        panel_results.show_results(df_validated, validation_status)
+
+        panel_ppp.df_input = df_validated
+        panel_ppp.df_summary = panel_status.df_summary
+
         tab_panels.active = 1
+        tab_panels.visible = True
+
+        if validation_status["status"]:
+            panel_submit_button.enable_button(panel_ppp.ppp_status)
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
@@ -190,349 +182,347 @@ def target_uploader_app():
         panel_submit_button.submit.disabled = True
 
         placeholder_floatpanel.objects = []
-        tab_panels.active = 0
-        tab_panels.visible = False
-        # panel_status.reset()
-        panel_results.reset()
+
+        # reset some panels
+        panel_status.reset()
         panel_ppp.reset()
-        # time.sleep(0.1)  # may be removed
+
         pn.state.notifications.clear()
 
-        gif_pane = pn.pane.GIF(
-            "https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif",
-            width=20,
-        )
+        panel_timer.timer(True)
 
-        df_input_, validation_status = _validate_file(panel_input)
+        validation_status, df_input_, df_validated = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
         if validation_status is None:
-            time.sleep(0.1)
             _toggle_buttons(button_set, disabled=False)
+            panel_timer.timer(False)
             return
 
-        panel_ppp_button.PPPrunStats.append(gif_pane)
+        if not validation_status["visibility"]["status"]:
+            logger.error("No visible object is found")
+            pn.state.notifications.error(
+                "Cannot simulate pointing for 0 visible targets",
+                duration=0,
+            )
+            _toggle_buttons(button_set, disabled=False)
+            panel_timer.timer(False)
+            return
 
-        tb_input = Table.from_pandas(df_input_)
+        panel_status.show_results(df_validated, validation_status)
+        panel_results.show_results(df_validated, validation_status)
+        panel_targets.show_results(df_validated)
 
-        # tgt_obs_ok = visibility_checker(tb_input, "B")
-        logger.info(f"Observation period start at {panel_dates.date_begin.value}")
-        logger.info(f"Observation period end at {panel_dates.date_end.value}")
-
-        tgt_obs_ok = visibility_checker(
-            tb_input,
-            panel_dates.date_begin.value,
-            panel_dates.date_end.value,
-        )
-
-        # NOTE: It seems boolean comparison for a numpy array must not be done with "is"
-        # https://beta.ruff.rs/docs/rules/true-false-comparison/
-        tgt_obs_no = np.where(~tgt_obs_ok)[0]
-        tgt_obs_yes = np.where(tgt_obs_ok)[0]
-
-        tb_input_ = tb_input[tgt_obs_yes]
-
-        weight_para = [4.02, 0.01, 0.01]
+        tab_panels.active = 1
+        tab_panels.visible = True
 
         try:
-            (
-                uS_L2,
-                cR_L,
-                cR_L_,
-                sub_l,
-                obj_allo_L_fin,
-                uS_M2,
-                cR_M,
-                cR_M_,
-                sub_m,
-                obj_allo_M_fin,
-            ) = PPPrunStart(tb_input_, weight_para)
-            res_mode_, nppc, p_result_fig, p_result_ppc, p_result_tab_ = ppp_result(
-                cR_L_, sub_l, obj_allo_L_fin, uS_L2, cR_M_, sub_m, obj_allo_M_fin, uS_M2
-            )
+            panel_ppp.origname = panel_input.file_input.filename
+            panel_ppp.origdata = panel_input.file_input.value
+            panel_ppp.df_summary = panel_status.df_summary
 
-            if p_result_tab_.value.iloc[-1]["Request time (h)"] > 10 * 5:
-                ppp_Alert = pn.pane.Alert(
-                    """### Warnings
-The total requested time exceeds the 5-night upper limit of normal program. Please reduce the time.
-            """,
-                    alert_type="warning",
-                )
-                if len(tgt_obs_no) > 0:
-                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                    ppp_Alert.object += f"""
+            panel_ppp.run_ppp(df_validated, validation_status)
+            panel_ppp.show_results()
 
-The following targets are not observable during the semester. Please remove them.
-    {tgt_obs_no_id}
-                """
-
-            else:
-                if len(tgt_obs_no) > 0:
-                    tgt_obs_no_id = " ".join(tb_input[tgt_obs_no]["ob_code"])
-                    ppp_Alert = pn.pane.Alert(
-                        f"""### Warnings
-The following targets are not observable during the semester. Please remove them.
-    {tgt_obs_no_id}
-                """,
-                        alert_type="warning",
-                    )
-
-                else:
-                    ppp_Alert = pn.pane.Alert(
-                        """### Success
-The total requested time is reasonable for normal program. All the input targets are observable in the semester.
-                """,
-                        alert_type="success",
-                    )
-
-            panel_status.show_results(df_input_, validation_status)
-            panel_results.show_results(df_input_, validation_status)
-            panel_targets.show_results(df_input_)
-
-            panel_ppp.show_results(
-                res_mode_, nppc, p_result_fig, p_result_tab_, ppp_Alert
-            )
-
-            tab_panels.visible = True
             tab_panels.active = 2
 
-            panel_submit_button.submit.disabled = False
+            # enable the submit button only with the successful validation
+            if validation_status["status"]:
+                panel_submit_button.enable_button(panel_ppp.ppp_status)
+                panel_submit_button.submit.disabled = False
 
         except gurobipy.GurobiError as e:
             pn.state.notifications.error(f"{str(e)}", duration=0)
             pass
 
-        panel_ppp_button.PPPrunStats.remove(gif_pane)
-
         _toggle_buttons(button_set, disabled=False)
+        panel_timer.timer(False)
 
-        def cb_submit(event):
-            panel_submit_button.submit.disabled = True
+    def cb_submit(event):
+        panel_submit_button.submit.disabled = True
 
-            placeholder_floatpanel.objects = []
+        placeholder_floatpanel.objects = []
 
-            logger.info("Submit button clicked.")
-            logger.info("Validation before actually writing to the storage")
+        logger.info("Submit button clicked.")
+        logger.info("Validation before actually writing to the storage")
 
-            # do the validation again (input file can be different)
-            # and I don't know how to implement to return value
-            # from callback to another function (sorry)
-            df_input, validation_status = _validate_file(panel_input)
+        panel_timer.timer(True)
 
-            if (validation_status is None) or (not validation_status["status"]):
-                logger.error("Validation failed for some reason")
-                tab_panels.visible = False
-                panel_status.reset()
-                panel_results.reset()
-                time.sleep(0.1)  # may be removed
-                pn.state.notifications.clear()
+        # do the validation again and again (input file can be different)
+        # and I don't know how to implement to return value
+        # from callback to another function (sorry)
+        validation_status, df_input, df_validated = panel_input.validate(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+        )
 
-                if validation_status is None:
-                    return
-                else:
-                    logger.error("Validation failed for some reason")
-                    panel_status.show_results(df_input, validation_status)
-                    panel_results.show_results(df_input, validation_status)
-                    panel_targets.show_results(df_input)
-                    tab_panels.visible = True
-                    return
+        if (validation_status is None) or (not validation_status["status"]):
+            logger.error("Validation failed for some reason")
 
-            upload_time = datetime.now(timezone.utc)
-            secret_token = panel_input.secret_token
+            tab_panels.visible = False
 
-            _, _, _ = upload_file(
-                df_input,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]
-                ),
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            _, _, _ = upload_file(
-                p_result_tab_.value,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]
-                ),
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            _, _, _ = upload_file(
-                p_result_ppc.value,
-                outdir=os.path.join(
-                    config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppc"]
-                ),
-                origname=panel_input.file_input.filename,
-                secret_token=secret_token,
-                upload_time=upload_time,
-            )
-            panel_notes = UploadNoteWidgets(secret_token, upload_time)
-            placeholder_floatpanel[:] = [panel_notes.floatpanel]
+            panel_status.reset()
+            panel_results.reset()
 
-            panel_submit_button.submit.disabled = True
+            pn.state.notifications.clear()
 
-        panel_submit_button.submit.on_click(cb_submit)
+            if validation_status is None:
+                panel_timer.timer(False)
+                return
+            else:
+                panel_status.show_results(df_validated, validation_status)
+                panel_results.show_results(df_validated, validation_status)
+                panel_targets.show_results(df_validated)
+                tab_panels.visible = True
+                panel_timer.timer(False)
+                return
 
-    # set callback to the "validate" click
+        panel_ppp.origname = panel_input.file_input.filename
+        panel_ppp.origdata = panel_input.file_input.value
+        panel_ppp.df_summary = panel_status.df_summary
+        panel_ppp.upload_time = datetime.now(timezone.utc)
+        panel_ppp.secret_token = panel_input.secret_token
+
+        outdir, outfile_zip, _ = panel_ppp.upload(outdir_prefix=config["OUTPUT_DIR"])
+
+        panel_notes = UploadNoteWidgets(
+            panel_ppp.secret_token,
+            panel_ppp.upload_time,
+            panel_ppp.ppp_status,
+            outdir.replace(config["OUTPUT_DIR"], "data/", 1),
+            outfile_zip,
+        )
+        placeholder_floatpanel[:] = [panel_notes.floatpanel]
+
+        panel_submit_button.submit.disabled = True
+        panel_timer.timer(False)
+
+    # set callback to the buttons
     panel_validate_button.validate.on_click(cb_validate)
     panel_ppp_button.PPPrun.on_click(cb_PPP)
+    panel_submit_button.submit.on_click(cb_submit)
 
     app = template.servable()
 
     return app
 
 
+#
+# admin app
+#
 def list_files_app():
     config = dotenv_values(".env.shared")
 
     logger.info(f"config params from dotenv: {config}")
 
-    if not os.path.exists(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"])
-    ):
-        logger.error(
-            f"{os.path.join(config['OUTPUT_DIR_PREFIX'], config['OUTPUT_DIR_data'])} does not exist."
-        )
+    if not os.path.exists(config["OUTPUT_DIR"]):
+        logger.error(f"{config['OUTPUT_DIR']} not found")
         raise ValueError
 
     template = pn.template.VanillaTemplate(
         title="PFS Target & Proposal Lists",
-        collapsed_sidebar=True,
+        # collapsed_sidebar=True,
         # header_background="#3A7D7E",
         # header_background="#C71585",  # mediumvioletred
         header_background="#dc143c",  # crimson
         busy_indicator=None,
         favicon="docs/site/assets/images/favicon.png",
-    )
-    # template = pn.template.BootstrapTemplate(
-    #     title="PFS Target Lists",
-    #     collapsed_sidebar=True,
-    #     # header_background="#3A7D7E",
-    #     # header_background="#C71585",  # mediumvioletred
-    #     header_background="#dc143c",  # crimson
-    #     busy_indicator=None,
-    #     favicon="docs/site/assets/images/favicon.png",
-    # )
-
-    df_files_tgt = load_file_properties(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_data"]), ext="ecsv"
+        # sidebar_width=400,
     )
 
-    df_files_psl = load_file_properties(
-        os.path.join(config["OUTPUT_DIR_PREFIX"], config["OUTPUT_DIR_ppp"]), ext="ecsv"
+    df_files_tgt_psl = load_file_properties(
+        config["OUTPUT_DIR"],
+        ext="ecsv",
     )
 
-    editors = {}
-    for c in df_files_tgt.columns:
-        editors[c] = None
+    psl_info_input = pn.widgets.FileInput(
+        value=None,
+        filename=None,
+        accept=".csv",
+        multiple=False,
+        height=30,
+    )
+
+    psl_info = pn.Column(
+        pn.Row("<font size=4>Please upload the proposal info:</font>", height=50),
+        psl_info_input,
+        height=150,
+    )
+
+    # range sliders for filtering
+    slider_nobj = pn.widgets.EditableRangeSlider(
+        name="N (ob_code)",
+        start=np.floor(df_files_tgt_psl["n_obj"].min() / 10) * 10,
+        end=np.ceil(df_files_tgt_psl["n_obj"].max() / 10) * 10,
+        step=1,
+    )
+    slider_fiberhour = pn.widgets.EditableRangeSlider(
+        name="Fiberhour (h)",
+        start=np.floor(df_files_tgt_psl["Exptime_tgt (FH)"].min()),
+        end=np.ceil(df_files_tgt_psl["Exptime_tgt (FH)"].max()),
+        step=1,
+    )
+
+    slider_rot_l = pn.widgets.EditableRangeSlider(
+        name="ROT (low, h)",
+        start=np.floor(df_files_tgt_psl["Time_tot_L (h)"].min()),
+        end=np.ceil(df_files_tgt_psl["Time_tot_L (h)"].max()),
+        step=1,
+    )
+    slider_rot_m = pn.widgets.EditableRangeSlider(
+        name="ROT (medium, h)",
+        start=np.floor(df_files_tgt_psl["Time_tot_M (h)"].min()),
+        end=np.ceil(df_files_tgt_psl["Time_tot_M (h)"].max()),
+        step=1,
+    )
 
     # setup panel components
-    table_files_tgt = pn.widgets.Tabulator(
-        df_files_tgt,
-        page_size=500,
-        theme="bootstrap",
-        # theme_classes=["table-striped", "table-sm"],
-        theme_classes=["table-striped"],
-        frozen_columns=["index"],
-        pagination="remote",
-        header_filters=True,
-        editors=editors,
-        titles={
-            "upload_id": "Upload ID",
-            "filenames": "File",
-            "n_obj": "N(object)",
-            "t_exp": "Fiberhour (h)",
-            "origname": "Original filename",
-            "filesize": "Size (kB)",
-            "timestamp": "Timestamp",
-        },
-        hidden_columns=["index", "fullpath", "link"],
-        buttons={"download": "<i class='fa-solid fa-download'></i>"},
-        layout="fit_data_table",
-    )
 
-    table_files_psl = pn.widgets.Tabulator(
-        df_files_psl,
-        page_size=500,
-        theme="bootstrap",
-        theme_classes=["table-striped"],
-        pagination="remote",
-        header_filters=True,
-        editors=editors,
-        layout="fit_data_table",
-        disabled=True,
-        buttons={
-            "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
-            "download": "<i class='fa-solid fa-download'></i>",
-        },
-        hidden_columns=["index"],
-        width=1400,
-    )
+    # Target & psl summary table
 
-    table_files_ppc = pn.widgets.Tabulator(
-        page_size=20,
-        theme="bootstrap",
-        theme_classes=["table-striped"],
-        pagination="remote",
-        header_filters=True,
-        editors=editors,
-        layout="fit_data_table",
-        disabled=True,
-        hidden_columns=["index", "Fiber usage fraction (%)", "link"],
-        width=550,
-        visible=False,
-    )
-
-    # Open a file by clicking the download buttons
-    # https://discourse.holoviz.org/t/how-to-make-a-dynamic-link-in-panel/2137
-    js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
-
-    def execute_javascript(script):
-        # print("js executed")
+    """def execute_javascript(script):
         script = f'<script type="text/javascript">{script}</script>'
         js_panel.object = script
         js_panel.object = ""
 
     def open_panel_download(event):
         if event.column == "download":
-            # href = f"data/target_lists/{df_files_tgt['filename'][event.row]}"
-            href = f"data/{config['OUTPUT_DIR_data']}/{df_files_tgt['filename'][event.row]}"
+            p_href = df_files_tgt["fullpath"][event.row].replace(
+                config["OUTPUT_DIR"], "data", 1
+            )
             # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-            script = f"window.open('{href}', '_blank')"
-            # print(href)
-            execute_javascript(script)
+            script = f"window.open('{p_href}', '_blank')"
+            execute_javascript(script)#"""
 
     def open_panel_magnify(event):
         if event.column == "magnify":
-            table_ppc_t = Table.read(
-                os.path.join(
-                    config["OUTPUT_DIR_PREFIX"],
-                    config["OUTPUT_DIR_ppc"],
-                    f"targets_{df_files_psl['Upload ID'][event.row]}.ecsv",
+            table_ppc.clear()
+            u_id = df_files_tgt_psl["Upload ID"][event.row]
+            p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
+            table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
+            table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
+            table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
+            (
+                nppc_fin,
+                p_result_fig_fin,
+                p_result_ppc_fin,
+                p_result_tab,
+            ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
+
+            def tab_ppc_save(p_result_ppc_fin, p_result_tab):
+                Table.from_pandas(p_result_ppc_fin).write(
+                    f"data/temp/TAC_ppc_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
+                )
+                Table.from_pandas(p_result_tab).write(
+                    f"data/temp/TAC_psl_{u_id}.ecsv",
+                    format="ascii.ecsv",
+                    delimiter=",",
+                    overwrite=True,
+                )
+                return f"data/temp/TAC_ppc_{u_id}.ecsv"
+
+            if nppc_fin is not None:
+                output_status = pn.pane.Markdown(
+                    f"<font size=3>You are checking program: Upload id = {u_id} </font>",
+                )
+
+                fd = pn.widgets.FileDownload(
+                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
+                    filename=f"TAC_ppc_{u_id}.csv",
+                    button_type="primary",
+                    width=250,
+                )
+
+                table_ppc.append(pn.Row(output_status, fd, width=750))
+
+            else:
+                output_status = pn.pane.Markdown(
+                    f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
+                )
+
+                table_ppc.append(pn.Row(output_status, width=750))
+
+            table_ppc.append(
+                pn.Row(
+                    pn.Column(p_result_ppc_fin, width=700, height=1000),
+                    pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
                 )
             )
-            table_files_ppc.value = Table.to_pandas(table_ppc_t).sort_values(
-                "ppc_priority", ascending=True, ignore_index=True
+
+    def Table_files_tgt_psl(column_checkbox_):
+        if psl_info_input.value is not None:
+            df_psl_info = load_input(
+                BytesIO(psl_info_input.value),
+                format="csv",
+            )[0]
+
+            _df_files_tgt_psl = pd.merge(
+                df_files_tgt_psl, df_psl_info, left_on="Upload ID", right_on="Upload ID"
             )
-            table_files_ppc.visible = True
 
-        if event.column == "download":
-            href = f"data/{config['OUTPUT_DIR_ppc']}/targets_{df_files_psl['Upload ID'][event.row]}.ecsv"
-            # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-            script = f"window.open('{href}', '_blank')"
-            # print(href)
-            execute_javascript(script)
+        else:
+            _df_files_tgt_psl = df_files_tgt_psl
 
-    table_files_tgt.on_click(open_panel_download)
-    table_files_psl.on_click(open_panel_magnify)
+        _hidden_columns = list(
+            set(list(_df_files_tgt_psl.columns)) - set(column_checkbox_)
+        )
+
+        _table_files_tgt_psl = pn.widgets.Tabulator(
+            _df_files_tgt_psl,
+            page_size=500,
+            theme="bootstrap",
+            # theme_classes=["table-striped", "table-sm"],
+            theme_classes=["table-striped"],
+            frozen_columns=["index"],
+            pagination="remote",
+            header_filters=True,
+            buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>"},
+            layout="fit_data_table",
+            hidden_columns=_hidden_columns,
+            disabled=True,
+            selection=[],
+            selectable="checkbox",
+        )
+
+        _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
+        _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
+        _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
+        _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
+
+        _table_files_tgt_psl.on_click(open_panel_magnify)
+
+        return _table_files_tgt_psl
+
+    column_checkbox = pn.widgets.CheckBoxGroup(
+        name="Columns to show",
+        value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
+        options=list(df_files_tgt_psl.columns) + ["proposal ID", "PI name", "rank"],
+        inline=True,
+    )
+
+    table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
+
+    # Details of PPC
+    table_ppc = pn.Column()
+
+    # -------------------------------------------------------------------
+
+    sidebar_column = pn.Column(
+        psl_info, slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
+    )
 
     tab_panels = pn.Tabs(
-        ("Target info", pn.Column(table_files_tgt, js_panel)),
-        ("Program info", pn.Row(table_files_psl, table_files_ppc)),
+        ("Program info", pn.Column(column_checkbox, table_files_tgt_psl)),
+        ("PPC details", table_ppc),
     )
 
     # put them into the template
-    # template.sidebar.append(sidebar_column)
+    template.sidebar.append(sidebar_column)
     template.main.append(tab_panels)
 
     app = template.servable()

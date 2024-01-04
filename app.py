@@ -26,7 +26,5 @@ pn.extension(
 
 pn.state.notifications.position = "bottom-left"
 
-target_uploader_app()
 
-# <link href= rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
-# <script src= integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm" crossorigin="anonymous"></script>
+target_uploader_app()

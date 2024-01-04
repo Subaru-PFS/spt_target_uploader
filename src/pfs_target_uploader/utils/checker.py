@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import re
+import time
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 from dateutil import parser, tz
-from logzero import logger
+from loguru import logger
 
 # below for qplan
 # isort: split
@@ -18,6 +19,7 @@ from . import (
     filter_category,
     filter_keys,
     optional_keys,
+    optional_keys_default,
     required_keys,
     target_datatype,
 )
@@ -25,12 +27,14 @@ from . import (
 warnings.filterwarnings("ignore")
 
 
-def get_semester_daterange(dt, current=False, next=False):
+def get_semester_daterange(dt, current=False, next=True):
     if current and next:
         logger.error("current and next cannot be True at the same time")
+        raise ValueError
 
     if (not current) and (not next):
         logger.error("current and next cannot be False at the same time")
+        raise ValueError
 
     if current:
         if (dt.month >= 2) and (dt.month <= 7):
@@ -71,7 +75,10 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     if date_end is None:
         date_end = tmp_end
 
-    daterange = pd.date_range(date_begin, date_end)
+    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
+    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
+
+    daterange = pd.date_range(date_begin, date_end + timedelta(days=1))
 
     ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
 
@@ -125,6 +132,90 @@ def visibility_checker(uS, date_begin=None, date_end=None):
     return np.array(tgt_obs_ok, dtype=bool)
 
 
+def visibility_checker_vec(
+    df: pd.DataFrame,
+    date_begin: datetime = None,
+    date_end: datetime = None,
+    min_el: float = 30.0,
+    max_el: float = 85.0,
+) -> np.ndarray:
+    if df.index.size == 0:
+        return np.array([], dtype=bool)
+
+    # set timezone to HST
+    tz_HST = tz.gettz("US/Hawaii")
+
+    # set next semester if there is no range is defined.
+    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
+
+    if date_begin is None:
+        date_begin = tmp_begin
+    if date_end is None:
+        date_end = tmp_end
+
+    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
+    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
+
+    # include the last date instead of removing it
+    daterange = pd.date_range(date_begin, date_end + timedelta(days=1), tz=tz_HST)
+
+    dates_begin, dates_end = daterange[:-1], daterange[1:]
+
+    nights_begin = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
+        for d in dates_begin
+    ]
+    nights_end = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
+        for d in dates_end
+    ]
+
+    # # one can set start/stop times with sunset/sunrise
+    # datetime_sunset = [observer.sunset(d) for d in dates_begin]
+    # datetime_sunrise = [observer.sunrise(d) for d in dates_end]
+
+    # define targets
+    targets = [
+        StaticTarget(name=df["ob_code"][i], ra=df["ra"][i], dec=df["dec"][i])
+        for i in range(df.index.size)
+    ]
+
+    def process_single_target(target: StaticTarget, exptime: float) -> bool:
+        t_obs_ok_single = 0
+        for dd in range(len(dates_begin)):
+            observer.set_date(nights_begin[dd])
+            _, t_start, t_stop = observer.observable(
+                target,
+                nights_begin[dd],
+                nights_end[dd],
+                # datetime_sunset[dd],
+                # datetime_sunrise[dd],
+                min_el,  # [deg]
+                max_el,  # [deg]
+                exptime,  # [s] TODO: This has to be a total time including overheads
+                airmass=None,
+                moon_sep=None,
+            )
+            try:
+                if t_stop > t_start:
+                    t_obs_ok_single += (t_stop - t_start).seconds
+            except TypeError:
+                continue
+
+            # Once t_obs_ok_single exceeds the required exptime, you can exit the function
+            if t_obs_ok_single >= exptime:
+                return True
+        # If it not ever returned before, it means that the object cannot be observed in the input period
+        return False
+
+    # make the object loop vectorized
+    vec_func = np.vectorize(process_single_target, otypes=["bool"])
+    # TODO: Exposure time should be the total time required to make an exposure (i.e., incl. overheads)
+    is_observable = vec_func(targets, df["exptime"])
+
+    return is_observable
+
+
 def check_keys(
     df,
     required_keys=required_keys,
@@ -141,27 +232,27 @@ def check_keys(
 
     for k in required_keys:
         if k in df.columns:
-            desc = f"Required key `{k}` is found"
+            desc = f"Required column `{k}` is found."
             required_status.append(True)
             required_desc_success.append(desc)
             logger.info(desc)
         else:
-            desc = f"Required key `{k}` is missing"
+            desc = f"Required column `{k}` is missing."
             required_status.append(False)
             required_desc_error.append(desc)
             logger.error(desc)
 
     for k in optional_keys:
         if k in df.columns:
-            desc = f"Optional key `{k}` is found"
+            desc = f"Optional column `{k}` is found."
             optional_status.append(True)
             optional_desc_success.append(desc)
             logger.info(desc)
         else:
-            desc = f"Optional key `{k}` is missing"
+            desc = f"Optional column `{k}` is missing. The default value, `{optional_keys_default[k]}`, will be used."
             optional_status.append(False)
             optional_desc_warning.append(desc)
-            logger.warn(desc)
+            logger.warning(desc)
 
     dict_required_keys = dict(
         status=np.all(required_status),  # True for success
@@ -213,6 +304,10 @@ def check_str(
             dict_str[f"success_{k}"] = is_match
             success_required_keys = np.logical_and(success_required_keys, is_match)
             is_success = is_success and np.all(is_match)
+            if np.all(is_match):
+                logger.info(f"[{k}] validation for string values in {k} is successful")
+            else:
+                logger.error(f"[{k}] validation for string values in {k} is failed")
 
     for k in optional_keys:
         if (k in df.columns) and (dtype[k] is str):
@@ -222,6 +317,10 @@ def check_str(
             dict_str[f"success_{k}"] = is_match
             success_optional_keys = np.logical_and(success_optional_keys, is_match)
             is_optional_success = is_optional_success and np.all(is_match)
+            if np.all(is_match):
+                logger.info(f"[{k}] validation for string values is {k} is successful")
+            else:
+                logger.warning(f"[{k}] validation for string values in {k} if failed")
 
     dict_str["status"] = is_success
     dict_str["status_optional"] = is_optional_success
@@ -232,18 +331,6 @@ def check_str(
 
 
 def check_values(df, logger=logger):
-    # TODO: check data range including:
-    # - ra must be in 0 to 360
-    # - dec must be in -90 to 90
-    # - equinox must be "J2000" or "J2000.0"
-    # - [x] priority must be positive integer [0-9]
-    # - exptime must be positive
-    # - resolution must be 'L' or 'M'
-    #
-    # - filters must be in targetdb
-    # - fluxes must be positive
-    #
-
     # Required keys
     is_ra = np.logical_and(df["ra"] >= 0.0, df["ra"] <= 360.0)
     is_dec = np.logical_and(df["dec"] >= -90.0, df["dec"] <= 90.0)
@@ -251,7 +338,6 @@ def check_values(df, logger=logger):
     is_priority = np.logical_and(df["priority"] >= 0.0, df["priority"] <= 9.0)
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
-    is_equinox = np.logical_or(df["equinox"] == "J2000", df["equinox"] == "J2000.0")
 
     dict_values = {}
     is_success = True
@@ -259,13 +345,19 @@ def check_values(df, logger=logger):
     success_all = np.ones(df.index.size, dtype=bool)  # True if success
 
     for k, v in zip(
-        ["ra", "dec", "equinox", "priority", "exptime", "resolution"],
-        [is_ra, is_dec, is_equinox, is_priority, is_exptime, is_resolution],
+        ["ra", "dec", "priority", "exptime", "resolution"],
+        [is_ra, is_dec, is_priority, is_exptime, is_resolution],
     ):
         dict_values[f"status_{k}"] = np.all(v)
         dict_values[f"success_{k}"] = v
         is_success = is_success and np.all(v)
         success_all = np.logical_and(success_all, v)
+
+        if np.all(v):
+            logger.info(f"[{k}] validation for values in {k} is successful")
+        else:
+            logger.error(f"[{k}] validation for values in {k} is failed")
+
     dict_values["status"] = is_success
     dict_values["success"] = success_all
 
@@ -282,74 +374,126 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
         df[f"flux_{band}"] = np.nan
         df[f"flux_error_{band}"] = np.nan
 
-    is_found = np.zeros(df.index.size, dtype=bool)
-
-    # print(df["i2_hsc"])
-
     def assign_filter_category(k):
         for band in filter_category.keys():
-            # print(band, filter_category[band])
             if k in filter_category[band]:
                 return band
         return None
 
-    for i in range(df.index.size):
-        for c in df.columns:
+    t_start = time.time()
+
+    def detect_fluxcolumns(s):
+        filters_found_one = []
+        is_found_filter = False
+        for c in s.keys():
             b = assign_filter_category(c)
-            # print(c, b)
             if b is not None:
-                if np.isfinite(df.loc[i, c]):
-                    if df.loc[i, f"filter_{b}"] is not None:
+                if np.isfinite(s[c]):
+                    if s[f"filter_{b}"] is not None:
                         logger.warning(
-                            f"filter_{b} has already been filled. {c} filter for {df.loc[i,'ob_code']} is skipped."
+                            f"filter_{b} has already been filled. {c} filter for {s['ob_code']} is skipped."
                         )
                         continue
 
-                    flux = df.loc[i, c]
+                    flux = s[c]
                     logger.info(
-                        f"{b} band filter column ({c}) found for OB {df.loc[i, 'ob_code']} as {flux}"
+                        f"{b} band filter column ({c}) found for OB {s['ob_code']} as {flux}"
                     )
-                    is_found[i] = True
-                    df.loc[i, f"filter_{b}"] = c
-                    df.loc[i, f"flux_{b}"] = flux
+                    is_found_filter = True
+                    filters_found_one.append(c)
+                    s[f"filter_{b}"] = c
+                    s[f"flux_{b}"] = flux
+
                     try:
-                        if np.isfinite(df.loc[i, f"{c}_error"]):
-                            flux_error = df.loc[i, f"{c}_error"]
-                            df.loc[i, f"flux_error_{b}"] = flux_error
+                        if np.isfinite(s[f"{c}_error"]):
+                            flux_error = s[f"{c}_error"]
+                            s[f"flux_error_{b}"] = flux_error
                             logger.info(
                                 f"{b} band flux error ({c}_error) found as {flux_error}"
                             )
                     except KeyError:
                         pass
+                    except TypeError:
+                        pass
 
-    # logger.info(f"{df.loc[:,'filter_i']}")
+        return s, is_found_filter, filters_found_one
+
+    vfunc_fluxcolumns = np.vectorize(
+        detect_fluxcolumns, otypes=[dict, bool, np.ndarray]
+    )
+    input_list_of_dicts = df.to_dict(orient="records")
+    output_list_of_dicts, is_found, filters_found = vfunc_fluxcolumns(
+        input_list_of_dicts
+    )
+    dfout = pd.DataFrame.from_records(output_list_of_dicts)
+    t_stop = time.time()
+
+    filters_found_flatten = [item for sublist in filters_found for item in sublist]
+    filters_found_unique = np.unique(filters_found_flatten)
+
+    logger.info(f"Flux column detection finished in {t_stop - t_start:.2f} [s]")
 
     dict_flux = {}
     dict_flux["success"] = is_found
-    # print(is_found)
+    dict_flux["filters"] = filters_found_unique
+
+    logger.info(f"Unique filters {filters_found_unique}")
+
     if not np.all(is_found):
         dict_flux["status"] = False
         logger.error(
-            f"Flux columns are missing for objects: {df.loc[~is_found,'ob_code'].to_numpy()}"
+            f"Flux columns are missing for objects: {dfout.loc[~is_found,'ob_code'].to_numpy()}"
         )
     else:
+        logger.info("Flux columns are detected for all objects")
         dict_flux["status"] = True
 
     # cleaning
     logger.info("dropping columns with NA values for all rows.")
     for k, v in filter_category.items():
-        if df.loc[:, f"filter_{k}"].isna().all():
-            df.drop(columns=[f"filter_{k}"], inplace=True)
-            df.drop(columns=[f"flux_{k}"], inplace=True)
-            df.drop(columns=[f"flux_error_{k}"], inplace=True)
-        elif df.loc[:, f"flux_{k}"].isna().all():
-            df.drop(columns=[f"flux_{k}"], inplace=True)
-        elif df.loc[:, f"flux_error_{k}"].isna().all():
-            df.drop(columns=[f"flux_error_{k}"], inplace=True)
+        if dfout.loc[:, f"filter_{k}"].isna().all():
+            dfout.drop(columns=[f"filter_{k}"], inplace=True)
+            dfout.drop(columns=[f"flux_{k}"], inplace=True)
+            dfout.drop(columns=[f"flux_error_{k}"], inplace=True)
+        elif dfout.loc[:, f"flux_{k}"].isna().all():
+            dfout.drop(columns=[f"flux_{k}"], inplace=True)
+        elif dfout.loc[:, f"flux_error_{k}"].isna().all():
+            dfout.drop(columns=[f"flux_error_{k}"], inplace=True)
 
-    logger.info(f"{df}")
+    logger.info(f"{dfout}")
 
-    return dict_flux, df
+    return dict_flux, dfout
+
+
+def check_visibility(
+    df, date_begin=None, date_end=None, vectorized=True, logger=logger
+):
+    dict_visibility = {}
+
+    if vectorized:
+        is_visible = visibility_checker_vec(
+            df, date_begin=date_begin, date_end=date_end
+        )
+    else:
+        is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
+        print(is_visible)
+
+    if np.all(is_visible):
+        logger.info("All objects are visible in the input period")
+        dict_visibility["status"] = True
+    elif np.any(is_visible):
+        logger.warning(
+            f"Objects are not visible in the input period: {df.loc[~is_visible,'ob_code'].to_list()}"
+        )
+        dict_visibility["status"] = True
+    else:
+        # None of targets are visible in the input observation period
+        logger.error("None of objects is visible in the input period")
+        dict_visibility["status"] = False
+
+    dict_visibility["success"] = is_visible
+
+    return dict_visibility
 
 
 def check_unique(df, logger=logger):
@@ -386,7 +530,16 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
-def validate_input(df, logger=logger):
+def validate_input(df, date_begin=None, date_end=None, logger=logger):
+    logger.info("Validation of the input list starts")
+    t_validate_start = time.time()
+
+    def msg_t_stop():
+        t_validate_stop = time.time()
+        logger.info(
+            f"Validation of the input list finished in {t_validate_stop-t_validate_start:.1f} seconds"
+        )
+
     validation_status = {}
 
     # Validation status
@@ -399,6 +552,7 @@ def validate_input(df, logger=logger):
     validation_status["str"] = {"status": None}
     validation_status["values"] = {"status": None}
     validation_status["flux"] = {"status": None}
+    validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
 
     # check mandatory columns
@@ -414,7 +568,8 @@ def validate_input(df, logger=logger):
     validation_status["optional_keys"] = dict_optional_keys
 
     if not dict_required_keys["status"]:
-        return validation_status
+        msg_t_stop()
+        return validation_status, df
 
     # check string values
     logger.info("[STAGE 2] Checking string values")
@@ -422,7 +577,8 @@ def validate_input(df, logger=logger):
     logger.info(f"[STAGE 2] status: {dict_str['status']} (Success if True)")
     validation_status["str"] = dict_str
     if not dict_str["status"]:
-        return validation_status
+        msg_t_stop()
+        return validation_status, df
 
     # check value against allowed ranges
     logger.info("[STAGE 3] Checking whether values are in allowed ranges")
@@ -430,15 +586,22 @@ def validate_input(df, logger=logger):
     logger.info(f"[STAGE 3] status: {dict_values['status']} (Success if True)")
     validation_status["values"] = dict_values
     if not dict_values["status"]:
-        return validation_status
+        msg_t_stop()
+        return validation_status, df
 
     # check columns for flux
-    logger.info("[TMP] Checking flux information")
+    logger.info("[STAGE 3'] Checking flux information")
     dict_flux, df = check_fluxcolumns(df)
-    logger.info(f"[TMP] status: {dict_flux['status']} (Success if True)")
+    logger.info(f"[STAGE 3'] status: {dict_flux['status']} (Success if True)")
     validation_status["flux"] = dict_flux
-    if not dict_flux["status"]:
-        return validation_status
+
+    # check columns for visibility
+    logger.info("[STAGE 3''] Checking target visibility")
+    dict_visibility = check_visibility(
+        df, date_begin=date_begin, date_end=date_end, vectorized=True
+    )
+    logger.info(f"[STAGE 3''] status: {dict_visibility['status']} (Success if True)")
+    validation_status["visibility"] = dict_visibility
 
     # check unique constraint for `ob_code`
     logger.info("[STAGE 4] Checking whether all ob_code are unique")
@@ -451,6 +614,7 @@ def validate_input(df, logger=logger):
         and validation_status["str"]["status"]
         and validation_status["values"]["status"]
         and validation_status["flux"]["status"]
+        and validation_status["visibility"]["status"]
         and validation_status["unique"]["status"]
     ):
         logger.info("[Summary] succeeded to meet all validation criteria")
@@ -458,4 +622,13 @@ def validate_input(df, logger=logger):
     else:
         logger.info("[Summary] failed to meet all validation criteria")
 
-    return validation_status
+    msg_t_stop()
+
+    # remove unregistered columns from the dataframe
+    logger.info("Dropping columns not in the required, optional, and filter keys")
+    for k in df.columns:
+        if k not in required_keys + optional_keys + filter_keys:
+            logger.info(f'"{k}" is dropped')
+            df.drop(columns=[k], inplace=True)
+
+    return validation_status, df

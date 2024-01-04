@@ -8,38 +8,27 @@ from itertools import chain
 
 import colorcet as cc
 import holoviews as hv
-import hvplot.pandas  # need to run pandas.DataFrame.hvplot
+import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
 import matplotlib.pyplot as plt
 import multiprocess
 import numpy as np
 import pandas as pd
 import panel as pn
-import seaborn as sns
+import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
+from bokeh.models.widgets.tables import NumberFormatter
+from loguru import logger
 from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
+from spatialpandas.geometry import PolygonArray
 
 # below for netflow
 # isort: split
 import ets_fiber_assigner.netflow as nf
 from ics.cobraOps.Bench import Bench
-
-# from ics.cobraOps import plotUtils
-# from ics.cobraOps.cobraConstants import NULL_TARGET_ID, NULL_TARGET_POSITION
-# from ics.cobraOps.CobrasCalibrationProduct import CobrasCalibrationProduct
-# from ics.cobraOps.CollisionSimulator import CollisionSimulator
-# from ics.cobraOps.TargetGroup import TargetGroup
-
-# below for qplan
-# isort: split
-from qplan.entity import StaticTarget
-from qplan.util.site import site_subaru as observer
-
-warnings.filterwarnings("ignore")
-
 
 # check bokeh version
 # ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
@@ -50,8 +39,14 @@ from pkg_resources import parse_version
 if parse_version(bokeh.__version__) < parse_version("3.3"):
     hv.renderer("bokeh").webgl = False
 
+warnings.filterwarnings("ignore")
 
-def PPPrunStart(uS, weight_para):
+pn.extension(notifications=True)
+
+
+def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
+    r_pfi = d_pfi / 2.0
+
     def count_N(sample):
         """calculate local count of targets
 
@@ -107,7 +102,7 @@ def PPPrunStart(uS, weight_para):
 
         return sample
 
-    def target_DBSCAN(sample, sep=1.38):
+    def target_DBSCAN(sample, sep=d_pfi):
         """separate pointings/targets into different groups
 
         Parameters
@@ -131,9 +126,16 @@ def PPPrunStart(uS, weight_para):
         n_clusters = len(unique_labels)
 
         tgt_group = []
+        tgt_pri_ord = []
 
         for ii in range(n_clusters):
-            tgt_t = sample[labels == ii]
+            tgt_t_pri_tot = sum(sample[labels == ii]["weight"])
+            tgt_pri_ord.append([ii, tgt_t_pri_tot])
+
+        tgt_pri_ord.sort(key=lambda x: x[1], reverse=True)
+
+        for jj in np.array(tgt_pri_ord)[:, 0]:
+            tgt_t = sample[labels == jj]
             tgt_group.append(tgt_t)
 
         return tgt_group
@@ -199,7 +201,7 @@ def PPPrunStart(uS, weight_para):
         # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
         hexagon = center.directional_offset_by(
             [30 + PA, 90 + PA, 150 + PA, 210 + PA, 270 + PA, 330 + PA, 30 + PA] * u.deg,
-            1.38 / 2.0 * u.deg,
+            r_pfi * u.deg,
         )
         ra_h = hexagon.ra.deg
         dec_h = hexagon.dec.deg
@@ -232,7 +234,7 @@ def PPPrunStart(uS, weight_para):
         """
         values = np.vstack((np.deg2rad(sample["dec"]), np.deg2rad(sample["ra"])))
         kde = KernelDensity(
-            bandwidth=np.deg2rad(1.38 / 2.0),
+            bandwidth=np.deg2rad(r_pfi),
             kernel="linear",
             algorithm="ball_tree",
             metric="haversine",
@@ -317,7 +319,7 @@ def PPPrunStart(uS, weight_para):
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, mutiPro, conta, contb, contc):
+    def PPP_centers(sample_f, mutiPro, weight_para, starttime, exetime):
         """determine pointing centers
 
         Parameters
@@ -335,17 +337,38 @@ def PPPrunStart(uS, weight_para):
         sample with list of pointing centers in meta
         """
 
-        time_start = time.time()
+        conta, contb, contc = weight_para
+        status = 999
         Nfiber = int(2394 - 200)  # 200 for calibrators
         sample_f = count_N(sample_f)
         sample_f = weight(sample_f, conta, contb, contc)
 
+        if (time.time() - starttime) > exetime:
+            sample_f.meta["PPC"] = []
+            status = 1
+            logger.info("PPP stopped since the time is running out [PPP_centers s1]")
+            return sample_f, status
+
         peak = []
 
-        for sample in target_DBSCAN(sample_f, 1.38):
+        for sample in target_DBSCAN(sample_f, d_pfi):
+            if (time.time() - starttime) > exetime:
+                status = 1
+                logger.info(
+                    "PPP stopped since the time is running out [PPP_centers s2]"
+                )
+                break
+
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
-            while any(sample_s["exptime_PPP"] > 0):
+            while any(sample_s["exptime_PPP"] > 0) and len(peak) <= 200:
+                if (time.time() - starttime) > exetime:
+                    status = 1
+                    logger.info(
+                        "PPP stopped since the time is running out [PPP_centers s2_1]"
+                    )
+                    break
+
                 # -------------------------------
                 ####peak_xy from KDE peak with weights
                 X_, Y_, obj_dis_sig_, peak_x, peak_y = KDE(sample_s, mutiPro)
@@ -373,6 +396,7 @@ def PPPrunStart(uS, weight_para):
                 # -------------------------------
                 if len(index_) > Nfiber:
                     index_ = random.sample(list(index_), Nfiber)
+
                 sample_s["exptime_PPP"][
                     list(index_)
                 ] -= 900  # targets in the PPC observed with 900 sec
@@ -383,40 +407,14 @@ def PPPrunStart(uS, weight_para):
 
         sample_f.meta["PPC"] = np.array(peak)
 
-        return sample_f
+        return sample_f, status
 
-    def plot_KDE(sample_f):
-        sample_g = target_DBSCAN(sample_f, 1.38, True)
-        peak = sample_f.meta["PPC"]
-        for sample in sample_g:
-            plt.figure(figsize=(7, 5))
-            plt.scatter(
-                sample["ra"],
-                sample["dec"],
-                c=sample["priority"],
-                marker="o",
-                cmap="Paired_r",
-                vmin=0,
-                vmax=9,
-                s=7,
-                zorder=10,
-            )
-            plt.colorbar(label="User priority")
-            PFS_FoV_plot(peak[:, 1], peak[:, 2], peak[:, 3], "orange", 0.5, "--")
-            plt.xlim(min(sample["ra"]) - 1, max(sample["ra"]) + 1)
-            plt.ylim(min(sample["dec"]) - 1, max(sample["dec"]) + 1)
-            plt.xlabel("RA", fontsize=10)
-            plt.ylabel("DEC", fontsize=10)
-            plt.title
-            plt.show()
-
-    def point_DBSCAN(sample, Plot):
+    def point_DBSCAN(sample):
         """separate pointings into different group
 
         Parameters
         ==========
         sample:table
-        Plot, Print:boolean
 
         Returns
         =======
@@ -425,7 +423,7 @@ def PPPrunStart(uS, weight_para):
         ppc_xy = sample.meta["PPC"]
 
         # haversine uses (dec,ra) in radian;
-        db = DBSCAN(eps=np.radians(1.38), min_samples=1, metric="haversine").fit(
+        db = DBSCAN(eps=np.radians(d_pfi), min_samples=1, metric="haversine").fit(
             np.fliplr(np.radians(ppc_xy[:, [1, 2]]))
         )
 
@@ -433,21 +431,11 @@ def PPPrunStart(uS, weight_para):
         unique_labels = set(labels)
         n_clusters = len(unique_labels)
 
-        if Plot:
-            colors = sns.color_palette(cc.glasbey_warm, n_clusters)
-
         ppc_group = []
 
         for ii in range(n_clusters):
             ppc_t = ppc_xy[labels == ii]
             ppc_group.append(ppc_t)
-
-            if Plot:
-                xy = ppc_t[:, [1, 2]]
-                for uu in xy:
-                    PFS_FoV_plot(uu[0], uu[1], 0, colors[ii], 0.2, "-")
-                    plt.plot(uu[0], uu[1], "o", mfc=colors[ii], mew=0, ms=5)
-                plt.show()
 
         return ppc_group
 
@@ -469,12 +457,6 @@ def PPPrunStart(uS, weight_para):
             id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
             targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
             int_ += 1
-
-        # for ii in range(50): #mock Fstars
-        #    targetL.append(nf.CalibTarget('Fs_'+str(ii),0,0, "cal"))
-
-        # for jj in range(150):#mock skys
-        #    targetL.append(nf.CalibTarget('Sky_'+str(jj),0,0,"sky"))
 
         return targetL
 
@@ -501,19 +483,13 @@ def PPPrunStart(uS, weight_para):
             }
             int_ += 1
 
-        # classdict["sky"] = {"numRequired": 150,
-        #                    "nonObservationCost": max(sample['weight'])*1., "calib": True}
-
-        # classdict["cal"] = {"numRequired": 50,
-        #                    "nonObservationCost": max(sample['weight'])*1., "calib": True}
-
         return classdict
 
     def cobraMoveCost(dist):
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample):
+    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
 
         Parameters
@@ -532,7 +508,6 @@ def PPPrunStart(uS, weight_para):
         bench = Bench(layout="full")
         tgt = sam2netflow(sample)
         classdict = NetflowPreparation(sample)
-        otime = "2024-05-20T08:00:00Z"
 
         telescopes = []
 
@@ -613,20 +588,27 @@ def PPPrunStart(uS, weight_para):
             # if there are PPCs with no fiber assignment
             index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
-            Tel_t = Tel[:]
+            Tel = np.array(Tel)
+            Tel_t = np.copy(Tel)
+            otime_ = "2024-05-20T08:00:00Z"
             iter_1 = 0
 
-            while len(index) > 0 and iter_1 < 3:
-                # shift PPCs with 0.2 deg, but only run three iterations to save computational time
+            while len(index) > 0 and iter_1 < 8:
+                # shift PPCs with 0.2 deg, but only run 6 iterations to save computational time
                 # typically one iteration is enough
-                for ind in index:
-                    Tel_t[ind, 1] = Tel[ind, 1] + np.random.choice([-0.2, 0.2], 1)[0]
-                    Tel_t[ind, 2] = Tel[ind, 2] + np.random.choice([-0.2, 0.2], 1)[0]
+                shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
+                shift_dec = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample)
+                Tel_t[index, 1] = Tel[index, 1] + shift_ra
+                Tel_t[index, 2] = Tel[index, 2] + shift_dec
+
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 iter_1 += 1
+
+                if iter_1 >= 4:
+                    otime_ = "2024-04-20T08:00:00Z"
 
             return res, telescope, tgt
 
@@ -641,9 +623,13 @@ def PPPrunStart(uS, weight_para):
         =======
         Fiber assignment in each PPC
         """
-        time_start = time.time()
 
-        ppc_g = point_DBSCAN(sample, False)  # separate ppc into different groups
+        if len(sample.meta["PPC"]) == 0:
+            point_t = []
+            logger.info("No PPC is determined due to running out of time [netflowRun]")
+            return point_t
+
+        ppc_g = point_DBSCAN(sample)  # separate ppc into different groups
 
         point_list = []
         point_c = 0
@@ -705,7 +691,7 @@ def PPPrunStart(uS, weight_para):
         point_t = Table(
             np.array(point_list, dtype=object),
             names=[
-                "ppc_code",
+                "ppc_code_",
                 "group_id",
                 "ppc_ra",
                 "ppc_dec",
@@ -745,25 +731,37 @@ def PPPrunStart(uS, weight_para):
 
         completion rate: in each user-defined priority + overall
         """
-        sample.add_column(0, name="allocate_time")
+        sample["exptime_assign"] = 0
+        sub_l = sorted(list(set(sample["priority"])))
+        n_sub = len(sub_l)
+
+        if len(point_l) == 0:
+            return (
+                sample,
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
+                sub_l,
+            )
+
         point_l_pri = point_l[
             point_l.argsort(keys="ppc_priority")
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        sub_l = sorted(list(set(sample["priority"])))
-        n_sub = len(sub_l)
-        count_sub = [len(sample)] + [sum(sample["priority"] == ll) for ll in sub_l]
-        completeR = []  # count
+        count_sub = [sum(sample["exptime"]) / 900.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        ]  # fiber hours
+        completeR = []  # fiber hours
         completeR_ = []  # percentage
 
         for ppc in point_l_pri:
             lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
-            sample["allocate_time"].data[lst] += 900
+            sample["exptime_assign"].data[lst] += 900
 
-            comp_s = np.where(sample["exptime_PPP"] == sample["allocate_time"])[0]
-            comT_t = [len(comp_s)] + [
-                sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
+            # achieved fiber hours (in total, in P[0-9])
+            comT_t = [sum(sample["exptime_assign"]) / 900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+                for ll in sub_l
             ]
             completeR.append(comT_t)
             completeR_.append(
@@ -772,14 +770,14 @@ def PPPrunStart(uS, weight_para):
 
         return sample, np.array(completeR), np.array(completeR_), sub_l
 
-    def netflow_iter(uS, obj_allo, conta, contb, contc):
+    def netflow_iter(uS, obj_allo, weight_para, starttime, exetime):
         """iterate the total procedure to re-assign fibers to targets which have not been assigned
             in the previous/first iteration
 
         Parameters
         ==========
         uS: table
-            sample with exptime>allocate_time
+            sample with exptime>exptime_assign
 
         obj_allo: table
             ppc information
@@ -796,30 +794,43 @@ def PPPrunStart(uS, weight_para):
             # if targets can not be successfully assigned with fibers in >5 iterations, then directly stop
             # if total number of ppc >200 (~5 nights), then directly stop
         """
-        time_start = time.time()
-        if sum(uS["allocate_time"] == uS["exptime_PPP"]) == len(uS):
+
+        status = 999
+
+        if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
             # remove ppc with no fiber assignment
             obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
-            return obj_allo
+            return obj_allo, status
+
+        elif (time.time() - starttime) > exetime:
+            status = 1
+            logger.info("PPP stopped since the time is running out [netflow_iter s1]")
+            return obj_allo, status
 
         else:
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
-            while any(uS["allocate_time"] < uS["exptime_PPP"]) and iter_m2 < 10:
-                uS_t1 = uS[uS["allocate_time"] < uS["exptime_PPP"]]
-                uS_t1["exptime_PPP"] = (
-                    uS_t1["exptime_PPP"] - uS_t1["allocate_time"]
-                )  # remained exposure time
-                uS_t1.remove_column("allocate_time")
+            while any(uS["exptime_assign"] < uS["exptime_PPP"]) and iter_m2 < 10:
+                if (time.time() - starttime) > exetime:
+                    status = 1
+                    logger.info(
+                        "PPP stopped since the time is running out [netflow_iter s2]"
+                    )
+                    break
 
-                uS_t2 = PPP_centers(uS_t1, True, conta, contb, contc)
+                uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
+                uS_t1["exptime_PPP"] = (
+                    uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
+                )  # remained exposure time
+
+                uS_t2 = PPP_centers(uS_t1, True, weight_para, starttime, exetime)[0]
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if len(obj_allo) > 200 or iter_m2 >= 10:
-                    # stop if n_ppc>200
-                    return obj_allo
+                if len(obj_allo) > 200:
+                    logger.info("PPP stopped since Nppc > 200 [netflow_iter s2]")
+                    break
 
                 else:
                     obj_allo = vstack([obj_allo, obj_allo_t])
@@ -829,9 +840,11 @@ def PPPrunStart(uS, weight_para):
                     uS = complete_ppc(uS_t2, obj_allo)[0]
                     iter_m2 += 1
 
-            return obj_allo
+            return obj_allo, status
 
-    conta, contb, contc = weight_para
+    # computation starts here
+    logger.info("PPP run started")
+    t_ppp_start = time.time()
 
     exptime_ppp = np.ceil(uS["exptime"] / 900) * 900
     uS.add_column(exptime_ppp, name="exptime_PPP")
@@ -839,90 +852,139 @@ def PPPrunStart(uS, weight_para):
     uS_L = uS[uS["resolution"] == "L"]
     uS_M = uS[uS["resolution"] == "M"]
 
+    out_uS_L2 = []
+    out_cR_L = []
+    out_cR_L_ = []
+    out_sub_l = []
+    out_obj_allo_L_fin = []
+    out_uS_M2 = []
+    out_cR_M = []
+    out_cR_M_ = []
+    out_sub_m = []
+    out_obj_allo_M_fin = []
+
     if len(uS_L) > 0 and len(uS_M) == 0:
-        uS_L_s2 = PPP_centers(uS_L, True, conta, contb, contc)
+        uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
         obj_allo_L = netflowRun(uS_L_s2)
         uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin = netflow_iter(uS_L2, obj_allo_L, conta, contb, contc)
-
-        uS_L_s2.remove_column("allocate_time")
-        uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
-
-        return uS_L2, cR_L, cR_L_, sub_l, obj_allo_L_fin, [], [], [], [], []
-
-    if len(uS_M) > 0 and len(uS_L) == 0:
-        uS_M_s2 = PPP_centers(uS_M, True, conta, contb, contc)
-        obj_allo_M = netflowRun(uS_M_s2)
-        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin = netflow_iter(uS_M2, obj_allo_M, conta, contb, contc)
-
-        uS_M_s2.remove_column("allocate_time")
-        uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
-
-        return [], [], [], [], [], uS_M2, cR_M, cR_M_, sub_m, obj_allo_M_fin
-
-    if len(uS_L) > 0 and len(uS_M) > 0:
-        uS_L_s2 = PPP_centers(uS_L, True, conta, contb, contc)
-        obj_allo_L = netflowRun(uS_L_s2)
-        uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin = netflow_iter(uS_L2, obj_allo_L, conta, contb, contc)
-
-        uS_L_s2.remove_column("allocate_time")
-        uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
-
-        uS_M_s2 = PPP_centers(uS_M, True, conta, contb, contc)
-        obj_allo_M = netflowRun(uS_M_s2)
-        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin = netflow_iter(uS_M2, obj_allo_M, conta, contb, contc)
-
-        uS_M_s2.remove_column("allocate_time")
-        uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
-
-        return (
-            uS_L2,
-            cR_L,
-            cR_L_,
-            sub_l,
-            obj_allo_L_fin,
-            uS_M2,
-            cR_M,
-            cR_M_,
-            sub_m,
-            obj_allo_M_fin,
+        obj_allo_L_fin, status_ = netflow_iter(
+            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
         )
 
+        uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
 
-def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
+        out_uS_L2 = uS_L2
+        out_cR_L = cR_L
+        out_cR_L_ = cR_L_
+        out_sub_l = sub_l
+        out_obj_allo_L_fin = obj_allo_L_fin
+
+    if len(uS_M) > 0 and len(uS_L) == 0:
+        uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
+        obj_allo_M = netflowRun(uS_M_s2)
+        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
+        obj_allo_M_fin, status_ = netflow_iter(
+            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+        )
+
+        uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
+
+        out_uS_M2 = uS_M2
+        out_cR_M = cR_M
+        out_cR_M_ = cR_M_
+        out_sub_m = sub_m
+        out_obj_allo_M_fin = obj_allo_M_fin
+
+    if len(uS_L) > 0 and len(uS_M) > 0:
+        uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
+        obj_allo_L = netflowRun(uS_L_s2)
+        uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
+        obj_allo_L_fin, status_ = netflow_iter(
+            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+        )
+
+        uS_L2, cR_L, cR_L_, sub_l = complete_ppc(uS_L_s2, obj_allo_L_fin)
+
+        uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
+        obj_allo_M = netflowRun(uS_M_s2)
+        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
+        obj_allo_M_fin, status_ = netflow_iter(
+            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+        )
+
+        uS_M2, cR_M, cR_M_, sub_m = complete_ppc(uS_M_s2, obj_allo_M_fin)
+
+        out_uS_L2 = uS_L2
+        out_cR_L = cR_L
+        out_cR_L_ = cR_L_
+        out_sub_l = sub_l
+        out_obj_allo_L_fin = obj_allo_L_fin
+        out_uS_M2 = uS_M2
+        out_cR_M = cR_M
+        out_cR_M_ = cR_M_
+        out_sub_m = sub_m
+        out_obj_allo_M_fin = obj_allo_M_fin
+
+    t_ppp_stop = time.time()
+    logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
+    logger.info(f"PPP running status: {status_:.0f}")
+
+    return (
+        out_uS_L2,
+        out_cR_L,
+        out_cR_L_,
+        out_sub_l,
+        out_obj_allo_L_fin,
+        out_uS_M2,
+        out_cR_M,
+        out_cR_M_,
+        out_sub_m,
+        out_obj_allo_M_fin,
+        status_,
+    )
+
+
+def ppp_result(
+    cR_l,
+    sub_l,
+    obj_allo_l,
+    uS_L2,
+    cR_m,
+    sub_m,
+    obj_allo_m,
+    uS_M2,
+    d_pfi=1.38,
+    box_width=1200.0,
+    plot_height=400,
+):
+    r_pfi = d_pfi / 2.0
+
+    tabulator_stylesheet = """
+    .tabulator-row-odd { background-color: #ffffff !important; }
+    .tabulator-row-even { background-color: #ffffff !important; }
+    .tabulator-row-odd:hover { color: #000000 !important; background-color: #ffffff !important; }
+    .tabulator-row-even:hover { color: #000000 !important; background-color: #ffffff !important; }
+    """
+
+    # add styling/formatting to the table
+    tabulator_formatters = {
+        "N_ppc": NumberFormatter(format="0", text_align="right"),
+        "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
+        "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Used fiber fraction (%)": NumberFormatter(format="0.000", text_align="right"),
+        "Fraction of PPC < 30% (%)": NumberFormatter(format="0.0", text_align="right"),
+    }
+    for p in ["all"] + np.arange(10).tolist():
+        tabulator_formatters[f"P_{p}"] = NumberFormatter(
+            format="0.0", text_align="right"
+        )
+
     def overheads(n_sci_frame):
         # in seconds
         t_exp_sci: float = 900.0
-        t_exp_bias: float = 0.0
-        t_exp_dark: float = 900.0
-        t_exp_flat: float = 10.0
-        t_exp_arc: float = 10.0
-        t_lamp_flat: float = 60.0
-        t_lamp_arc: float = 60.0
-        t_focus: float = 300.0
         t_overhead_misc: float = 60.0
         t_overhead_fiber: float = 180.0
-
-        n_frame_bias: float = 10.0
-        n_frame_dark: float = 10.0
-        n_frame_flat: float = 10.0
-        n_frame_arc: float = 10.0
-        n_focus: float = 3.0
-
-        # t_tot_bias = (t_exp_bias + t_overhead_misc) * n_frame_bias
-        # t_tot_dark = (t_exp_dark + t_overhead_misc) * n_frame_dark
-
-        # total time for calibration
-        t_calib = (
-            t_lamp_flat
-            + (t_exp_flat + t_overhead_misc) * n_frame_flat
-            + t_lamp_arc
-            + (t_exp_arc + t_overhead_misc) * n_frame_arc
-        )
-        t_focus_tot = t_focus * n_focus
 
         Toverheads_tot_best = (
             t_exp_sci + t_overhead_misc + t_overhead_fiber
@@ -931,150 +993,217 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
         return Toverheads_tot_best / 3600.0
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
-        nppc = pn.widgets.IntSlider(
-            name="You can modify the number of pointings for the "
-            + RESmode
-            + " resolution",
+        nppc = pn.widgets.EditableIntSlider(
+            name=(f"{RESmode.capitalize()}-resolution mode"),
             value=len(cR),
             step=1,
             start=1,
             end=len(cR),
+            fixed_start=1,
+            fixed_end=len(cR),
             bar_color="gray",
-            width=500,
+            max_width=450,
         )
 
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
-        colors = sns.color_palette(cc.glasbey_bw, len(sub) - 1)
+        # colors for priority 0-9
+        # red + first colors from glasbey_dark colormap as strings
+        colors_all = ["red"] + cc.b_glasbey_bw_minc_20_maxl_70[:9]
+        colors = [colors_all[i] for i in sub]
+
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
-        obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1)
+        obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
+        obj_allo1["ppc_code"] = [
+            "Point_" + RESmode + "_" + str(count)
+            for count in (np.arange(0, len(obj_allo), 1) + 1)
+        ]
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
 
-        def plot_ppc(nppc_fin):
-            def PFS_FoV_plot(ppc_ra, ppc_dec, PA):
-                ppc_coord = []
+        # add a column to indicate the color for the scatter plot
+        uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
 
-                # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
-                for ii in range(len(ppc_ra)):
-                    ppc_ra_t, ppc_dec_t, pa_t = ppc_ra[ii], ppc_dec[ii], PA[ii]
-                    center = SkyCoord(ppc_ra_t * u.deg, ppc_dec_t * u.deg)
+        cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
+        cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
 
-                    hexagon = center.directional_offset_by(
-                        [
-                            30 + pa_t,
-                            90 + pa_t,
-                            150 + pa_t,
-                            210 + pa_t,
-                            270 + pa_t,
-                            330 + pa_t,
-                            30 + pa_t,
-                        ]
-                        * u.deg,
-                        1.38 / 2.0 * u.deg,
-                    )
-                    ra_h = hexagon.ra.deg
-                    dec_h = hexagon.dec.deg
+        # create polygons for PFS FoVs for each pointing
+        ppc_coord = []
+        # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
+        for ii in range(len(obj_allo1["ppc_ra"])):
+            ppc_ra_t, ppc_dec_t, pa_t = (
+                obj_allo1["ppc_ra"][ii],
+                obj_allo1["ppc_dec"][ii],
+                obj_allo1["ppc_pa"][ii],
+            )
+            center = SkyCoord(ppc_ra_t * u.deg, ppc_dec_t * u.deg)
+            hexagon = center.directional_offset_by(
+                np.array([deg + pa_t for deg in [30, 90, 150, 210, 270, 330, 30]])
+                * u.deg,
+                r_pfi * u.deg,
+            )
+            ra_h = hexagon.ra.deg
+            dec_h = hexagon.dec.deg
+            # for pointings around RA~0 or 360, parts of it will move to the opposite side (e.g., [[1,0],[-1,0]] -->[[1,0],[359,0]])
+            # correct for it
+            ra_h_in = np.where(np.fabs(ra_h - center.ra.deg) > 180)
+            if len(ra_h_in[0]) > 0:
+                if ra_h[ra_h_in[0][0]] > 180:
+                    ra_h[ra_h_in[0]] -= 360
+                elif ra_h[ra_h_in[0][0]] < 180:
+                    ra_h[ra_h_in[0]] += 360
+            ppc_coord_one = []
+            for a, d in zip(ra_h, dec_h):
+                ppc_coord_one += [a, d]
+            ppc_coord.append([np.array(ppc_coord_one)])
+        ppc_coord_polygon_array = PolygonArray(ppc_coord)
+        df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
 
-                    # for pointings around RA~0 or 360, parts of it will move to the opposite side (e.g., [[1,0],[-1,0]] -->[[1,0],[359,0]])
-                    # correct for it
-                    ra_h_in = np.where(np.fabs(ra_h - center.ra.deg) > 180)
-                    if len(ra_h_in[0]) > 0:
-                        if ra_h[ra_h_in[0][0]] > 180:
-                            ra_h[ra_h_in[0]] -= 360
-                        elif ra_h[ra_h_in[0][0]] < 180:
-                            ra_h[ra_h_in[0]] += 360
+        #
+        # The following p_ are static plots and neeed to be created only once
+        #
+        # for sky distributions
+        ra_min = np.min([obj_allo1["ppc_ra"].min(), uS_["ra"].min()]) - d_pfi
+        ra_max = np.max([obj_allo1["ppc_ra"].max(), uS_["ra"].max()]) + d_pfi
+        dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
+        dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
+        p_tgt = uS_.hvplot.scatter(
+            x="ra",
+            y="dec",
+            by="priority",
+            color="ppc_color",
+            marker="o",
+            # s=20,
+            s=60,
+            line_color="white",
+            line_width=0.5,
+            legend=True,
+        )
 
-                    ppc_coord.append([[ra_h[o], dec_h[o]] for o in range(len(ra_h))])
+        obj_allo2_for_ppcplot = obj_allo2.rename(
+            columns={"ppc_ra": "RA", "ppc_dec": "Dec", "ppc_pa": "PA"}
+        )
 
-                ppc_tot_plot = [
-                    hv.Area(ii).opts(color="gray", alpha=0.2, line_width=0)
-                    for ii in ppc_coord
-                ]
+        # static part for compolation rate plot
+        p_comp_rate = cR__.hvplot.line(
+            x="PPC_id",
+            y=name[:-1],
+            value_label="Completion rate (%)",
+            title="Progress of the completion rate",
+            color=["k"] + colors,
+            line_width=[4, 3] + [2] * (len(sub) - 1),
+            line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
+            legend="right",
+        )
 
-                pd_ppc = pd.DataFrame({"RA": ppc_ra, "DEC": ppc_dec, "PA": PA})
-                p1 = pd_ppc.hvplot.scatter(
-                    x="RA",
-                    y="DEC",
-                    by="PA",
-                    title="Distribution of targets & PPC",
-                    color="gray",
-                    marker="s",
-                    s=40,
-                    legend=False,
-                )
+        """
+        # static part for fiber usage fraction plot
+        p_fibereff_bar = hv.Bars(
+            obj_allo2,
+            kdims=["PPC_id"],
+            vdims=["Fiber usage fraction (%)"],
+        ).opts(
+            title="Fiber usage fraction by pointing",
+            width=1,
+            color="tomato",
+            alpha=0.5,
+            line_width=0,
+            # xlabel="",
+            tools=["hover"],
+        )
+        #"""
 
-                return p1 * hv.Overlay(ppc_tot_plot)
-
-            p_ppc = PFS_FoV_plot(
-                obj_allo1["ppc_ra"][:nppc_fin],
-                obj_allo1["ppc_dec"][:nppc_fin],
-                obj_allo1["ppc_pa"][:nppc_fin],
+        @pn.io.profile("update_ppp_figures")
+        def update_ppp_figures(nppc_fin):
+            # update the plot of sky distribution of pointings and targets
+            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
+                fill_color="darkgray",
+                line_color="dimgray",
+                line_width=0.5,
+                alpha=0.2,
+            )
+            p_ppc_center = hv.Scatter(
+                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
+                kdims=["RA"],
+                vdims=["Dec", "PA"],
+            ).opts(
+                tools=["hover"],
+                fill_color="lightgray",
+                line_color="gray",
+                size=10,
+                marker="s",
+                show_legend=False,
+            )
+            p_ppc_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
+                title="Distributions of targets & pointing centers",
+                xlabel="RA (deg)",
+                ylabel="Dec (deg)",
+                xlim=(ra_max, ra_min),
+                ylim=(dec_min, dec_max),
+                toolbar="left",
+                active_tools=["box_zoom"],
+                show_grid=True,
+                shared_axes=False,
+                height=plot_height,
             )
 
-            p_tgt = uS_.hvplot.scatter(
-                x="ra",
-                y="dec",
-                by="priority",
-                color=["r"] + colors,
-                marker="o",
-                s=20,
-                legend=True,
+            # update completion rates as a function of PPC ID
+            p_comp_nppc = hv.VLine(nppc_fin).opts(
+                color="gray", line_dash="dashed", line_width=5
+            )
+            p_comp_tot = (p_comp_rate * p_comp_nppc).opts(
+                xlim=(0.5, len(obj_allo) + 0.5),
+                ylim=(0, 105),
+                show_grid=True,
+                shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
             )
 
-            return (p_tgt * p_ppc).opts(show_grid=True)
-
-        def plot_CR(nppc_fin):
-            cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
-            cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
-
-            p1 = cR__.hvplot.line(
-                x="PPC_id",
-                y=name[:-1],
-                value_label="Completion rate (%)",
-                title=f"{RESmode:s}-resolution mode",
-                color=["k", "r"] + colors,
-                line_width=[3, 2] + [1] * (len(sub) - 1),
-                line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
-                legend=True,
-            )
-            p2 = hv.Rectangles([(30, 88, 95, 100)]).opts(
-                color="orange", line_width=0, alpha=0.2
-            )
-            p3 = hv.Rectangles([(20, 43, 130, 93)]).opts(
-                color="dodgerblue", line_width=0, alpha=0.2
-            )
-            p4 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
-
-            return (p1 * p2 * p3 * p4).opts(
-                xlim=(0, len(obj_allo) + 1), ylim=(0, 105), show_grid=True
-            )
-
-        def plot_FE(nppc_fin):
+            """
+            # update fiber efficiency as a function of PPC ID
             mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
-            p1 = obj_allo2.hvplot.bar(
-                "PPC_id",
-                "Fiber usage fraction (%)",
-                title=f"{RESmode:s}-resolution mode",
-                rot=90,
-                width=1,
-                color="tomato",
-                alpha=0.5,
-                line_width=0,
-            )
-            p2 = (hv.HLine(mean_FE).opts(color="red", line_width=3)) * (
+            p_fibereff_mean = (
+                hv.HLine(mean_FE).opts(
+                    color="red",
+                    line_width=3,
+                )
+            ) * (
                 hv.Text(
-                    int(len(cR) * 0.85), mean_FE * 1.5, "{:.2f}%".format(mean_FE)
+                    int(len(cR) * 0.9),
+                    mean_FE * 1.15,
+                    # mean_FE * 1.5,
+                    "{:.2f}%".format(mean_FE),
                 ).opts(color="red")
             )
-            p3 = hv.VLine(nppc_fin).opts(color="gray", line_dash="dashed", line_width=5)
-
-            return (p1 * p2 * p3).opts(
-                fontsize={"xticks": "0pt"},
-                xlim=(0, len(obj_allo) + 1),
-                ylim=(0, max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) + 1),
+            p_fibereff_nppc = hv.VLine(nppc_fin - 0.5).opts(
+                color="gray", line_dash="dashed", line_width=5
             )
 
+            ymax_fibereff = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.25
+
+            p_fibereff_tot = (p_fibereff_bar * p_fibereff_mean * p_fibereff_nppc).opts(
+                fontsize={"xticks": "0pt"},
+                # TODO: xlim with hvplot's bar chart does not work properly.
+                # ref: https://github.com/holoviz/hvplot/issues/946
+                # xlim=(0, len(obj_allo) + 10),
+                ylim=(0, ymax_fibereff),
+                shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
+            )
+            #"""
+
+            # return after putting all plots into a column
+            return pn.Column(
+                pn.panel(p_comp_tot, linked_axes=False, width=600),
+                # pn.panel(p_fibereff_tot, linked_axes=False, width=600),
+                pn.panel(p_ppc_tot, linked_axes=False, width=600),
+            )
+
+        @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * 15.0 / 60.0  # hour
             Fhour_tot = (
@@ -1095,6 +1224,8 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
                 index=[0],
             )
 
+            cR1 = cR1.reindex(["P_all"] + [f"P_{p}" for p in range(10)], axis="columns")
+
             ppc_summary = pd.DataFrame(
                 {
                     "resolution": [RESmode],
@@ -1111,113 +1242,647 @@ def ppp_result(cR_l, sub_l, obj_allo_l, uS_L2, cR_m, sub_m, obj_allo_m, uS_M2):
 
             return ppc_summary_fin
 
-        def ppp_res_tab2(nppc_fin):
-            obj_alloc = obj_allo1[:nppc_fin]
-            obj_alloc.remove_column("allocated_targets")
-            obj_alloc.remove_column("group_id")
-            obj_alloc.remove_column("PPC_id")
+        @pn.io.profile("ppp_res_tab2")
+        def ppp_res_tab2():
+            obj_alloc = obj_allo1[
+                "ppc_code",
+                "ppc_ra",
+                "ppc_dec",
+                "ppc_pa",
+                "ppc_resolution",
+                "ppc_priority",
+                "Fiber usage fraction (%)",
+                "allocated_targets",
+            ]
+            # normalize the priority of ppc to prevent too small value
+            obj_alloc["ppc_priority"] = (
+                obj_alloc["ppc_priority"] / max(obj_alloc["ppc_priority"]) * 1e3
+            )
             return Table.to_pandas(obj_alloc)
 
-        p_result_fig = pn.Row(
-            pn.Column(
-                pn.bind(plot_CR, nppc),
-                width=700,
-                height=300,
-            ),
-            pn.Column(
-                pn.bind(plot_FE, nppc),
-                width=500,
-                height=285,
-            ),
-            pn.Column(
-                pn.bind(plot_ppc, nppc),
-                width=600,
-                height=300,
-            ),
+        # compose figures
+        p_result_fig = pn.Column(
+            f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
+            pn.bind(update_ppp_figures, nppc),
         )
 
+        # PPP summary table
         p_result_tab = pn.widgets.Tabulator(
             pn.bind(ppp_res_tab1, nppc),
-            page_size=4,
-            theme="bootstrap",
-            theme_classes=["table-sm"],
-            pagination="remote",
-            visible=True,
-            layout="fit_data_table",
-            hidden_columns=["index"],
-            selectable=False,
-            header_align="right",
-            configuration={"columnDefaults": {"headerSort": False}},
-            disabled=True,
         )
 
+        # PPC table
         p_result_ppc = pn.widgets.Tabulator(
-            pn.bind(ppp_res_tab2, nppc), visible=False, disabled=True
-        )
-
-        return nppc, p_result_fig, p_result_tab, p_result_ppc
-
-    if len(cR_l) > 0 and len(cR_m) == 0:
-        nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
-            "low", cR_l, sub_l, obj_allo_l, uS_L2
-        )
-
-        return "low", nppc_l, p_result_fig_l, p_result_ppc_l, p_result_tab_l
-
-    elif len(cR_m) > 0 and len(cR_l) == 0:
-        nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
-            "medium", cR_m, sub_m, obj_allo_m, uS_M2
-        )
-
-        return "medium", nppc_m, p_result_fig_m, p_result_ppc_m, p_result_tab_m
-
-    elif len(cR_l) > 0 and len(cR_m) > 0:
-        nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
-            "low", cR_l, sub_l, obj_allo_l, uS_L2
-        )
-        nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
-            "medium", cR_m, sub_m, obj_allo_m, uS_M2
-        )
-
-        nppc_fin = pn.Row(nppc_l, nppc_m)
-        p_result_fig_fin = pn.Column(p_result_fig_l, p_result_fig_m)
-
-        def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
-            ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
-            ppc_sum.loc[2] = ppc_sum.sum(numeric_only=True)
-            ppc_sum.loc[2, "resolution"] = "Total"
-            ppc_sum.iloc[2, 6:] = np.nan
-            return ppc_sum
-
-        def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
-            ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
-            return ppc_lst
-
-        p_result_tab = pn.widgets.Tabulator(
-            pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
-            page_size=4,
-            theme="bootstrap",
-            theme_classes=["table-sm"],
-            pagination="remote",
-            visible=True,
-            layout="fit_data_table",
-            hidden_columns=["index"],
-            selectable=False,
-            header_align="right",
-            configuration={"columnDefaults": {"headerSort": False}},
-            disabled=True,
-        )
-
-        p_result_ppc_fin = pn.widgets.Tabulator(
-            pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
+            # pn.bind(ppp_res_tab2, nppc),
+            ppp_res_tab2(),
             visible=False,
             disabled=True,
         )
+        return nppc, p_result_fig, p_result_tab, p_result_ppc
 
-        return (
-            "low & medium",
-            nppc_fin,
-            p_result_fig_fin,
-            p_result_ppc_fin,
-            p_result_tab,
-        )  #'''
+    # function starts here
+    logger.info("start creating PPP figures")
+
+    # initialize output elements
+    nppc_l = None
+    p_result_fig_l = None
+    p_result_tab_l = None
+    p_result_ppc_l = None
+    nppc_m = None
+    p_result_fig_m = None
+    p_result_tab_m = None
+    p_result_ppc_m = None
+
+    # exit if no PPP outputs
+    if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
+        logger.info("No PPP results due to running out of time [ppp_result]")
+        return (None, None, None, None)
+
+    # generate figures and tables for low resolution
+    if len(obj_allo_l) > 0:
+        nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
+            "low", cR_l, sub_l, obj_allo_l, uS_L2
+        )
+
+    # generate figures and tables for medium resolution
+    if len(obj_allo_m) > 0:
+        nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
+            "medium", cR_m, sub_m, obj_allo_m, uS_M2
+        )
+
+    # define rows
+    nppc_fin = pn.Row(max_width=900)
+    p_result_fig_fin = pn.Row(max_width=900)
+
+    # append components if it is not None
+    for slider in [nppc_l, nppc_m]:
+        if slider is not None:
+            nppc_fin.append(slider)
+    for fig in [p_result_fig_l, p_result_fig_m]:
+        if fig is not None:
+            p_result_fig_fin.append(fig)
+
+    @pn.io.profile("p_result_tab_tot")
+    def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
+        ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
+        loc_total = ppc_sum.index.size
+        ppc_sum.loc[loc_total] = ppc_sum.sum(numeric_only=True)
+        ppc_sum.loc[loc_total, "resolution"] = "Total"
+        ppc_sum.iloc[loc_total, 6:] = np.nan
+        for k in ppc_sum.columns:
+            if ppc_sum.loc[:, k].isna().all():
+                ppc_sum.drop(columns=[k], inplace=True)
+        return ppc_sum
+
+    @pn.io.profile("p_result_ppc_tot")
+    def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
+        ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
+        return ppc_lst
+
+    p_result_tab = pn.widgets.Tabulator(
+        pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
+        theme="bootstrap",
+        theme_classes=["table-sm"],
+        pagination=None,
+        visible=True,
+        layout="fit_data_table",
+        hidden_columns=["index"],
+        selectable=False,
+        header_align="right",
+        configuration={"columnDefaults": {"headerSort": False}},
+        disabled=True,
+        stylesheets=[tabulator_stylesheet],
+        max_height=150,
+        formatters=tabulator_formatters,
+    )
+
+    # currently, this table is not displayed
+    p_result_ppc_fin = pn.widgets.Tabulator(
+        pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
+        visible=False,
+        disabled=True,
+    )
+
+    logger.info("creating PPP figures finished ")
+
+    return (nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab)
+
+
+## PPP result reproduction
+
+
+def ppp_result_reproduce(
+    obj_allo,
+    uS,
+    tab_psl,
+    d_pfi=1.38,
+    box_width=1200.0,
+    plot_height=220,
+):
+    if "ppc_code" not in obj_allo.colnames:
+        pn.state.notifications.error(
+            "This submission is too old and not compatible for the operation.",
+            duration=5000,
+        )
+        logger.error("'ppc_code' not found in the ppc_list. return None")
+        return (None, None, None, None)
+
+    # exit if no PPP outputs
+    if None in obj_allo["ppc_code"]:
+        logger.info(
+            "[Reproduce] No PPP results due to running out of time [ppp_result]"
+        )
+        return (None, None, None, None)
+
+    r_pfi = d_pfi / 2.0
+
+    def complete_ppc(sample, point_l):
+        if "allocated_targets" not in point_l.colnames:
+            pn.state.notifications.error(
+                "This submission is too old and not compatible for the operation.",
+                duration=5000,
+            )
+            logger.error(
+                "'allocated_targets' not found in the pointing list. raise exception."
+            )
+            raise KeyError  #
+
+        sample["exptime_assign"] = 0
+        sub_l = sorted(list(set(sample["priority"])))
+        n_sub = len(sub_l)
+
+        if len(point_l) == 0:
+            return (
+                sample,
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
+                sub_l,
+            )
+
+        point_l_pri = point_l[
+            point_l.argsort(keys="ppc_priority")
+        ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
+
+        # sub-groups of the input sample, catagarized by the user defined priority
+        count_sub = [sum(sample["exptime"]) / 900.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        ]  # fiber hours
+        completeR = []  # fiber hours
+        completeR_ = []  # percentage
+
+        for ppc in point_l_pri:
+            lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
+            sample["exptime_assign"].data[lst] += 900
+
+            # achieved fiber hours (in total, in P[0-9])
+            comT_t = [sum(sample["exptime_assign"]) / 900.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+                for ll in sub_l
+            ]
+            completeR.append(comT_t)
+            completeR_.append(
+                [comT_t[oo] / count_sub[oo] * 100 for oo in range(len(count_sub))]
+            )
+
+        return sample, np.array(completeR), np.array(completeR_), sub_l
+
+    def overheads(n_sci_frame):
+        # in seconds
+        t_exp_sci: float = 900.0
+        t_overhead_misc: float = 60.0
+        t_overhead_fiber: float = 180.0
+
+        Toverheads_tot_best = (
+            t_exp_sci + t_overhead_misc + t_overhead_fiber
+        ) * n_sci_frame
+
+        return Toverheads_tot_best / 3600.0
+
+    def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr):
+        def nppc2rot(nppc_):
+            # in seconds
+            t_exp_sci: float = 900.0
+            t_overhead_misc: float = 60.0
+            t_overhead_fiber: float = 180.0
+
+            Toverheads_tot_best = (
+                t_exp_sci + t_overhead_misc + t_overhead_fiber
+            ) * nppc_
+
+            return Toverheads_tot_best / 3600.0
+
+        def rot2nppc(rot):
+            # in seconds
+            t_exp_sci: float = 900.0
+            t_overhead_misc: float = 60.0
+            t_overhead_fiber: float = 180.0
+
+            nppc_ = rot * 3600.0 / (t_exp_sci + t_overhead_misc + t_overhead_fiber)
+
+            return int(np.floor(nppc_))
+
+        nppc = pn.widgets.EditableFloatSlider(
+            name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
+            value=nppc2rot(len(cR)),
+            step=0.1,
+            start=nppc2rot(1),
+            end=nppc2rot(len(cR)),
+            bar_color="gray",
+            max_width=450,
+            width=400,
+        )
+
+        name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
+        # colors for priority 0-9
+        # red + first colors from glasbey_dark colormap as strings
+        colors_all = ["red"] + cc.b_glasbey_bw_minc_20_maxl_70[:9]
+        colors = [colors_all[i] for i in sub]
+
+        obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
+        obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
+        obj_allo2 = Table.to_pandas(obj_allo1)
+        uS_ = Table.to_pandas(uS)
+
+        # add a column to indicate the color for the scatter plot
+        uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
+
+        cR_ = np.array([list(cR[ii]) + [ii + 1] for ii in range(len(cR))])
+        cR__ = pd.DataFrame(dict(zip(name, cR_.T)))
+
+        # create polygons for PFS FoVs for each pointing
+        ppc_coord = []
+        # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
+        for ii in range(len(obj_allo1["ppc_ra"])):
+            ppc_ra_t, ppc_dec_t, pa_t = (
+                obj_allo1["ppc_ra"][ii],
+                obj_allo1["ppc_dec"][ii],
+                obj_allo1["ppc_pa"][ii],
+            )
+            center = SkyCoord(ppc_ra_t * u.deg, ppc_dec_t * u.deg)
+            hexagon = center.directional_offset_by(
+                np.array([deg + pa_t for deg in [30, 90, 150, 210, 270, 330, 30]])
+                * u.deg,
+                r_pfi * u.deg,
+            )
+            ra_h = hexagon.ra.deg
+            dec_h = hexagon.dec.deg
+            # for pointings around RA~0 or 360, parts of it will move to the opposite side (e.g., [[1,0],[-1,0]] -->[[1,0],[359,0]])
+            # correct for it
+            ra_h_in = np.where(np.fabs(ra_h - center.ra.deg) > 180)
+            if len(ra_h_in[0]) > 0:
+                if ra_h[ra_h_in[0][0]] > 180:
+                    ra_h[ra_h_in[0]] -= 360
+                elif ra_h[ra_h_in[0][0]] < 180:
+                    ra_h[ra_h_in[0]] += 360
+            ppc_coord_one = []
+            for a, d in zip(ra_h, dec_h):
+                ppc_coord_one += [a, d]
+            ppc_coord.append([np.array(ppc_coord_one)])
+        ppc_coord_polygon_array = PolygonArray(ppc_coord)
+        df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
+
+        #
+        # The following p_ are static plots and neeed to be created only once
+        #
+        # for sky distributions
+        ra_min = np.min([obj_allo1["ppc_ra"].min(), uS_["ra"].min()]) - d_pfi
+        ra_max = np.max([obj_allo1["ppc_ra"].max(), uS_["ra"].max()]) + d_pfi
+        dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
+        dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
+        p_tgt = uS_.hvplot.scatter(
+            x="ra",
+            y="dec",
+            by="priority",
+            color="ppc_color",
+            marker="o",
+            # s=20,
+            s=60,
+            line_color="white",
+            line_width=0.5,
+            legend=True,
+        )
+
+        obj_allo2_for_ppcplot = obj_allo2.rename(
+            columns={"ppc_ra": "RA", "ppc_dec": "Dec", "ppc_pa": "PA"}
+        )
+
+        # static part for compolation rate plot
+        p_comp_rate = cR__.hvplot.line(
+            x="PPC_id",
+            y=name[:-1],
+            value_label="Completion rate (%)",
+            title="Progress of the completion rate",
+            color=["k"] + colors,
+            line_width=[4, 3] + [2] * (len(sub) - 1),
+            line_dash=["solid"] * 2 + ["dashed"] * (len(sub) - 1),
+            legend="right",
+        )
+
+        """
+        # static part for fiber usage fraction plot
+        p_fibereff_bar = hv.Bars(
+            obj_allo2,
+            kdims=["PPC_id"],
+            vdims=["Fiber usage fraction (%)"],
+        ).opts(
+            title="Fiber usage fraction by pointing",
+            width=1,
+            color="tomato",
+            alpha=0.5,
+            line_width=0,
+            # xlabel="",
+            tools=["hover"],
+        )
+        #"""
+
+        @pn.io.profile("update_ppp_figures")
+        def update_ppp_figures(nppc_fin):
+            # update the plot of sky distribution of pointings and targets
+            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
+                fill_color="darkgray",
+                line_color="dimgray",
+                line_width=0.5,
+                alpha=0.2,
+            )
+            p_ppc_center = hv.Scatter(
+                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
+                kdims=["RA"],
+                vdims=["Dec", "PA"],
+            ).opts(
+                tools=["hover"],
+                fill_color="lightgray",
+                line_color="gray",
+                size=10,
+                marker="s",
+                show_legend=False,
+            )
+            p_ppc_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
+                title="Distributions of targets & pointing centers",
+                xlabel="RA (deg)",
+                ylabel="Dec (deg)",
+                xlim=(ra_max, ra_min),
+                ylim=(dec_min, dec_max),
+                toolbar="left",
+                active_tools=["box_zoom"],
+                show_grid=True,
+                shared_axes=False,
+                height=plot_height,
+            )
+
+            # update completion rates as a function of PPC ID
+            p_comp_nppc = hv.VLine(nppc_fin).opts(
+                color="gray", line_dash="dashed", line_width=5
+            )
+            p_comp_nppc_usr = hv.VLine(nppc_usr).opts(
+                color="gray", line_dash="dotted", line_width=3
+            )
+
+            p_comp_tot = (p_comp_rate * p_comp_nppc * p_comp_nppc_usr).opts(
+                xlim=(0.5, len(obj_allo) + 0.5),
+                ylim=(0, 105),
+                show_grid=True,
+                shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
+            )
+
+            """
+            # update fiber efficiency as a function of PPC ID
+            mean_FE = np.mean(obj_allo2["Fiber usage fraction (%)"][:nppc_fin])
+            p_fibereff_mean = (
+                hv.HLine(mean_FE).opts(
+                    color="red",
+                    line_width=3,
+                )
+            ) * (
+                hv.Text(
+                    int(len(cR) * 0.9),
+                    mean_FE * 1.15,
+                    # mean_FE * 1.5,
+                    "{:.2f}%".format(mean_FE),
+                ).opts(color="red")
+            )
+            p_fibereff_nppc = hv.VLine(nppc_fin - 0.5).opts(
+                color="gray", line_dash="dashed", line_width=5
+            )
+            p_fibereff_nppc_usr = hv.VLine(nppc_usr - 0.5).opts(
+                color="gray", line_dash="dotted", line_width=3
+            )
+
+            ymax_fibereff = max(obj_allo2["Fiber usage fraction (%)"][:nppc_fin]) * 1.25
+
+            p_fibereff_tot = (p_fibereff_bar * p_fibereff_mean * p_fibereff_nppc * p_fibereff_nppc_usr).opts(
+                fontsize={"xticks": "0pt"},
+                # TODO: xlim with hvplot's bar chart does not work properly.
+                # ref: https://github.com/holoviz/hvplot/issues/946
+                # xlim=(0, len(obj_allo) + 10),
+                ylim=(0, ymax_fibereff),
+                shared_axes=False,
+                toolbar="left",
+                active_tools=["box_zoom"],
+                height=plot_height,
+            )
+            #"""
+
+            # return after putting all plots into a column
+            return pn.Column(
+                pn.panel(p_comp_tot, linked_axes=False, width=500),
+                # pn.panel(p_fibereff_tot, linked_axes=False, width=500),
+                pn.panel(p_ppc_tot, linked_axes=False, width=500),
+            )
+
+        @pn.io.profile("ppp_res_tab1")
+        def ppp_res_tab1(nppc_fin):
+            hour_tot = nppc_fin * 15.0 / 60.0  # hour
+            Fhour_tot = (
+                sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
+                * 15.0
+                / 60.0
+            )  # fiber_count*hour
+            Ttot_best = overheads(nppc_fin)
+            fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
+            fib_eff_small = (
+                sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
+                / nppc_fin
+                * 100.0
+            )
+
+            cR1 = pd.DataFrame(
+                dict(zip(name[:-1], cR[nppc_fin - 1])),
+                index=[0],
+            )
+
+            cR1 = cR1.reindex(["P_all"] + [f"P_{p}" for p in range(10)], axis="columns")
+
+            ppc_summary = pd.DataFrame(
+                {
+                    "resolution": [RESmode],
+                    "N_ppc": [nppc_fin],
+                    "Texp (h)": [hour_tot],
+                    "Texp (fiberhour)": [Fhour_tot],
+                    "Request time (h)": [Ttot_best],
+                    "Used fiber fraction (%)": [fib_eff_mean],
+                    "Fraction of PPC < 30% (%)": [fib_eff_small],
+                },
+            )
+
+            ppc_summary_fin = pd.concat([ppc_summary, cR1], axis=1)
+
+            return ppc_summary_fin
+
+        @pn.io.profile("ppp_res_tab2")
+        def ppp_res_tab2(nppc_fin):
+            obj_alloc = obj_allo1[:nppc_fin]
+            return Table.to_pandas(obj_alloc)
+
+        # compose figures
+        p_result_fig = pn.Column(
+            f"<font size=4><u>{RESmode.capitalize():s}-resolution mode</u></font>",
+            pn.bind(update_ppp_figures, pn.bind(rot2nppc, nppc)),
+        )
+
+        # PPP summary table
+        p_result_tab = pn.widgets.Tabulator(
+            pn.bind(ppp_res_tab1, pn.bind(rot2nppc, nppc)),
+        )
+
+        # PPC table
+        p_result_ppc = pn.widgets.Tabulator(
+            pn.bind(ppp_res_tab2, pn.bind(rot2nppc, nppc)),
+            visible=False,
+            disabled=True,
+        )
+        return nppc, p_result_fig, p_result_tab, p_result_ppc
+
+    # function starts here
+    logger.info("[Reproduce] start creating PPP figures")
+
+    # initialize output elements
+    nppc_l = None
+    p_result_fig_l = None
+    p_result_tab_l = None
+    p_result_ppc_l = None
+    nppc_m = None
+    p_result_fig_m = None
+    p_result_tab_m = None
+    p_result_ppc_m = None
+
+    tabulator_stylesheet = """
+    .tabulator-row-odd { background-color: #ffffff !important; }
+    .tabulator-row-even { background-color: #ffffff !important; }
+    .tabulator-row-odd:hover { color: #000000 !important; background-color: #ffffff !important; }
+    .tabulator-row-even:hover { color: #000000 !important; background-color: #ffffff !important; }
+    """
+
+    # add styling/formatting to the table
+    tabulator_formatters = {
+        "N_ppc": NumberFormatter(format="0", text_align="right"),
+        "Texp (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Texp (fiberhour)": NumberFormatter(format="0.00", text_align="right"),
+        "Request time (h)": NumberFormatter(format="0.00", text_align="right"),
+        "Used fiber fraction (%)": NumberFormatter(format="0.000", text_align="right"),
+        "Fraction of PPC < 30% (%)": NumberFormatter(format="0.0", text_align="right"),
+    }
+    for p in ["all"] + np.arange(10).tolist():
+        tabulator_formatters[f"P_{p}"] = NumberFormatter(
+            format="0.0", text_align="right"
+        )
+
+    exptime_ppp = np.ceil(uS["exptime"] / 900) * 900
+    uS.add_column(exptime_ppp, name="exptime_PPP")
+
+    uS_L = uS[uS["resolution"] == "L"]
+    uS_M = uS[uS["resolution"] == "M"]
+
+    obj_allo_l = obj_allo[obj_allo["ppc_resolution"] == "L"]
+    obj_allo_m = obj_allo[obj_allo["ppc_resolution"] == "M"]
+
+    # generate figures and tables for low resolution
+    if len(uS_L) > 0:
+        uS_L_, cR_l, cR_l_, sub_l = complete_ppc(uS_L, obj_allo_l)
+        nppc_usr_l = tab_psl[tab_psl["resolution"] == "low"]["N_ppc"]
+
+        nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
+            "low", cR_l_, sub_l, obj_allo_l, uS_L_, nppc_usr_l
+        )
+
+    # generate figures and tables for medium resolution
+    if len(uS_M) > 0:
+        uS_M_, cR_m, cR_m_, sub_m = complete_ppc(uS_M, obj_allo_m)
+        nppc_usr_m = tab_psl[tab_psl["resolution"] == "medium"]["N_ppc"]
+
+        nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
+            "medium", cR_m_, sub_m, obj_allo_m, uS_M_, nppc_usr_m
+        )
+
+    # define rows
+    nppc_fin = pn.Row(max_width=900)
+    p_result_fig_fin = pn.Row(max_width=900)
+
+    # append components if it is not None
+    for slider in [nppc_l, nppc_m]:
+        if slider is not None:
+            nppc_fin.append(slider)
+    for fig in [p_result_fig_l, p_result_fig_m]:
+        if fig is not None:
+            p_result_fig_fin.append(fig)
+
+    @pn.io.profile("p_result_tab_tot")
+    def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
+        ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
+        loc_total = ppc_sum.index.size
+        ppc_sum.loc[loc_total] = ppc_sum.sum(numeric_only=True)
+        ppc_sum.loc[loc_total, "resolution"] = "Total"
+        ppc_sum.iloc[loc_total, 6:] = np.nan
+        for k in ppc_sum.columns:
+            if ppc_sum.loc[:, k].isna().all():
+                ppc_sum.drop(columns=[k], inplace=True)
+        return ppc_sum
+
+    @pn.io.profile("p_result_ppc_tot")
+    def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
+        ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
+        return ppc_lst
+
+    p_result_tab = pn.widgets.Tabulator(
+        pn.bind(p_result_tab_tot, p_result_tab_l, p_result_tab_m),
+        theme="bootstrap",
+        theme_classes=["table-sm"],
+        pagination=None,
+        visible=True,
+        layout="fit_data_table",
+        hidden_columns=["index"],
+        selectable=False,
+        header_align="right",
+        configuration={"columnDefaults": {"headerSort": False}},
+        disabled=True,
+        stylesheets=[tabulator_stylesheet],
+        max_height=150,
+        formatters=tabulator_formatters,
+    )
+
+    # currently, this table is not displayed
+    p_result_ppc_fin = pn.widgets.Tabulator(
+        pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
+        visible=True,
+        disabled=True,
+        page_size=20,
+        theme="bootstrap",
+        theme_classes=["table-striped"],
+        pagination="remote",
+        header_filters=True,
+        layout="fit_columns",
+        hidden_columns=[
+            "index",
+            "Fiber usage fraction (%)",
+            "allocated_targets",
+            "PPC_id",
+        ],
+        width=650,
+        height=850,
+    )
+
+    logger.info("[Reproduce] creating PPP figures finished ")
+
+    return (nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab)
