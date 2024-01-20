@@ -15,6 +15,11 @@ use_directory_urls: false
 
 plugins:
   - search
+  - social
+  - mkdocs-video:
+      is_video: True
+      video_autoplay: False
+      video_muted: False
 
 
 theme:
@@ -64,7 +69,6 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
-
 
 
 extra_css:
