@@ -1479,12 +1479,13 @@ def ppp_result_reproduce(
 
             nppc_ = rot * 3600.0 / (t_exp_sci + t_overhead_misc + t_overhead_fiber)
 
-            return int(np.floor(nppc_))
+            return int(round(nppc_,0))
 
         nppc = pn.widgets.EditableFloatSlider(
             name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
-            value=nppc2rot(len(cR)),
-            step=0.1,
+            format="1[.]000",
+            value=nppc2rot(nppc_usr.data[0]),
+            step=nppc2rot(1),
             start=nppc2rot(1),
             end=nppc2rot(len(cR)),
             bar_color="gray",

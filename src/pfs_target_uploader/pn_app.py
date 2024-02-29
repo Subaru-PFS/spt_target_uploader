@@ -435,7 +435,8 @@ def list_files_app():
                     callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
                     filename=f"TAC_ppc_{u_id}.csv",
                     button_type="primary",
-                    width=250,
+                    width=280,
+                    height=40,
                 )
 
                 table_ppc.append(pn.Row(output_status, fd, width=750))
@@ -498,11 +499,10 @@ def list_files_app():
 
         return _table_files_tgt_psl
 
-    column_checkbox = pn.widgets.CheckBoxGroup(
+    column_checkbox = pn.widgets.MultiChoice(
         name="Columns to show",
         value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
         options=list(df_files_tgt_psl.columns) + ["proposal ID", "PI name", "rank"],
-        inline=True,
     )
 
     table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
