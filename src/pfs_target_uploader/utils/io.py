@@ -413,4 +413,11 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
         }
     )
 
-    return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)
+    if len(df_psl_tgt) == 0:
+        logger.warning(
+                    f"There are no ecsv files in the designated folder ({datadir})."
+                )
+        return df_psl_tgt
+    
+    else:
+        return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)

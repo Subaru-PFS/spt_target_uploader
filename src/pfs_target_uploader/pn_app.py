@@ -396,65 +396,6 @@ def list_files_app():
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)#"""
 
-    def open_panel_magnify(event):
-        if event.column == "magnify":
-            table_ppc.clear()
-            u_id = df_files_tgt_psl["Upload ID"][event.row]
-            p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
-            table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
-            table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
-            table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
-            (
-                nppc_fin,
-                p_result_fig_fin,
-                p_result_ppc_fin,
-                p_result_tab,
-            ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
-
-            def tab_ppc_save(p_result_ppc_fin, p_result_tab):
-                Table.from_pandas(p_result_ppc_fin).write(
-                    f"data/temp/TAC_ppc_{u_id}.ecsv",
-                    format="ascii.ecsv",
-                    delimiter=",",
-                    overwrite=True,
-                )
-                Table.from_pandas(p_result_tab).write(
-                    f"data/temp/TAC_psl_{u_id}.ecsv",
-                    format="ascii.ecsv",
-                    delimiter=",",
-                    overwrite=True,
-                )
-                return f"data/temp/TAC_ppc_{u_id}.ecsv"
-
-            if nppc_fin is not None:
-                output_status = pn.pane.Markdown(
-                    f"<font size=3>You are checking program: Upload id = {u_id} </font>",
-                )
-
-                fd = pn.widgets.FileDownload(
-                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
-                    filename=f"TAC_ppc_{u_id}.csv",
-                    button_type="primary",
-                    width=280,
-                    height=40,
-                )
-
-                table_ppc.append(pn.Row(output_status, fd, width=750))
-
-            else:
-                output_status = pn.pane.Markdown(
-                    f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
-                )
-
-                table_ppc.append(pn.Row(output_status, width=750))
-
-            table_ppc.append(
-                pn.Row(
-                    pn.Column(p_result_ppc_fin, width=700, height=1000),
-                    pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
-                )
-            )
-
     def Table_files_tgt_psl(column_checkbox_):
         if psl_info_input.value is not None:
             df_psl_info = load_input(
@@ -494,6 +435,65 @@ def list_files_app():
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
         _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
         _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
+
+        def open_panel_magnify(event):
+            if event.column == "magnify":
+                table_ppc.clear()
+                u_id = _df_files_tgt_psl["Upload ID"][event.row]
+                p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"][event.row])[0]
+                table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
+                table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
+                table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
+                (
+                    nppc_fin,
+                    p_result_fig_fin,
+                    p_result_ppc_fin,
+                    p_result_tab,
+                ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
+
+                def tab_ppc_save(p_result_ppc_fin, p_result_tab):
+                    Table.from_pandas(p_result_ppc_fin).write(
+                        f"data/temp/TAC_ppc_{u_id}.ecsv",
+                        format="ascii.ecsv",
+                        delimiter=",",
+                        overwrite=True,
+                    )
+                    Table.from_pandas(p_result_tab).write(
+                        f"data/temp/TAC_psl_{u_id}.ecsv",
+                        format="ascii.ecsv",
+                        delimiter=",",
+                        overwrite=True,
+                    )
+                    return f"data/temp/TAC_ppc_{u_id}.ecsv"
+
+                if nppc_fin is not None:
+                    output_status = pn.pane.Markdown(
+                        f"<font size=3>You are checking program: Upload id = {u_id} </font>",
+                    )
+
+                    fd = pn.widgets.FileDownload(
+                        callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
+                        filename=f"TAC_ppc_{u_id}.csv",
+                        button_type="primary",
+                        width=280,
+                        height=40,
+                    )
+
+                    table_ppc.append(pn.Row(output_status, fd, width=750))
+
+                else:
+                    output_status = pn.pane.Markdown(
+                        f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
+                    )
+
+                    table_ppc.append(pn.Row(output_status, width=750))
+
+                table_ppc.append(
+                    pn.Row(
+                        pn.Column(p_result_ppc_fin, width=700, height=1000),
+                        pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
+                    )
+                )
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
 
