@@ -1375,9 +1375,10 @@ def ppp_result_reproduce(
     obj_allo,
     uS,
     tab_psl,
+    tab_tac,
     d_pfi=1.38,
     box_width=1200.0,
-    plot_height=220,
+    plot_height=250,
 ):
     if "ppc_code" not in obj_allo.colnames:
         pn.state.notifications.error(
@@ -1458,7 +1459,7 @@ def ppp_result_reproduce(
 
         return Toverheads_tot_best / 3600.0
 
-    def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr):
+    def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr, nppc_tac=0):
         def nppc2rot(nppc_):
             # in seconds
             t_exp_sci: float = 900.0
@@ -1479,15 +1480,22 @@ def ppp_result_reproduce(
 
             nppc_ = rot * 3600.0 / (t_exp_sci + t_overhead_misc + t_overhead_fiber)
 
-            return int(round(nppc_,0))
+            return int(round(nppc_, 0))
+
+        if nppc_tac > 0:
+            admin_slider_ini_value = nppc_tac.data[0]
+        else:
+            admin_slider_ini_value = nppc_usr.data[0]
 
         nppc = pn.widgets.EditableFloatSlider(
             name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
             format="1[.]000",
-            value=nppc2rot(nppc_usr.data[0]),
+            value=nppc2rot(admin_slider_ini_value),
             step=nppc2rot(1),
-            start=nppc2rot(1),
+            start=0,
+            fixed_start=0,
             end=nppc2rot(len(cR)),
+            fixed_end=nppc2rot(len(cR)),
             bar_color="gray",
             max_width=450,
             width=400,
@@ -1598,37 +1606,51 @@ def ppp_result_reproduce(
 
         @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
-            # update the plot of sky distribution of pointings and targets
-            p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
-                fill_color="darkgray",
-                line_color="dimgray",
-                line_width=0.5,
-                alpha=0.2,
-            )
-            p_ppc_center = hv.Scatter(
-                obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
-                kdims=["RA"],
-                vdims=["Dec", "PA"],
-            ).opts(
-                tools=["hover"],
-                fill_color="lightgray",
-                line_color="gray",
-                size=10,
-                marker="s",
-                show_legend=False,
-            )
-            p_ppc_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
-                title="Distributions of targets & pointing centers",
-                xlabel="RA (deg)",
-                ylabel="Dec (deg)",
-                xlim=(ra_max, ra_min),
-                ylim=(dec_min, dec_max),
-                toolbar="left",
-                active_tools=["box_zoom"],
-                show_grid=True,
-                shared_axes=False,
-                height=plot_height,
-            )
+            if nppc_fin > 0:
+                # update the plot of sky distribution of pointings and targets
+                p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
+                    fill_color="darkgray",
+                    line_color="dimgray",
+                    line_width=0.5,
+                    alpha=0.2,
+                )
+                p_ppc_center = hv.Scatter(
+                    obj_allo2_for_ppcplot.iloc[:nppc_fin, :],
+                    kdims=["RA"],
+                    vdims=["Dec", "PA"],
+                ).opts(
+                    tools=["hover"],
+                    fill_color="lightgray",
+                    line_color="gray",
+                    size=10,
+                    marker="s",
+                    show_legend=False,
+                )
+                p_ppc_tot = (p_ppc_polygon * p_ppc_center * p_tgt).opts(
+                    title="Distributions of targets & pointing centers",
+                    xlabel="RA (deg)",
+                    ylabel="Dec (deg)",
+                    xlim=(ra_max, ra_min),
+                    ylim=(dec_min, dec_max),
+                    toolbar="left",
+                    active_tools=["box_zoom"],
+                    show_grid=True,
+                    shared_axes=False,
+                    height=plot_height,
+                )
+            else:
+                p_ppc_tot = (p_tgt).opts(
+                    title="Distributions of targets & pointing centers",
+                    xlabel="RA (deg)",
+                    ylabel="Dec (deg)",
+                    xlim=(ra_max, ra_min),
+                    ylim=(dec_min, dec_max),
+                    toolbar="left",
+                    active_tools=["box_zoom"],
+                    show_grid=True,
+                    shared_axes=False,
+                    height=plot_height,
+                )
 
             # update completion rates as a function of PPC ID
             p_comp_nppc = hv.VLine(nppc_fin).opts(
@@ -1637,8 +1659,13 @@ def ppp_result_reproduce(
             p_comp_nppc_usr = hv.VLine(nppc_usr).opts(
                 color="gray", line_dash="dotted", line_width=3
             )
+            p_comp_nppc_tac = hv.VLine(nppc_tac).opts(
+                color="red", line_dash="dotted", line_width=3
+            )
 
-            p_comp_tot = (p_comp_rate * p_comp_nppc * p_comp_nppc_usr).opts(
+            p_comp_tot = (
+                p_comp_rate * p_comp_nppc * p_comp_nppc_usr * p_comp_nppc_tac
+            ).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
                 ylim=(0, 105),
                 show_grid=True,
@@ -1696,23 +1723,34 @@ def ppp_result_reproduce(
         @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * 15.0 / 60.0  # hour
-            Fhour_tot = (
-                sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
-                * 15.0
-                / 60.0
-            )  # fiber_count*hour
             Ttot_best = overheads(nppc_fin)
-            fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
-            fib_eff_small = (
-                sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
-                / nppc_fin
-                * 100.0
-            )
 
-            cR1 = pd.DataFrame(
-                dict(zip(name[:-1], cR[nppc_fin - 1])),
-                index=[0],
-            )
+            if nppc_fin > 0:
+                Fhour_tot = (
+                    sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
+                    * 15.0
+                    / 60.0
+                )  # fiber_count*hour
+                fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
+                fib_eff_small = (
+                    sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
+                    / nppc_fin
+                    * 100.0
+                )
+
+                cR1 = pd.DataFrame(
+                    dict(zip(name[:-1], cR[nppc_fin - 1])),
+                    index=[0],
+                )
+            else:
+                Fhour_tot = 0
+                fib_eff_mean = 0
+                fib_eff_small = 0
+
+                cR1 = pd.DataFrame(
+                    dict(zip(name[:-1], [0] * 11)),
+                    index=[0],
+                )
 
             cR1 = cR1.reindex(["P_all"] + [f"P_{p}" for p in range(10)], axis="columns")
 
@@ -1804,8 +1842,13 @@ def ppp_result_reproduce(
         uS_L_, cR_l, cR_l_, sub_l = complete_ppc(uS_L, obj_allo_l)
         nppc_usr_l = tab_psl[tab_psl["resolution"] == "low"]["N_ppc"]
 
+        if len(tab_tac) > 0:
+            nppc_tac_l = tab_tac[tab_tac["resolution"] == "low"]["N_ppc"]
+        else:
+            nppc_tac_l = 0
+
         nppc_l, p_result_fig_l, p_result_tab_l, p_result_ppc_l = ppp_plotFig(
-            "low", cR_l_, sub_l, obj_allo_l, uS_L_, nppc_usr_l
+            "low", cR_l_, sub_l, obj_allo_l, uS_L_, nppc_usr_l, nppc_tac_l
         )
 
     # generate figures and tables for medium resolution
@@ -1813,8 +1856,13 @@ def ppp_result_reproduce(
         uS_M_, cR_m, cR_m_, sub_m = complete_ppc(uS_M, obj_allo_m)
         nppc_usr_m = tab_psl[tab_psl["resolution"] == "medium"]["N_ppc"]
 
+        if len(tab_tac) > 0:
+            nppc_tac_m = tab_tac[tab_tac["resolution"] == "medium"]["N_ppc"]
+        else:
+            nppc_tac_m = 0
+
         nppc_m, p_result_fig_m, p_result_tab_m, p_result_ppc_m = ppp_plotFig(
-            "medium", cR_m_, sub_m, obj_allo_m, uS_M_, nppc_usr_m
+            "medium", cR_m_, sub_m, obj_allo_m, uS_M_, nppc_usr_m, nppc_tac_m
         )
 
     # define rows

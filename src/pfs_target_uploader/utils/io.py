@@ -331,12 +331,19 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     exp_sci_fh_m = np.zeros(n_files, dtype=float)
     tot_time_l = np.zeros(n_files, dtype=float)
     tot_time_m = np.zeros(n_files, dtype=float)
+    tac_fh_l = np.zeros(n_files, dtype=float)
+    tac_fh_m = np.zeros(n_files, dtype=float)
+    tac_nppc_l = np.zeros(n_files, dtype=int)
+    tac_nppc_m = np.zeros(n_files, dtype=int)
+    tac_rot_l = np.zeros(n_files, dtype=float)
+    tac_rot_m = np.zeros(n_files, dtype=float)
 
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
         if ext == "ecsv":
             f_target = os.path.join(d, f"target_{uid}.{ext}")
             f_psl = os.path.join(d, f"psl_{uid}.{ext}")
+            f_tac = os.path.join(d, f"TAC_psl_{uid}.{ext}")
 
             try:
                 tb_target = Table.read(f_target)
@@ -347,6 +354,11 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                     f"{e}: {f_target} and/or {f_psl} are not found. Skip them"
                 )
                 continue
+
+            try:
+                tb_tac = Table.read(f_tac)
+            except FileNotFoundError:
+                tb_tac = Table()
 
             filesizes[i] = (os.path.getsize(f_target) * u.byte).to(u.kbyte).value
             # links[i] = f"<a href='{f_target}'><i class='fa-solid fa-download'></i></a>"
@@ -386,6 +398,15 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 except KeyError:
                     tot_time_l[i] = tb_l["Request time 1 (h)"]
 
+                if len(tb_tac) > 0:
+                    tac_fh_l[i] = tb_tac[tb_tac["resolution"] == "low"][
+                        "Texp (fiberhour)"
+                    ]
+                    tac_nppc_l[i] = tb_tac[tb_tac["resolution"] == "low"]["N_ppc"]
+                    tac_rot_l[i] = tb_tac[tb_tac["resolution"] == "low"][
+                        "Request time (h)"
+                    ]
+
             if len(tb_m) > 0:
                 exp_sci_m[i] = tb_m["Texp (h)"]
                 exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
@@ -393,6 +414,15 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                     tot_time_m[i] = tb_m["Request time (h)"]
                 except KeyError:
                     tot_time_m[i] = tb_m["Request time 1 (h)"]
+
+                if len(tb_tac) > 0:
+                    tac_fh_m[i] = tb_tac[tb_tac["resolution"] == "medium"][
+                        "Texp (fiberhour)"
+                    ]
+                    tac_nppc_m[i] = tb_tac[tb_tac["resolution"] == "medium"]["N_ppc"]
+                    tac_rot_m[i] = tb_tac[tb_tac["resolution"] == "medium"][
+                        "Request time (h)"
+                    ]
 
     df_psl_tgt = pd.DataFrame(
         {
@@ -405,6 +435,12 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "Exptime_sci_M (FH)": exp_sci_fh_m,
             "Time_tot_L (h)": tot_time_l,
             "Time_tot_M (h)": tot_time_m,
+            "TAC_FH_L": tac_fh_l,
+            "TAC_FH_M": tac_fh_m,
+            "TAC_nppc_L": tac_nppc_l,
+            "TAC_nppc_M": tac_nppc_m,
+            "TAC_ROT_L": tac_rot_l,
+            "TAC_ROT_M": tac_rot_m,
             "Filename": orignames,
             "filesize": filesizes,
             "timestamp": timestamps,
@@ -413,4 +449,9 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
         }
     )
 
-    return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)
+    if len(df_psl_tgt) == 0:
+        logger.warning(f"There are no ecsv files in the designated folder ({datadir}).")
+        return df_psl_tgt
+
+    else:
+        return df_psl_tgt.sort_values("timestamp", ascending=False, ignore_index=True)

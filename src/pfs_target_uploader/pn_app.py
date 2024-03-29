@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timezone
 from io import BytesIO
 
+import glob
 import gurobipy
 import numpy as np
 import pandas as pd
@@ -342,13 +343,16 @@ def list_files_app():
         filename=None,
         accept=".csv",
         multiple=False,
-        height=30,
+        height=40,
     )
 
     psl_info = pn.Column(
-        pn.Row("<font size=4>Please upload the proposal info:</font>", height=50),
+        pn.pane.Markdown(
+            "<font size=4><span style='color:blue'>[optional]</span> Upload the proposal info:</font>"
+            "<font size=4>(<a href='doc/examples/example_admin_pslID.csv' target='_blank'>example</a>)</font>",
+        ),
         psl_info_input,
-        height=150,
+        height=200,
     )
 
     # range sliders for filtering
@@ -396,65 +400,6 @@ def list_files_app():
             script = f"window.open('{p_href}', '_blank')"
             execute_javascript(script)#"""
 
-    def open_panel_magnify(event):
-        if event.column == "magnify":
-            table_ppc.clear()
-            u_id = df_files_tgt_psl["Upload ID"][event.row]
-            p_ppc = os.path.split(df_files_tgt_psl["fullpath_psl"][event.row])[0]
-            table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
-            table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
-            table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
-            (
-                nppc_fin,
-                p_result_fig_fin,
-                p_result_ppc_fin,
-                p_result_tab,
-            ) = ppp_result_reproduce(table_ppc_t, table_tgt_t, table_psl_t)
-
-            def tab_ppc_save(p_result_ppc_fin, p_result_tab):
-                Table.from_pandas(p_result_ppc_fin).write(
-                    f"data/temp/TAC_ppc_{u_id}.ecsv",
-                    format="ascii.ecsv",
-                    delimiter=",",
-                    overwrite=True,
-                )
-                Table.from_pandas(p_result_tab).write(
-                    f"data/temp/TAC_psl_{u_id}.ecsv",
-                    format="ascii.ecsv",
-                    delimiter=",",
-                    overwrite=True,
-                )
-                return f"data/temp/TAC_ppc_{u_id}.ecsv"
-
-            if nppc_fin is not None:
-                output_status = pn.pane.Markdown(
-                    f"<font size=3>You are checking program: Upload id = {u_id} </font>",
-                )
-
-                fd = pn.widgets.FileDownload(
-                    callback=pn.bind(tab_ppc_save, p_result_ppc_fin, p_result_tab),
-                    filename=f"TAC_ppc_{u_id}.csv",
-                    button_type="primary",
-                    width=280,
-                    height=40,
-                )
-
-                table_ppc.append(pn.Row(output_status, fd, width=750))
-
-            else:
-                output_status = pn.pane.Markdown(
-                    f"<font size=3>You are checking program: Upload id = {u_id} (no PPP outputs) </font>",
-                )
-
-                table_ppc.append(pn.Row(output_status, width=750))
-
-            table_ppc.append(
-                pn.Row(
-                    pn.Column(p_result_ppc_fin, width=700, height=1000),
-                    pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
-                )
-            )
-
     def Table_files_tgt_psl(column_checkbox_):
         if psl_info_input.value is not None:
             df_psl_info = load_input(
@@ -490,22 +435,221 @@ def list_files_app():
             selectable="checkbox",
         )
 
+        dirs = glob.glob(f"data/????/??/*/*")
+        upload_id_tacFin = [
+            tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
+            for tt in dirs
+            if "TAC_psl_" in tt
+        ]
+        row_tacFin = np.where(
+            np.in1d(_table_files_tgt_psl.value["Upload ID"], upload_id_tacFin) == True
+        )[0]
+        _table_files_tgt_psl.selection = [int(tt) for tt in row_tacFin]
+
         _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
         _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
         _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
+
+        def open_panel_magnify(event):
+            # move to "PPC details" tab
+            tab_panels.active = 1
+
+            row_target = event.row
+            if event.column == "magnify":
+                table_ppc.clear()
+                u_id = _df_files_tgt_psl["Upload ID"][row_target]
+                p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"][row_target])[0]
+                try:
+                    psl_id = _df_files_tgt_psl["proposal ID"][row_target]
+                except KeyError:
+                    psl_id = None
+
+                table_ppc_t = Table.read(os.path.join(p_ppc, f"ppc_{u_id}.ecsv"))
+                table_tgt_t = Table.read(os.path.join(p_ppc, f"target_{u_id}.ecsv"))
+                table_psl_t = Table.read(os.path.join(p_ppc, f"psl_{u_id}.ecsv"))
+                try:
+                    table_tac_t = Table.read(
+                        os.path.join(p_ppc, f"TAC_psl_{u_id}.ecsv")
+                    )
+                except FileNotFoundError:
+                    table_tac_t = Table()
+
+                (
+                    nppc_fin,
+                    p_result_fig_fin,
+                    p_result_ppc_fin,
+                    p_result_tab,
+                ) = ppp_result_reproduce(
+                    table_ppc_t, table_tgt_t, table_psl_t, table_tac_t
+                )
+
+                def tab_ppc_save(event):
+                    # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
+                    dirs = glob.glob(f"data/????/??/*")
+                    path_t = [tt for tt in dirs if u_id in tt][0]
+
+                    Table.from_pandas(p_result_ppc_fin.value).write(
+                        f"{path_t}/TAC_ppc_{u_id}.ecsv",
+                        format="ascii.ecsv",
+                        delimiter=",",
+                        overwrite=True,
+                    )
+                    logger.info(f"File TAC_ppc_{u_id}.ecsv is saved under {path_t}.")
+                    # make the ppc list downloadable
+                    fd_link.object = f"<font size=4>(<a href={path_t}/TAC_ppc_{u_id}.ecsv target='_blank'>Download the PPC list</a>)</font>"
+
+                    Table.from_pandas(p_result_tab.value).write(
+                        f"{path_t}/TAC_psl_{u_id}.ecsv",
+                        format="ascii.ecsv",
+                        delimiter=",",
+                        overwrite=True,
+                    )
+                    logger.info(f"File TAC_psl_{u_id}.ecsv is saved under {path_t}.")
+
+                    # update tac allocation in program info tab
+                    dirs = glob.glob(f"data/????/??/*/*")
+                    path_ = [path_t for path_t in dirs if "TAC_psl_" + u_id in path_t][
+                        0
+                    ]
+                    tb_tac_psl_t = Table.read(path_)
+
+                    if sum(tb_tac_psl_t["resolution"] == "low") > 0:
+                        _df_files_tgt_psl["TAC_FH_L"][row_target] = tb_tac_psl_t[
+                            "Texp (fiberhour)"
+                        ][tb_tac_psl_t["resolution"] == "low"]
+                        _df_files_tgt_psl["TAC_nppc_L"][row_target] = tb_tac_psl_t[
+                            "N_ppc"
+                        ][tb_tac_psl_t["resolution"] == "low"]
+                        _df_files_tgt_psl["TAC_ROT_L"][row_target] = tb_tac_psl_t[
+                            "Request time (h)"
+                        ][tb_tac_psl_t["resolution"] == "low"]
+
+                    if sum(tb_tac_psl_t["resolution"] == "medium") > 0:
+                        _df_files_tgt_psl["TAC_FH_M"][row_target] = tb_tac_psl_t[
+                            "Texp (fiberhour)"
+                        ][tb_tac_psl_t["resolution"] == "medium"]
+                        _df_files_tgt_psl["TAC_nppc_M"][row_target] = tb_tac_psl_t[
+                            "N_ppc"
+                        ][tb_tac_psl_t["resolution"] == "medium"]
+                        _df_files_tgt_psl["TAC_ROT_M"][row_target] = tb_tac_psl_t[
+                            "Request time (h)"
+                        ][tb_tac_psl_t["resolution"] == "medium"]
+
+                    _table_files_tgt_psl.value = _df_files_tgt_psl
+
+                    # select rows which complete the tac allocation
+                    upload_id_tacFin = [
+                        tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
+                        for tt in dirs
+                        if "TAC_psl_" in tt
+                    ]
+
+                    row_tacFin = np.where(
+                        np.in1d(
+                            _table_files_tgt_psl.value["Upload ID"], upload_id_tacFin
+                        )
+                        == True
+                    )[0]
+                    _table_files_tgt_psl.selection = [int(tt) for tt in row_tacFin]
+
+                    # update tac allocation summary
+                    tac_summary.object = (
+                        "<font size=5>Summary of Tac allocation:</font>\n"
+                        "<font size=4> - Low-res mode: </font>\n"
+                        f"<font size=4> **FH** allocated= <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
+                        f"<font size=4> **Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
+                        f"<font size=4> **ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
+                        "<font size=4> - Medium-res mode: </font>\n"
+                        f"<font size=4> **FH** allocated= <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
+                        f"<font size=4> **Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
+                        f"<font size=4> **ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
+                    )
+
+                    # move to "Program info" tab
+                    # tab_panels.active = 0
+
+                if nppc_fin is not None:
+                    output_status = pn.pane.Markdown(
+                        "<font size=5>You are checking the program:</font>\n"
+                        f"<font size=4> Upload id = <span style='color:tomato'>**{u_id}**</span></font>\n"
+                        f"<font size=4> Proposal id = <span style='color:tomato'>**{psl_id}**</span> </font>",
+                    )
+
+                    fd_success = pn.widgets.Button(
+                        name="Time allocated",
+                        button_type="primary",
+                        icon="circle-check",
+                        icon_size="2em",
+                        height=45,
+                        max_width=150,
+                        margin=(20, 0, 0, 0),
+                    )
+
+                    fd_link = pn.pane.Markdown(
+                        "<font size=4>(Download the PPC list)</font>",
+                        margin=(0, 0, 0, -15),
+                    )
+
+                    fd_success.on_click(tab_ppc_save)
+
+                    table_ppc.append(
+                        pn.Row(output_status, pn.Column(fd_success, fd_link), width=750)
+                    )
+
+                else:
+                    ####NEED to FIX!!
+                    # Do we need this? since 15-min upper limit is set in online PPP, all programs should have some ppp outputs..?
+                    output_status = pn.pane.Markdown(
+                        "<font size=5>You are checking the program (no PPP outputs):</font>\n"
+                        f"<font size=4> Upload id = <span style='color:tomato'>**{u_id}**</span></font>\n"
+                        f"<font size=4> Proposal id = <span style='color:tomato'>**{psl_id}**</span> </font>",
+                    )
+
+                    table_ppc.append(pn.Row(output_status, width=750))
+
+                table_ppc.append(
+                    pn.Row(
+                        pn.Column(p_result_ppc_fin, width=700, height=1000),
+                        pn.Column(nppc_fin, p_result_tab, p_result_fig_fin),
+                    )
+                )
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
 
         return _table_files_tgt_psl
 
     column_checkbox = pn.widgets.MultiChoice(
-        name="Columns to show",
-        value=["Upload ID", "n_obj", "Time_tot_L (h)", "Time_tot_M (h)", "timestamp"],
-        options=list(df_files_tgt_psl.columns) + ["proposal ID", "PI name", "rank"],
+        name=" ",
+        value=[
+            "Upload ID",
+            "n_obj",
+            "Time_tot_L (h)",
+            "Time_tot_M (h)",
+            "timestamp",
+            "TAC_FH_L",
+            "TAC_FH_M",
+            "TAC_nppc_L",
+            "TAC_nppc_M",
+        ],
+        options=list(df_files_tgt_psl.columns)
+        + ["proposal ID", "PI name", "rank", "grade"],
     )
 
     table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
+
+    # summary of tac allocation
+    tac_summary = pn.pane.Markdown(
+        "<font size=5>Summary of Tac allocation:</font>\n"
+        "<font size=4> - Low-res mode: </font>\n"
+        f"<font size=4> FH allocated= <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
+        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
+        f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
+        "<font size=4> - Medium-res mode: </font>\n"
+        f"<font size=4> FH allocated= <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
+        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.2f}**</span> </font>\n"
+        f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
+    )
 
     # Details of PPC
     table_ppc = pn.Column()
@@ -513,11 +657,27 @@ def list_files_app():
     # -------------------------------------------------------------------
 
     sidebar_column = pn.Column(
-        psl_info, slider_nobj, slider_fiberhour, slider_rot_l, slider_rot_m
+        psl_info,
+        pn.pane.Markdown("<font size=4> Select the proposals to show:</font>"),
+        slider_nobj,
+        slider_fiberhour,
+        slider_rot_l,
+        slider_rot_m,
+        tac_summary,
     )
 
     tab_panels = pn.Tabs(
-        ("Program info", pn.Column(column_checkbox, table_files_tgt_psl)),
+        (
+            "Program info",
+            pn.Column(
+                pn.pane.Markdown(
+                    "<font size=4> Select the columns to show:</font>",
+                    height=20,
+                ),
+                column_checkbox,
+                table_files_tgt_psl,
+            ),
+        ),
         ("PPC details", table_ppc),
     )
 
