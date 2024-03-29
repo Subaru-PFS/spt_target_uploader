@@ -1879,7 +1879,7 @@ def ppp_result_reproduce(
 
     @pn.io.profile("p_result_tab_tot")
     def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
-        ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
+        ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0, ignore_index=True)
         loc_total = ppc_sum.index.size
         ppc_sum.loc[loc_total] = ppc_sum.sum(numeric_only=True)
         ppc_sum.loc[loc_total, "resolution"] = "Total"
@@ -1891,7 +1891,7 @@ def ppp_result_reproduce(
 
     @pn.io.profile("p_result_ppc_tot")
     def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
-        ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
+        ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0, ignore_index=True)
         return ppc_lst
 
     p_result_tab = pn.widgets.Tabulator(
@@ -1911,7 +1911,7 @@ def ppp_result_reproduce(
         formatters=tabulator_formatters,
     )
 
-    # currently, this table is not displayed
+    # PPC list shown in the left of the main panel
     p_result_ppc_fin = pn.widgets.Tabulator(
         pn.bind(p_result_ppc_tot, p_result_ppc_l, p_result_ppc_m),
         visible=True,
