@@ -1922,6 +1922,7 @@ def ppp_result_reproduce(
         pagination="remote",
         header_filters=True,
         layout="fit_columns",
+        selectable=False,
         hidden_columns=[
             "index",
             "Fiber usage fraction (%)",
