@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
+import glob
 import os
 from datetime import datetime, timezone
 from io import BytesIO
 
-import glob
 import gurobipy
 import numpy as np
 import pandas as pd
@@ -435,7 +435,7 @@ def list_files_app():
             selectable="checkbox",
         )
 
-        dirs = glob.glob(f"data/????/??/*/*")
+        dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
         upload_id_tacFin = [
             tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
             for tt in dirs
@@ -486,7 +486,7 @@ def list_files_app():
 
                 def tab_ppc_save(event):
                     # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
-                    dirs = glob.glob(f"data/????/??/*")
+                    dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*"))
                     path_t = [tt for tt in dirs if u_id in tt][0]
 
                     Table.from_pandas(p_result_ppc_fin.value).write(
@@ -508,7 +508,7 @@ def list_files_app():
                     logger.info(f"File TAC_psl_{u_id}.ecsv is saved under {path_t}.")
 
                     # update tac allocation in program info tab
-                    dirs = glob.glob(f"data/????/??/*/*")
+                    dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
                     path_ = [path_t for path_t in dirs if "TAC_psl_" + u_id in path_t][
                         0
                     ]
