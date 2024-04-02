@@ -361,8 +361,8 @@ class ValidationResultWidgets:
                 self.warning_text_visibility.object += (
                     "<font size=3> (see the following table).</font>"
                 )
-                if self.warning_text_visibility.value is not None:
-                    self.warning_text_visibility.value[0:0]
+                if self.warning_table_visibility.value is not None:
+                    self.warning_table_visibility.value[0:0]
                 self.warning_table_visibility.frozen_columns = []
                 dfout = df.loc[~validation_status["visibility"]["success"], :]
                 self.warning_table_visibility.value = dfout
