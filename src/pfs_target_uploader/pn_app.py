@@ -452,12 +452,13 @@ def list_files_app():
         _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
 
         def open_panel_magnify(event):
-            # move to "PPC details" tab
-            tab_panels.active = 1
-
             row_target = event.row
             if event.column == "magnify":
                 table_ppc.clear()
+
+                # move to "PPC details" tab
+                tab_panels.active = 1
+
                 u_id = _df_files_tgt_psl["Upload ID"][row_target]
                 p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"][row_target])[0]
                 try:
@@ -647,7 +648,7 @@ def list_files_app():
         f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
         "<font size=4> - Medium-res mode: </font>\n"
         f"<font size=4> FH allocated= <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
-        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.2f}**</span> </font>\n"
+        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
         f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
     )
 
