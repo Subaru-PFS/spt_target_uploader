@@ -499,7 +499,7 @@ def list_files_app():
                 path_t_server = path_t_all[0]
                 tac_ppc_list_file_server = f"{path_t_server}/TAC_ppc_{u_id}.ecsv"
 
-                path_t = path_t_server.replace(config["OUTPUT_DIR"], "data/", 1)
+                path_t = path_t_server.replace(config["OUTPUT_DIR"], "data", 1)
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
 
                 logger.info(f"{_table_files_tgt_psl.selection}")
