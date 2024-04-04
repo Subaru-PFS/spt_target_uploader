@@ -496,10 +496,10 @@ def list_files_app():
                     )
                     raise ValueError
 
-                path_t = path_t_all[0]
-                # tac_ppc_list_file_true = f"{path_t}/TAC_ppc_{u_id}.ecsv"
+                path_t_server = path_t_all[0]
+                tac_ppc_list_file_server = f"{path_t_server}/TAC_ppc_{u_id}.ecsv"
 
-                path_t = path_t.replace(config["OUTPUT_DIR"], "data/", 1)
+                path_t = path_t_server.replace(config["OUTPUT_DIR"], "data/", 1)
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
 
                 logger.info(f"{_table_files_tgt_psl.selection}")
@@ -517,22 +517,26 @@ def list_files_app():
                     # dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*"))
 
                     Table.from_pandas(p_result_ppc_fin.value).write(
-                        f"{path_t}/TAC_ppc_{u_id}.ecsv",
+                        f"{path_t_server}/TAC_ppc_{u_id}.ecsv",
                         format="ascii.ecsv",
                         delimiter=",",
                         overwrite=True,
                     )
-                    logger.info(f"File TAC_ppc_{u_id}.ecsv is saved under {path_t}.")
+                    logger.info(
+                        f"File TAC_ppc_{u_id}.ecsv is saved under {path_t_server}."
+                    )
                     # make the ppc list downloadable
                     fd_link.object = f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the PPC list</a>)</font>"
 
                     Table.from_pandas(p_result_tab.value).write(
-                        f"{path_t}/TAC_psl_{u_id}.ecsv",
+                        f"{path_t_server}/TAC_psl_{u_id}.ecsv",
                         format="ascii.ecsv",
                         delimiter=",",
                         overwrite=True,
                     )
-                    logger.info(f"File TAC_psl_{u_id}.ecsv is saved under {path_t}.")
+                    logger.info(
+                        f"File TAC_psl_{u_id}.ecsv is saved under {path_t_server}."
+                    )
 
                     # update tac allocation in program info tab
                     dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
