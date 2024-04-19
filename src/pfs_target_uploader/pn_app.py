@@ -485,28 +485,58 @@ def list_files_app():
                     table_ppc_t, table_tgt_t, table_psl_t, table_tac_t
                 )
 
+                dirs2 = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/"))
+                path_t_all = [tt for tt in dirs2 if u_id in tt]
+                if len(path_t_all) == 0:
+                    logger.error(f"Path not found for {u_id}")
+                    raise ValueError
+                elif len(path_t_all) > 1:
+                    logger.error(
+                        f"Multiple paths found for {u_id}, {path_t_all}, len={len(path_t_all)}"
+                    )
+                    raise ValueError
+
+                path_t_server = path_t_all[0]
+                tac_ppc_list_file_server = f"{path_t_server}/TAC_ppc_{u_id}.ecsv"
+
+                path_t = path_t_server.replace(config["OUTPUT_DIR"], "data", 1)
+                tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
+
+                logger.info(f"{_table_files_tgt_psl.selection}")
+                logger.info(f"{row_target=}")
+                if row_target in _table_files_tgt_psl.selection:
+                    # make the ppc list downloadable
+                    fd_link = pn.pane.Markdown(
+                        f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the PPC list</a>)</font>",
+                        margin=(0, 0, 0, -15),
+                    )
+                    logger.info("TAC PPC list is already available.")
+
                 def tab_ppc_save(event):
                     # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
-                    dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*"))
-                    path_t = [tt for tt in dirs if u_id in tt][0]
+                    # dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*"))
 
                     Table.from_pandas(p_result_ppc_fin.value).write(
-                        f"{path_t}/TAC_ppc_{u_id}.ecsv",
+                        f"{path_t_server}/TAC_ppc_{u_id}.ecsv",
                         format="ascii.ecsv",
                         delimiter=",",
                         overwrite=True,
                     )
-                    logger.info(f"File TAC_ppc_{u_id}.ecsv is saved under {path_t}.")
+                    logger.info(
+                        f"File TAC_ppc_{u_id}.ecsv is saved under {path_t_server}."
+                    )
                     # make the ppc list downloadable
-                    fd_link.object = f"<font size=4>(<a href={path_t}/TAC_ppc_{u_id}.ecsv target='_blank'>Download the PPC list</a>)</font>"
+                    fd_link.object = f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the PPC list</a>)</font>"
 
                     Table.from_pandas(p_result_tab.value).write(
-                        f"{path_t}/TAC_psl_{u_id}.ecsv",
+                        f"{path_t_server}/TAC_psl_{u_id}.ecsv",
                         format="ascii.ecsv",
                         delimiter=",",
                         overwrite=True,
                     )
-                    logger.info(f"File TAC_psl_{u_id}.ecsv is saved under {path_t}.")
+                    logger.info(
+                        f"File TAC_psl_{u_id}.ecsv is saved under {path_t_server}."
+                    )
 
                     # update tac allocation in program info tab
                     dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
@@ -566,6 +596,10 @@ def list_files_app():
                         f"<font size=4> **Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
                         f"<font size=4> **ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
                     )
+                    pn.state.notifications.info(
+                        "TAC allocation is made for the program and a new PPC list is saved.",
+                        duration=5000,  # 5sec
+                    )
 
                     # move to "Program info" tab
                     # tab_panels.active = 0
@@ -587,10 +621,11 @@ def list_files_app():
                         margin=(20, 0, 0, 0),
                     )
 
-                    fd_link = pn.pane.Markdown(
-                        "<font size=4>(Download the PPC list)</font>",
-                        margin=(0, 0, 0, -15),
-                    )
+                    if row_target not in _table_files_tgt_psl.selection:
+                        fd_link = pn.pane.Markdown(
+                            "<font size=4>(Download the PPC list)</font>",
+                            margin=(0, 0, 0, -15),
+                        )
 
                     fd_success.on_click(tab_ppc_save)
 
