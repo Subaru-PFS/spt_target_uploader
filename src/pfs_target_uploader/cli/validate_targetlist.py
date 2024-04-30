@@ -2,7 +2,7 @@
 
 import argparse
 import secrets
-from datetime import date, datetime, timezone
+from datetime import date  # , datetime, timezone
 
 from astropy.table import Table
 from loguru import logger
