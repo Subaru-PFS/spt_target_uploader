@@ -28,6 +28,8 @@ class ValidationResultWidgets:
         disabled=True,
         max_width=box_width,
         stylesheets=[stylesheet],
+        titles={"obj_id_str": "obj_id"},
+        hidden_columns=["obj_id"],
     )
 
     def __init__(self):
@@ -189,6 +191,11 @@ class ValidationResultWidgets:
     def show_results(self, df, validation_status):
         # reset title panes
         self.reset()
+
+        # df_orig = df.copy()  # create a back up just in case
+
+        # df["obj_id_str"] = df["obj_id"].astype(str)
+        df.insert(1, "obj_id_str", df["obj_id"].astype(str))
 
         if validation_status["status"]:
             self.error_title.visible = False
@@ -380,13 +387,13 @@ class ValidationResultWidgets:
         # Duplication
         if validation_status["unique"]["status"]:
             self.append_title("info")
-            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`s</u></font>\n\n<font size=3>All `ob_code` are unique.</font>"
+            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`</u></font>\n\n<font size=3>All `ob_code` are unique.</font>"
             self.info_pane.append(self.info_text_dups)
             self.error_table_dups.visible = False
         else:
             self.append_title("error")
             # add an error message and data table for duplicates
-            self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code`s </u></font>\n\n<font size=3>Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets</font>"
+            self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code` and `obj_id` </u></font>\n\n<font size=3>Each `ob_code` and `obj_id` must be unique within a proposal, but duplicate `ob_code` and/or `obj_id` are detected in the following targets</font>"
             self.error_table_dups.frozen_columns = []
             if self.error_table_dups.value is not None:
                 self.error_table_dups.value[0:0]
