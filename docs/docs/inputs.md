@@ -35,9 +35,15 @@ Mandatory fields are listed below.
 | priority   | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority |
 | resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution       |
 
-#### About `ob_code`
 
-In a given target list, each `ob_code` must be unique. Some examples of good cases are shown below.
+#### About uniqueness condition by `(obj_id, resolution)` and `ob_code`
+
+In a given target list, each pair of `(ob_code, resolution)` must be unique.
+Each `ob_code` must also be unique.
+
+Some examples of good and bad cases are shown below.
+
+✅ Good
 
 A standard case.
 
@@ -46,6 +52,17 @@ A standard case.
 | ob_1    |      1 |
 | ob_2    |      2 |
 
+🚫 Bad
+
+The following case violates the unique constraints by setting the duplicated `(obj_id, resolution)` values.
+
+| ob_code  | obj_id | resolution |
+|----------|-------:|------------|
+| ob_1_L_1 |      1 | L          |
+| ob_1_L_2 |      1 | L          |
+
+✅ Good
+
 You can request to observe an object with both `L` and `M` resolutions, but you need to use a different `ob_code` for each case.
 
 | ob_code | obj_id | resolution |
@@ -53,20 +70,24 @@ You can request to observe an object with both `L` and `M` resolutions, but you 
 | ob_1_L  |      1 | L          |
 | ob_1_M  |      1 | M          |
 
-You can request to observe an object multiple times instead of summing up the exposure time, but you need to use a different `ob_code` for each case.
+🚫 Bad
 
-| ob_code     | obj_id | exptime |
-|-------------|-------:|--------:|
-| ob_1_900s_1 |      1 |     900 |
-| ob_1_900s_2 |      1 |     900 |
-| ob_1_900s_3 |      1 |     900 |
-| ob_1_900s_4 |      1 |     900 |
+You cannot have multiple rows of an object a target list, even if you assign different `ob_code` for each row.
 
-This is essentially equivalent to the following.
+| ob_code     | obj_id | exptime | resolution |
+|-------------|-------:|--------:|------------|
+| ob_1_900s_1 |      1 |     900 | L          |
+| ob_1_900s_2 |      1 |     900 | L          |
+| ob_1_900s_3 |      1 |     900 | L          |
+| ob_1_900s_4 |      1 |     900 | L          |
 
-| ob_code    | obj_id | exptime |
-|------------|-------:|--------:|
-| ob_1_3600s |      1 |    3600 |
+✅ Good
+
+For the case above, please make a row by summing up the exposure time as follows.
+
+| ob_code    | obj_id | exptime | resolution |
+|------------|-------:|--------:|------------|
+| ob_1_3600s |      1 |    3600 | L          |
 
 #### About astrometry
 

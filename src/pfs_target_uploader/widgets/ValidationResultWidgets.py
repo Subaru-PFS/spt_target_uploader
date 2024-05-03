@@ -387,13 +387,13 @@ class ValidationResultWidgets:
         # Duplication
         if validation_status["unique"]["status"]:
             self.append_title("info")
-            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code`</u></font>\n\n<font size=3>All `ob_code` are unique.</font>"
+            self.info_text_dups.object = "<font size=4><u>Uniqueness of `ob_code` and `(obj_id, resolution)`</u></font>\n\n<font size=3>All `ob_code` and `(obj_id, resolution)` are unique.</font>"
             self.info_pane.append(self.info_text_dups)
             self.error_table_dups.visible = False
         else:
             self.append_title("error")
             # add an error message and data table for duplicates
-            self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code` and `obj_id` </u></font>\n\n<font size=3>Each `ob_code` and `obj_id` must be unique within a proposal, but duplicate `ob_code` and/or `obj_id` are detected in the following targets</font>"
+            self.error_text_dups.object = "<font size=4><u>Duplication of `ob_code` and `(obj_id, resolution)` </u></font>\n\n<font size=3>Each `ob_code` and `(obj_id, resolution)` must be unique within a proposal, but duplicate `ob_code` and/or `(obj_id, resolution)` are detected in the following targets.</font>"
             self.error_table_dups.frozen_columns = []
             if self.error_table_dups.value is not None:
                 self.error_table_dups.value[0:0]
