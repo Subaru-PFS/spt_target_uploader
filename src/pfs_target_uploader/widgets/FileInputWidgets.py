@@ -114,4 +114,7 @@ class FileInputWidgets(param.Parameterized):
         t_stop = time.time()
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
 
+        # convert obj_id to string
+        df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
+
         return validation_status, df_input, df_output
