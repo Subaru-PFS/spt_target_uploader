@@ -93,17 +93,20 @@ Target visibility is checked by comparing the requested exposure time is shorter
 
     All `ob_code`s are visible in the input observing period
 
-### Duplicated `ob_code`
+### Duplicated `ob_code` and `(obj_id, resolution)`
 
-`ob_code`s are checked not to have duplicates. Along with the error message, invalid rows will be displayed.
+Duplication of ob_code and obj_id
+
+`ob_code` and `(obj_id, resolution)` are checked not to have duplicates. Along with the error message, invalid rows will be displayed.
 
 !!! danger "Errors are raised in the following case"
 
-    Each `ob_code` must be unique within a proposal, but duplicate `ob_code` detected in the following targets.
+    Each `ob_code` and `(obj_id, resolution)` must be unique within a proposal, but duplicate `ob_code` and/or `(obj_id, resolution)`
+    are detected in the following targets.
 
 !!! success "Info message is raised for successful validation"
+    All `ob_code` and `(obj_id, resolution)` are unique.
 
-    All `ob_code` are unique.
 
 ## Validation Results
 

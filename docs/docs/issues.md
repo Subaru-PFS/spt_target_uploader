@@ -36,10 +36,6 @@ You can try to reload and start the simulation again.  If you are not sure what'
 
 Note that the computation will be terminated once the running time reaches 15 minutes.
 
-### Large `obj_id` in the tables is not displayed correctly in tables
-
-Javascript is used to display the table and the limitation of integer is $2^{53}-1$ ([ref](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER)). Numbers larger than the limit are incorrectly displayed.
-
 ### Tables are not displayed correctly
 
 Sometimes tables are not rendered correctly. If your table has more than one page, moving to another page usually brings the content back to the first page.

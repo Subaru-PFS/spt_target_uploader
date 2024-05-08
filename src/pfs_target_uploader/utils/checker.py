@@ -506,6 +506,7 @@ def check_unique(df, logger=logger):
 
     # make a status flag for duplication check
     flag_duplicate = np.zeros(df.index.size, dtype=bool)
+
     # find unique elements in 'ob_code'
     unique_elements, unique_counts = np.unique(
         df["ob_code"].to_numpy(), return_counts=True
@@ -526,6 +527,32 @@ def check_unique(df, logger=logger):
         description = "Duplicate 'ob_code' found. 'ob_code' must be unique."
         logger.error("Duplicates in 'ob_code' detected!")
         logger.error(f"""Duplicates by flag:\n{df.loc[flag_duplicate,:]}""")
+
+    # find unique elements for a pair of ('obj_id', 'resolution')
+    # unique_elements, unique_counts = np.unique(
+    #     df.loc[:, ["obj_id", "resolution"]].to_numpy(), return_counts=True
+    # )
+    is_duplicated = df.duplicated(subset=["obj_id", "resolution"], keep="first")
+
+    # If the number of duplicated elements is zero, 'success' status is returned.
+    if np.sum(is_duplicated) == 0:
+        unique_status = unique_status and True
+        description += " All ('ob_code', 'resolution') pairs are unique."
+        logger.info("All ('ob_code', 'resolution') are unique.")
+    else:
+        for i in np.arange(df.index.size)[is_duplicated]:
+            flag_duplicate[
+                np.logical_and(
+                    df["obj_id"] == df["obj_id"][i],
+                    df["resolution"] == df["resolution"][i],
+                )
+            ] = True
+        unique_status = False
+        description += " Duplicate ('obj_id', 'resolution') pair found. ('obj_id', 'resolution') must be unique."
+        logger.error("Duplicates in ('obj_id', 'resolution') detected!")
+        logger.error(
+            f"""Duplicates by flag:\n{df.loc[flag_duplicate,['ob_code', 'obj_id', 'resolution']]}"""
+        )
 
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 

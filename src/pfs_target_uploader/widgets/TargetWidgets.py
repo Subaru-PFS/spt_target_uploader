@@ -24,6 +24,8 @@ class TargetWidgets:
             layout="fit_data_table",
             disabled=True,
             stylesheets=[self.stylesheet],
+            titles={"obj_id_str": "obj_id"},
+            hidden_columns=["obj_id"],
         )
 
         self.pane = pn.Column(self.table_all)
