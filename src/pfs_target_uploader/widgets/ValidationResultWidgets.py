@@ -192,11 +192,6 @@ class ValidationResultWidgets:
         # reset title panes
         self.reset()
 
-        # df_orig = df.copy()  # create a back up just in case
-
-        # df["obj_id_str"] = df["obj_id"].astype(str)
-        df.insert(1, "obj_id_str", df["obj_id"].astype(str))
-
         if validation_status["status"]:
             self.error_title.visible = False
 
