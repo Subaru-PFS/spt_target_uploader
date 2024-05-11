@@ -2,10 +2,9 @@
 
 import os
 import secrets
-from datetime import date  # , datetime, timezone
-from typing import Annotated, List, Optional
+from datetime import date
+from typing import Annotated
 
-import rich
 import typer
 from astropy.table import Table
 from loguru import logger
@@ -21,8 +20,6 @@ app = typer.Typer(
     add_completion=False,
 )
 
-# config_help_msg = "Database configuration file in the TOML format."
-
 
 @app.command(help="Validate a target list for PFS openuse")
 def validate(
@@ -35,13 +32,6 @@ def validate(
     date_end: Annotated[
         str, typer.Option("--date-end", help="End date (e.g., 2023-07-31)")
     ] = None,
-    # save: Annotated[
-    #     bool, typer.Option("--save", help="Save the validated target list")
-    # ] = False,
-    # add_upload_id: Annotated[
-    #     bool,
-    #     typer.Option("--add-upload_id", help="Assign upload_id to the target list"),
-    # ] = False,
 ):
 
     df_input, dict_load = load_input(input_list)
@@ -56,25 +46,7 @@ def validate(
 
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
-        validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
-        )
-
-        # # save file if validation is successful and save option is provided
-        # if validation_status["status"] and save:
-        #     # dt = datetime.now(timezone.utc)
-        #     if add_upload_id:
-        #         secret_token = secrets.token_hex(8)
-        #         outfile = f"target_{secret_token}.ecsv"
-        #     else:
-        #         secret_token = None
-        #         outfile = "target_validated.ecsv"
-        #     logger.info(f"Saving the validated target list to {outfile}")
-        #     Table.from_pandas(df_validated).write(
-        #         outfile,
-        #         format="ascii.ecsv",
-        #         overwrite=True,
-        #     )
+        _, _ = validate_input(df_input, date_begin=date_begin, date_end=date_end)
 
 
 @app.command(help="Run the online PPP to simulate pointings")
@@ -129,19 +101,19 @@ def simulate(
 
     (
         uS_L2,
-        cR_L,
+        _,
         cR_L_,
         sub_l,
         obj_allo_L_fin,
         uS_M2,
-        cR_M,
+        _,
         cR_M_,
         sub_m,
         obj_allo_M_fin,
-        ppp_status_,
+        _,
     ) = PPPrunStart(tb_visible, None, max_exec_time, max_nppc=max_nppc)
 
-    nppc, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
+    _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
         cR_L_,
         sub_l,
         obj_allo_L_fin,
