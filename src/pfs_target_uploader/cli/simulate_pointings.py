@@ -74,7 +74,8 @@ def main():
         cR_M_,
         sub_m,
         obj_allo_M_fin,
-    ) = PPPrunStart(tb_visible, weights)
+        ppp_status_,
+    ) = PPPrunStart(tb_visible, weights, 0, max_nppc=0)
 
     nppc, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
         cR_L_,

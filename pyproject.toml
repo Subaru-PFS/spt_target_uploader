@@ -38,14 +38,16 @@ dependencies = [
     "snakeviz>=2.2.0",
     "memray>=1.10.0",
     "mkdocs-video>=1.5.0",
+    "typer>=0.12.3",
 ]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
 license = { text = "MIT" }
 
 [project.scripts]
-pfs_validate_targetlist = "pfs_target_uploader.cli.validate_targetlist:main"
-pfs_simulate_pointings = "pfs_target_uploader.cli.simulate_pointings:main"
+pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
+# pfs_validate_targetlist = "pfs_target_uploader.cli.validate_targetlist:main"
+# pfs_simulate_pointings = "pfs_target_uploader.cli.simulate_pointings:main"
 
 [build-system]
 requires = ["setuptools", "wheel", "pybind11"]

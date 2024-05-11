@@ -47,6 +47,9 @@ pn.extension(notifications=True)
 def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
     r_pfi = d_pfi / 2.0
 
+    if weight_para is None:
+        weight_para = [4.02, 0.01, 0.01]
+
     is_exetime = (exetime is not None) and (exetime > 0)
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
 
@@ -382,7 +385,7 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
                     break
 
                 # -------------------------------
-                ####peak_xy from KDE peak with weights
+                # ### peak_xy from KDE peak with weights
                 X_, Y_, obj_dis_sig_, peak_x, peak_y = KDE(sample_s, mutiPro)
 
                 # -------------------------------
@@ -868,20 +871,18 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if is_nppc:
-                    if len(obj_allo) > max_nppc:
-                        logger.info(
-                            f"PPP stopped since Nppc > {max_nppc} [netflow_iter s2]"
-                        )
-                        break
-
-                    else:
-                        obj_allo = vstack([obj_allo, obj_allo_t])
-                        obj_allo.remove_rows(
-                            np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0]
-                        )
-                        uS = complete_ppc(uS_t2, obj_allo)[0]
-                        iter_m2 += 1
+                if is_nppc and (len(obj_allo) > max_nppc):
+                    logger.info(
+                        f"PPP stopped since Nppc > {max_nppc} [netflow_iter s2]"
+                    )
+                    break
+                else:
+                    obj_allo = vstack([obj_allo, obj_allo_t])
+                    obj_allo.remove_rows(
+                        np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0]
+                    )
+                    uS = complete_ppc(uS_t2, obj_allo)[0]
+                    iter_m2 += 1
 
             return obj_allo, status
 

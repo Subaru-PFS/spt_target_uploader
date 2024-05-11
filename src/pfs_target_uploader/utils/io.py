@@ -160,7 +160,8 @@ def upload_file(
         else:
             logger.warning(f"{outdir} already exists, strange")
     else:
-        secret_token = "export"
+        if secret_token is None:
+            secret_token = "export"
         outdir = ""
 
     # convert pandas.DataFrame to astropy.Table
@@ -195,10 +196,12 @@ def upload_file(
             }
         )
 
-    if export:
-        outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}"
-    else:
-        outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}-{secret_token}"
+    outfile_zip_prefix = f"pfs_target-{dt:%Y%m%d-%H%M%S}"
+
+    if secret_token is not None:
+        outfile_zip_prefix += f"-{secret_token}"
+
+    logger.info(f"{outfile_zip_prefix} is the output file prefix")
 
     outfiles_dict = {
         "filename": [],
@@ -221,7 +224,7 @@ def upload_file(
         ],
         ["table", "table", "table", "table", "figure", "original", "readme"],
     ):
-        logger.info("Adding metadata")
+        logger.info(f"Adding metadata to {file_prefix} file")
         if type == "table":
             # add metadata
             obj.meta["original_filename"] = origname
