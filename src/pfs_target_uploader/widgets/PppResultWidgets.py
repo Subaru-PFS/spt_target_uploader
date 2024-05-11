@@ -41,7 +41,7 @@ class PppResultWidgets:
         )
         self.ppp_warning_text_1 = (
             "<font size=5>⚠️ **Warnings**</font>\n\n"
-            "<font size=3>The total requested time exceeds 35 hours (maximum for a normal program). "
+            f"<font size=3>The total requested time exceeds {int(self.max_reqtime_normal)} hours (maximum for a normal program). "
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered.</font>"
         )
@@ -54,7 +54,7 @@ class PppResultWidgets:
 
         self.ppp_warning_text_3 = (
             "<font size=5>⚠️ **Warnings**</font>\n\n"
-            "<font size=3>1. The total requested time exceeds 35 hours (maximum for a normal program). "
+            f"<font size=3>1. The total requested time exceeds {int(self.max_reqtime_normal)} hours (maximum for a normal program). "
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered."
             f"\n 2. Calculation stops because time ({int(self.exetime/60):d} min) is running out."
