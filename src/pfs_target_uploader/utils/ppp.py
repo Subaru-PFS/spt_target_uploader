@@ -44,8 +44,16 @@ warnings.filterwarnings("ignore")
 pn.extension(notifications=True)
 
 
-def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
+def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
     r_pfi = d_pfi / 2.0
+
+    is_exetime = (exetime is not None) and (exetime > 0)
+    is_nppc = (max_nppc is not None) and (max_nppc > 0)
+
+    if is_exetime:
+        logger.info(f"PPP calculation will be terminated after {exetime} seconds")
+    else:
+        logger.info("PPP calculation will be run until completion")
 
     def count_N(sample):
         """calculate local count of targets
@@ -319,7 +327,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, mutiPro, weight_para, starttime, exetime):
+    def PPP_centers(sample_f, mutiPro, weight_para, starttime, exetime: int):
         """determine pointing centers
 
         Parameters
@@ -343,7 +351,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         sample_f = count_N(sample_f)
         sample_f = weight(sample_f, conta, contb, contc)
 
-        if (time.time() - starttime) > exetime:
+        if is_exetime and ((time.time() - starttime) > exetime):
             sample_f.meta["PPC"] = []
             status = 1
             logger.info("PPP stopped since the time is running out [PPP_centers s1]")
@@ -352,7 +360,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         peak = []
 
         for sample in target_DBSCAN(sample_f, d_pfi):
-            if (time.time() - starttime) > exetime:
+            if is_exetime and ((time.time() - starttime) > exetime):
                 status = 1
                 logger.info(
                     "PPP stopped since the time is running out [PPP_centers s2]"
@@ -361,8 +369,12 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
-            while any(sample_s["exptime_PPP"] > 0) and len(peak) <= 200:
-                if (time.time() - starttime) > exetime:
+            while any(sample_s["exptime_PPP"] > 0):
+                # NOTE: need a crors-check with He-san, probably.
+                if is_nppc and (len(peak) > max_nppc):
+                    break
+
+                if is_exetime and ((time.time() - starttime) > exetime):
                     status = 1
                     logger.info(
                         "PPP stopped since the time is running out [PPP_centers s2_1]"
@@ -820,7 +832,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
         table of ppc information after all targets are assigned
             # note that some targets in the dense region may need very long time to be assigned with fibers
             # if targets can not be successfully assigned with fibers in >5 iterations, then directly stop
-            # if total number of ppc >200 (~5 nights), then directly stop
+            # if total number of ppc > max_nppc (~5 nights), then directly stop
         """
 
         status = 999
@@ -830,7 +842,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
             return obj_allo, status
 
-        elif (time.time() - starttime) > exetime:
+        elif is_exetime and ((time.time() - starttime) > exetime):
             status = 1
             logger.info("PPP stopped since the time is running out [netflow_iter s1]")
             return obj_allo, status
@@ -840,7 +852,7 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
             iter_m2 = 0
 
             while any(uS["exptime_assign"] < uS["exptime_PPP"]) and iter_m2 < 10:
-                if (time.time() - starttime) > exetime:
+                if is_exetime and ((time.time() - starttime) > exetime):
                     status = 1
                     logger.info(
                         "PPP stopped since the time is running out [netflow_iter s2]"
@@ -856,17 +868,20 @@ def PPPrunStart(uS, weight_para, exetime, d_pfi=1.38):
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if len(obj_allo) > 200:
-                    logger.info("PPP stopped since Nppc > 200 [netflow_iter s2]")
-                    break
+                if is_nppc:
+                    if len(obj_allo) > max_nppc:
+                        logger.info(
+                            f"PPP stopped since Nppc > {max_nppc} [netflow_iter s2]"
+                        )
+                        break
 
-                else:
-                    obj_allo = vstack([obj_allo, obj_allo_t])
-                    obj_allo.remove_rows(
-                        np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0]
-                    )
-                    uS = complete_ppc(uS_t2, obj_allo)[0]
-                    iter_m2 += 1
+                    else:
+                        obj_allo = vstack([obj_allo, obj_allo_t])
+                        obj_allo.remove_rows(
+                            np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0]
+                        )
+                        uS = complete_ppc(uS_t2, obj_allo)[0]
+                        iter_m2 += 1
 
             return obj_allo, status
 

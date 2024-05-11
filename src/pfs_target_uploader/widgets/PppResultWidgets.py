@@ -18,7 +18,10 @@ class PppResultWidgets:
     # Maximum ROT can be requested for an openuse normal program
     max_reqtime_normal = 35.0
 
-    def __init__(self):
+    def __init__(
+        self,
+        exetime: int = 15 * 60,  # [s] tentatively set to 15 min
+    ):
         # PPP status
         # True if PPP has been run
         # False if PPP has not been run
@@ -29,6 +32,7 @@ class PppResultWidgets:
         self.origdata = None
         self.upload_time = None
         self.secret_token = None
+        self.exetime: int = exetime
 
         self.ppp_title = pn.pane.Markdown(
             """# Results of PFS pointing simulation""",
@@ -44,7 +48,7 @@ class PppResultWidgets:
 
         self.ppp_warning_text_2 = (
             "<font size=5>⚠️ **Warnings**</font>\n\n"
-            "<font size=3>Calculation stops because time (15 min) is running out. "
+            f"<font size=3>Calculation stops because time ({int(self.exetime/60):d} min) is running out. "
             "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
@@ -53,7 +57,7 @@ class PppResultWidgets:
             "<font size=3>1. The total requested time exceeds 35 hours (maximum for a normal program). "
             "Please make sure to adjust it to your requirement before proceeding to the submission. "
             "Note that targets observable in the input observing period are considered."
-            "\n 2. Calculation stops because time (15 min) is running out."
+            f"\n 2. Calculation stops because time ({int(self.exetime/60):d} min) is running out."
             "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
@@ -246,8 +250,11 @@ class PppResultWidgets:
         logger.info("showing PPP results done")
 
     def run_ppp(
-        self, df, validation_status, weights=None, exetime=15 * 60
-    ):  # tentatively set to 15 min
+        self,
+        df,
+        validation_status,
+        weights=None,
+    ):
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 
@@ -268,7 +275,7 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             self.status_,
-        ) = PPPrunStart(tb_visible, weights, exetime)
+        ) = PPPrunStart(tb_visible, weights, self.exetime)
 
         (
             self.nppc,

@@ -39,6 +39,11 @@ def _toggle_buttons(buttons: list, disabled: bool = True):
 def target_uploader_app():
     config = dotenv_values(".env.shared")
 
+    if "MAX_EXETIME" not in config.keys():
+        max_exetime: int = 900
+    else:
+        max_exetime = int(config["MAX_EXETIME"])
+
     logger.info(f"config params from dotenv: {config}")
 
     if os.path.exists(config["OUTPUT_DIR"]):
@@ -72,7 +77,7 @@ def target_uploader_app():
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PppResultWidgets()
+    panel_ppp = PppResultWidgets(exetime=max_exetime)
 
     panel_input.reset()
 
