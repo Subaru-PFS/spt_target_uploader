@@ -131,6 +131,7 @@ def upload_file(
     upload_time=None,
     ppp_status=True,
     export=False,
+    skip_subdirectories=False,
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
@@ -147,12 +148,15 @@ def upload_file(
                 f"secret_token {secret_token} is newly generated as None is provided."
             )
 
-        outdir = os.path.join(
-            outdir_prefix,
-            f"{dt.year:4d}",
-            f"{dt.month:02d}",
-            f"{dt:%Y%m%d-%H%M%S}-{secret_token}",
-        )
+        if skip_subdirectories:
+            outdir = os.path.join(outdir_prefix, f"{dt:%Y%m%d-%H%M%S}-{secret_token}")
+        else:
+            outdir = os.path.join(
+                outdir_prefix,
+                f"{dt.year:4d}",
+                f"{dt.month:02d}",
+                f"{dt:%Y%m%d-%H%M%S}-{secret_token}",
+            )
 
         if not os.path.exists(outdir):
             logger.info(f"{outdir} is created")

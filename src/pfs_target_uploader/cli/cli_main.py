@@ -67,10 +67,6 @@ def simulate(
     max_nppc: Annotated[
         int, typer.Option("--max-nppc", help="Max number of pointings to consider")
     ] = None,
-    add_upload_id: Annotated[
-        bool,
-        typer.Option("--add-upload_id", help="Assign upload_id to the target list"),
-    ] = False,
 ):
     df_input, dict_load = load_input(input_list)
 
@@ -99,6 +95,7 @@ def simulate(
     tb_input = Table.from_pandas(df_validated)
     tb_visible = tb_input[validation_status["visibility"]["success"]]
 
+    logger.info("Running the online PPP to simulate pointings")
     (
         uS_L2,
         _,
@@ -110,9 +107,10 @@ def simulate(
         cR_M_,
         sub_m,
         obj_allo_M_fin,
-        _,
+        _,  # ppp_status
     ) = PPPrunStart(tb_visible, None, max_exec_time, max_nppc=max_nppc)
 
+    logger.info("Summarizing the results")
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
         cR_L_,
         sub_l,
@@ -129,24 +127,15 @@ def simulate(
 
     df_summary = _status_widget.df_summary
 
-    if add_upload_id:
-        secret_token = secrets.token_hex(8)
-    else:
-        secret_token = None
-
+    logger.info("Saving the results")
     _, outfile_zip, sio = upload_file(
         df_validated,
         p_result_tab.value,
         p_result_ppc.value,
         df_summary,
         p_result_fig,
+        outdir_prefix=output_dir,
         origname=os.path.basename(input_list),
         origdata=open(input_list, "rb").read(),
-        secret_token=secret_token,
-        export=True,
+        skip_subdirectories=True,
     )
-
-    # Write the stuff
-    logger.info(f"Writing {outfile_zip} under {output_dir}")
-    with open(os.path.join(output_dir, outfile_zip), "wb") as f:
-        f.write(sio.getbuffer())
