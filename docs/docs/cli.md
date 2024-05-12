@@ -67,8 +67,10 @@ $ pfs-uploader-cli validate [OPTIONS] INPUT_LIST
 
 **Options**:
 
+* `-d, --dir TEXT`: Output directory to save the results.  [default: .]
 * `--date-begin TEXT`: Begin date (e.g., 2023-02-01). The default is the first date of the next Subaru semester.
 * `--date-end TEXT`: End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.
+* `--save / --no-save`: Save the validated target list in the directory specified by "--dir".  [default: no-save]
 * `--help`: Show this message and exit.
 
 
