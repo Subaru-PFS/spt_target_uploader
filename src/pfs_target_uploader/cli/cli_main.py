@@ -4,7 +4,6 @@ import os
 from datetime import date
 from typing import Annotated
 
-import pandas as pd
 import typer
 from astropy.table import Table
 from loguru import logger
