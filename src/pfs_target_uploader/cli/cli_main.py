@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import secrets
 from datetime import date
 from typing import Annotated
 
@@ -128,7 +127,7 @@ def simulate(
     df_summary = _status_widget.df_summary
 
     logger.info("Saving the results")
-    _, outfile_zip, sio = upload_file(
+    _, _, _ = upload_file(
         df_validated,
         p_result_tab.value,
         p_result_ppc.value,
