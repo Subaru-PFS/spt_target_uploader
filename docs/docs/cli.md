@@ -72,5 +72,3 @@ $ pfs-uploader-cli validate [OPTIONS] INPUT_LIST
 * `--date-end TEXT`: End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.
 * `--save / --no-save`: Save the validated target list in the directory specified by "--dir".  [default: no-save]
 * `--help`: Show this message and exit.
-
-
