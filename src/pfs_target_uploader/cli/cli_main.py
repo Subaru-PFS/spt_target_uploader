@@ -20,16 +20,24 @@ app = typer.Typer(
 )
 
 
-@app.command(help="Validate a target list for PFS openuse")
+@app.command(help="Validate a target list for PFS openuse.")
 def validate(
     input_list: Annotated[
-        str, typer.Argument(show_default=False, help="Input CSV file")
+        str, typer.Argument(show_default=False, help="Input CSV file.")
     ],
     date_begin: Annotated[
-        str, typer.Option("--date-begin", help="Begin date (e.g., 2023-02-01)")
+        str,
+        typer.Option(
+            "--date-begin",
+            help="Begin date (e.g., 2023-02-01). The default is the first date of the next Subaru semester.",
+        ),
     ] = None,
     date_end: Annotated[
-        str, typer.Option("--date-end", help="End date (e.g., 2023-07-31)")
+        str,
+        typer.Option(
+            "--date-end",
+            help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
+        ),
     ] = None,
 ):
 
@@ -48,23 +56,42 @@ def validate(
         _, _ = validate_input(df_input, date_begin=date_begin, date_end=date_end)
 
 
-@app.command(help="Run the online PPP to simulate pointings")
+@app.command(
+    help="""Run the online PPP to simulate pointings.
+
+    The result is written under the directory set by the `--dir` option with a 16 character random string."""
+)
 def simulate(
     input_list: Annotated[str, typer.Argument(help="Input CSV file")],
     output_dir: Annotated[
-        str, typer.Option("-d", "--dir", help="Output directory")
+        str, typer.Option("-d", "--dir", help="Output directory to save the results.")
     ] = ".",
     date_begin: Annotated[
-        str, typer.Option("--date-begin", help="Begin date (e.g., 2023-02-01)")
+        str,
+        typer.Option(
+            "--date-begin",
+            help="Begin date (e.g., 2023-02-01). The default is the first date of the next Subaru semester.",
+        ),
     ] = None,
     date_end: Annotated[
-        str, typer.Option("--date-end", help="End date (e.g., 2023-07-31)")
+        str,
+        typer.Option(
+            "--date-end",
+            help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
+        ),
     ] = None,
     max_exec_time: Annotated[
-        int, typer.Option("--max-exec-time", help="Max execution time (s)")
+        int,
+        typer.Option(
+            "--max-exec-time", help="Max execution time (s). Default is 0 (no limit)."
+        ),
     ] = None,
     max_nppc: Annotated[
-        int, typer.Option("--max-nppc", help="Max number of pointings to consider")
+        int,
+        typer.Option(
+            "--max-nppc",
+            help="Max number of pointings to consider. Default is 0 (no limit).",
+        ),
     ] = None,
 ):
     df_input, dict_load = load_input(input_list)
