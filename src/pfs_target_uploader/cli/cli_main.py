@@ -4,6 +4,7 @@ import os
 from datetime import date
 from typing import Annotated
 
+import pandas as pd
 import typer
 from astropy.table import Table
 from loguru import logger
@@ -25,6 +26,9 @@ def validate(
     input_list: Annotated[
         str, typer.Argument(show_default=False, help="Input CSV file.")
     ],
+    output_dir: Annotated[
+        str, typer.Option("-d", "--dir", help="Output directory to save the results.")
+    ] = ".",
     date_begin: Annotated[
         str,
         typer.Option(
@@ -39,6 +43,12 @@ def validate(
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
         ),
     ] = None,
+    save: Annotated[
+        bool,
+        typer.Option(
+            help='Save the validated target list in the directory specified by "--dir".'
+        ),
+    ] = False,
 ):
 
     df_input, dict_load = load_input(input_list)
@@ -53,7 +63,34 @@ def validate(
 
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
-        _, _ = validate_input(df_input, date_begin=date_begin, date_end=date_end)
+        validation_status, df_validated = validate_input(
+            df_input, date_begin=date_begin, date_end=date_end
+        )
+
+    if validation_status["status"] is False:
+        logger.error("The input target list could not pass all validations.")
+        return
+
+    _status_widget = StatusWidgets()
+    _status_widget.show_results(df_validated, validation_status)
+
+    df_summary = _status_widget.df_summary
+
+    # logger.info(f"Summary of the objects:\n{df_summary}")
+
+    if save:
+        logger.info("Saving the results")
+        _, _, _ = upload_file(
+            df_validated,
+            None,
+            None,
+            df_summary,
+            None,
+            outdir_prefix=output_dir,
+            origname=os.path.basename(input_list),
+            origdata=open(input_list, "rb").read(),
+            skip_subdirectories=True,
+        )
 
 
 @app.command(
