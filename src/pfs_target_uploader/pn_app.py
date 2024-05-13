@@ -44,6 +44,8 @@ def target_uploader_app():
     else:
         max_exetime = int(config["MAX_EXETIME"])
 
+    logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
+
     logger.info(f"config params from dotenv: {config}")
 
     if os.path.exists(config["OUTPUT_DIR"]):
