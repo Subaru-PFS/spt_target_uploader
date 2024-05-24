@@ -132,6 +132,7 @@ def upload_file(
     ppp_status=True,
     export=False,
     skip_subdirectories=False,
+    single_exptime=900,
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
@@ -236,6 +237,7 @@ def upload_file(
                 obj.meta["upload_id"] = secret_token
                 obj.meta["upload_at"] = upload_time
                 obj.meta["ppp_status"] = ppp_status
+                obj.meta["single_exptime"] = single_exptime
             filename = f"{file_prefix}_{secret_token}.ecsv"
         elif type == "figure":
             filename = f"{file_prefix}_{secret_token}.html"
@@ -344,6 +346,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     tac_nppc_m = np.zeros(n_files, dtype=int)
     tac_rot_l = np.zeros(n_files, dtype=float)
     tac_rot_m = np.zeros(n_files, dtype=float)
+    single_exptime = np.full(n_files, 900, dtype=int)
 
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
@@ -390,6 +393,11 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                     timestamps[i] = tb_target.meta["upload_at"]
             except KeyError:
                 timestamps[i] = None
+
+            try:
+                single_exptime[i] = tb_target.meta["single_exptime"]
+            except KeyError:
+                pass
 
             n_obj[i] = tb_target["ob_code"].size
             t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
@@ -453,6 +461,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "timestamp": timestamps,
             "fullpath_tgt": fullpath_target,
             "fullpath_psl": fullpath_psl,
+            "single_exptime": single_exptime,
         }
     )
 

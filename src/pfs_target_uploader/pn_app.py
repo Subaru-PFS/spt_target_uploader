@@ -18,6 +18,7 @@ from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
+    ExpTimeWidgets,
     FileInputWidgets,
     PppResultWidgets,
     RunPppButtonWidgets,
@@ -74,6 +75,7 @@ def target_uploader_app(use_panel_cli=False):
     panel_submit_button = SubmitButtonWidgets()
 
     panel_dates = DatePickerWidgets()
+    panel_exptime = ExpTimeWidgets()
 
     panel_timer = TimerWidgets()
 
@@ -111,12 +113,13 @@ def target_uploader_app(use_panel_cli=False):
         ),
     )
 
-    sidebar_configs = pn.Column(panel_dates.pane)
+    sidebar_configs = pn.Column(panel_dates.pane, panel_exptime.pane)
 
     tab_sidebar = pn.Tabs(
         ("Home", sidebar_column),
         ("Config", sidebar_configs),
     )
+    # tab_sidebar.active = 1
 
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
@@ -231,7 +234,11 @@ def target_uploader_app(use_panel_cli=False):
             panel_ppp.origdata = panel_input.file_input.value
             panel_ppp.df_summary = panel_status.df_summary
 
-            panel_ppp.run_ppp(df_validated, validation_status)
+            panel_ppp.run_ppp(
+                df_validated,
+                validation_status,
+                single_exptime=panel_exptime.single_exptime.value,
+            )
             panel_ppp.show_results()
 
             tab_panels.active = 2
