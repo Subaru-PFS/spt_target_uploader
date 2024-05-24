@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-
 import os
 from datetime import date
-from typing import Annotated
+from enum import Enum
+from typing import Annotated, List
 
+import panel as pn
 import typer
 from astropy.table import Table
 from loguru import logger
@@ -18,6 +19,11 @@ app = typer.Typer(
     context_settings={"help_option_names": ["--help", "-h"]},
     add_completion=False,
 )
+
+
+class PanelAppName(str, Enum):
+    uploader = "uploader"
+    admin = "admin"
 
 
 @app.command(help="Validate a target list for PFS openuse.")
@@ -200,4 +206,122 @@ def simulate(
         origname=os.path.basename(input_list),
         origdata=open(input_list, "rb").read(),
         skip_subdirectories=True,
+    )
+
+
+@app.command(help="Launch the PFS Target Uploader Web App.")
+def start_app(
+    app: Annotated[PanelAppName, typer.Argument(help="App to launch.")],
+    port: Annotated[
+        int, typer.Option(show_default=True, help="Port number to run the server.")
+    ] = 5008,
+    prefix: Annotated[str, typer.Option(help="URL prefix to serve the app.")] = "",
+    allow_websocket_origin: Annotated[
+        List[str], typer.Option(help="Allow websocket origin.")
+    ] = None,
+    static_dirs: Annotated[List[str], typer.Option(help="Static directories.")] = None,
+    use_xheaders: Annotated[
+        bool, typer.Option(help="Set --use-xheaders option.")
+    ] = False,
+    num_procs: Annotated[int, typer.Option(help="Number of processes to run.")] = 1,
+    autoreload: Annotated[bool, typer.Option(help="Set --autoreload option.")] = False,
+    max_upload_size: Annotated[
+        int, typer.Option(help="Maximum file size in MB.")
+    ] = 500,
+    basic_auth: Annotated[
+        str, typer.Option(help="Basic authentication config (.json).")
+    ] = None,
+    cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
+    basic_login_template: Annotated[
+        str, typer.Option(help="Basic login template.")
+    ] = None,
+):
+
+    if app == "uploader":
+        from ..pn_app import target_uploader_app as pn_app
+    elif app == "admin":
+        from ..pn_app import list_files_app as pn_app
+
+    pn.extension(
+        "floatpanel",
+        "mathjax",
+        "tabulator",
+        notifications=True,
+        loading_spinner="dots",
+        # loading_color="#6A589D",
+        sizing_mode="stretch_width",
+        # sizing_mode="scale_width",
+        js_files={
+            "font-awesome": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js",
+            # "bootstrap": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css",
+        },
+        css_files=[
+            "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+            # "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js",
+            # "https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext",
+        ],
+        layout_compatibility="error",
+    )
+
+    pn.state.notifications.position = "bottom-left"
+
+    if allow_websocket_origin is None:
+        allow_websocket_origin = ["localhost"]
+    # else:
+    #     allow_websocket_origin = [f"{a}:{port}" for a in allow_websocket_origin]
+
+    logger.info(f"{allow_websocket_origin=}")
+
+    if autoreload:
+        logger.info("num_procs is set to 1 as autoreload is enabled.")
+        num_procs = 1
+
+    if static_dirs is None:
+        static_dirs_dict = {}
+    else:
+        logger.info(f"{static_dirs=}")
+        for d in static_dirs:
+            if "=" not in d:
+                logger.error(
+                    "Invalid static directory format. Please use the format 'name=path'."
+                )
+                return
+        static_dirs_dict = {d.split("=")[0]: d.split("=")[1] for d in static_dirs}
+
+    logger.info(f"Set maximum upload size to {max_upload_size} MB")
+
+    logger.info(f"Starting the {app} app on port {port}.")
+
+    if basic_auth is not None:
+        if not os.path.exists(basic_auth):
+            logger.error(f"Basic authentication file not found: {basic_auth}")
+            return
+        admin_options = dict(
+            basic_auth=basic_auth,
+            cookie_secret=cookie_secret,
+            basic_login_template=basic_login_template,
+        )
+        kwargs = admin_options
+    else:
+        kwargs = {}
+
+    # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
+    pn.serve(
+        pn_app,
+        port=port,
+        prefix=prefix,
+        # use_xheaders=use_xheaders,
+        num_procs=num_procs,
+        websocket_origin=allow_websocket_origin,
+        static_dirs=static_dirs_dict,
+        show=False,
+        autoreload=autoreload,
+        # Increase the maximum websocket message size allowed by Bokeh
+        websocket_max_message_size=max_upload_size * 1024 * 1024,
+        # Increase the maximum buffer size allowed by Tornado
+        http_server_kwargs={
+            "max_buffer_size": max_upload_size * 1024 * 1024,
+            "xheaders": use_xheaders,
+        },
+        **kwargs,
     )

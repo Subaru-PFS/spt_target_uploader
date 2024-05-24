@@ -17,7 +17,7 @@ dependencies = [
     "multiprocess>=0.70.15",
     "myst-parser>=2.0.0",
     "pandas>=2.0.3",
-    "panel>=1.3",
+    "panel>=1.3,<=1.3.8",
     "pybind11>=2.11.1",
     "python-dotenv>=1.0.0",
     "qplan @ git+https://github.com/naojsoft/qplan.git",
@@ -46,8 +46,6 @@ license = { text = "MIT" }
 
 [project.scripts]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
-# pfs_validate_targetlist = "pfs_target_uploader.cli.validate_targetlist:main"
-# pfs_simulate_pointings = "pfs_target_uploader.cli.simulate_pointings:main"
 
 [build-system]
 requires = ["setuptools", "wheel", "pybind11"]
@@ -74,18 +72,17 @@ dev = [
 serve-app = { cmd = [
     "pdm",
     "run",
-    "panel",
-    "serve",
-    "./app.py",
-    "./admin.py",
-    "--static-dirs",
-    "doc=docs/site",
-    "data=data",
-    # "\"uploader/data\"=data",
-    "--prefix=uploader",
-    "--websocket-max-message-size=104857600",
+    "pfs-uploader-cli",
+    "start-app",
+    "uploader",
     "--port",
     "5008",
+    "--prefix=uploader",
+    "--static-dirs",
+    "doc=docs/site",
+    "--static-dirs",
+    "data=data",
+    "--max-upload-size=100",
     "--autoreload",
 ], help = "Start the dev server for app and admin pages" }
 serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
