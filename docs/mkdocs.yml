@@ -8,6 +8,7 @@ nav:
   - 'Validation': validation.md
   - 'Pointing Simulation': PPP.md
   - 'Submission': submission.md
+  - 'CLI tool': cli.md
   - 'FAQ & Known Issues': issues.md
   - 'Contact': contact.md
 
