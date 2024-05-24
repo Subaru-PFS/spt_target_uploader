@@ -36,7 +36,7 @@ def _toggle_buttons(buttons: list, disabled: bool = True):
         b.disabled = disabled
 
 
-def target_uploader_app():
+def target_uploader_app(use_panel_cli=False):
     config = dotenv_values(".env.shared")
 
     if "MAX_EXETIME" not in config.keys():
@@ -312,15 +312,18 @@ def target_uploader_app():
     panel_ppp_button.PPPrun.on_click(cb_PPP)
     panel_submit_button.submit.on_click(cb_submit)
 
-    app = template.servable()
+    app = template
 
-    return app
+    if use_panel_cli:
+        return app.servable()
+    else:
+        return app
 
 
 #
 # admin app
 #
-def list_files_app():
+def list_files_app(use_panel_cli=False):
     config = dotenv_values(".env.shared")
 
     logger.info(f"config params from dotenv: {config}")
@@ -728,6 +731,9 @@ def list_files_app():
     template.sidebar.append(sidebar_column)
     template.main.append(tab_panels)
 
-    app = template.servable()
+    app = template
 
-    return app
+    if use_panel_cli:
+        return app.servable()
+    else:
+        return app
