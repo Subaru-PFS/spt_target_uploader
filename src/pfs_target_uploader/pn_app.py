@@ -38,6 +38,8 @@ def _toggle_buttons(buttons: list, disabled: bool = True):
 
 
 def target_uploader_app(use_panel_cli=False):
+    pn.state.notifications.position = "bottom-left"
+
     config = dotenv_values(".env.shared")
 
     if "MAX_EXETIME" not in config.keys():
@@ -331,6 +333,8 @@ def target_uploader_app(use_panel_cli=False):
 # admin app
 #
 def list_files_app(use_panel_cli=False):
+    pn.state.notifications.position = "bottom-left"
+
     config = dotenv_values(".env.shared")
 
     logger.info(f"config params from dotenv: {config}")

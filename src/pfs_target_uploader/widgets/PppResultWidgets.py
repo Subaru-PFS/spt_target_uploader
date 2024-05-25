@@ -261,6 +261,7 @@ class PppResultWidgets:
             weights = [4.02, 0.01, 0.01]
 
         self.df_input = df
+        self.df_input["single_exptime"] = single_exptime
 
         self.single_exptime = single_exptime
 

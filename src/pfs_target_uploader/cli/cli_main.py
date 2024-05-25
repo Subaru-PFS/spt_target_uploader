@@ -237,11 +237,6 @@ def start_app(
     ] = None,
 ):
 
-    if app == "uploader":
-        from ..pn_app import target_uploader_app as pn_app
-    elif app == "admin":
-        from ..pn_app import list_files_app as pn_app
-
     pn.extension(
         "floatpanel",
         "mathjax",
@@ -263,7 +258,12 @@ def start_app(
         layout_compatibility="error",
     )
 
-    pn.state.notifications.position = "bottom-left"
+    # pn.state.notifications.position = "bottom-left"
+
+    if app == "uploader":
+        from ..pn_app import target_uploader_app as pn_app
+    elif app == "admin":
+        from ..pn_app import list_files_app as pn_app
 
     if allow_websocket_origin is None:
         allow_websocket_origin = ["localhost"]
