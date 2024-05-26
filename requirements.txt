@@ -27,16 +27,18 @@ mkdocs-video>=1.5.0
 multiprocess>=0.70.15
 myst-parser>=2.0.0
 pandas>=2.0.3
-panel>=1.3
+panel<=1.3.8,>=1.3
 pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git
 pip>=23.2.1
 pybind11>=2.11.1
 pyinstrument>=4.6.0
 python-dotenv>=1.0.0
 qplan @ git+https://github.com/naojsoft/qplan.git
+ruff
 scikit-learn>=1.3.0
 seaborn>=0.12.2
 setuptools>=68.2.2
 snakeviz>=2.2.0
 spatialpandas>=0.4.9
+typer>=0.12.3
 wheel>=0.41.2
