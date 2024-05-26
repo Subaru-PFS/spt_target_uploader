@@ -322,7 +322,10 @@ def target_uploader_app(use_panel_cli=False):
         panel_ppp.upload_time = datetime.now(timezone.utc)
         panel_ppp.secret_token = panel_input.secret_token
 
-        outdir, outfile_zip, _ = panel_ppp.upload(outdir_prefix=config["OUTPUT_DIR"])
+        outdir, outfile_zip, _ = panel_ppp.upload(
+            outdir_prefix=config["OUTPUT_DIR"],
+            single_exptime=panel_exptime.single_exptime.value,
+        )
 
         panel_notes = UploadNoteWidgets(
             panel_ppp.secret_token,

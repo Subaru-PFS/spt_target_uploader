@@ -304,7 +304,10 @@ class PppResultWidgets:
 
         self.ppp_status = True
 
-    def upload(self, outdir_prefix=".", export=False):
+    def upload(self, outdir_prefix=".", export=False, single_exptime=None):
+        if single_exptime is None:
+            single_exptime = self.single_exptime
+
         try:
             df_psl = self.p_result_tab.value
             df_ppc = self.p_result_ppc.value
@@ -326,7 +329,7 @@ class PppResultWidgets:
             secret_token=self.secret_token,
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,
-            single_exptime=self.single_exptime,
+            single_exptime=single_exptime,
         )
 
         return outdir, outfile_zip, None
