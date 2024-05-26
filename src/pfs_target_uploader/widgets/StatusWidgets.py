@@ -69,7 +69,7 @@ class StatusWidgets:
 
         self.table_footnote = pn.pane.Markdown(
             "- <font size=2>`N` is the number of `ob_code`s for each priority.</font>\n"
-            "- <font size=2>`T` is the total fiberhours of `ob_code`s for each priority.</font>\n"
+            "- <font size=2>`Texp` is the total fiberhours of `ob_code`s for each priority.</font>\n"
             "- <font size=2>`L` and `M` correspond to the low- and medium-resolution modes, respectively.</font>",
         )
         # self.table_footnote.visible = False
