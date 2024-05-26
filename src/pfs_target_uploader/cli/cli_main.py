@@ -136,6 +136,9 @@ def simulate(
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
         ),
     ] = None,
+    single_exptime: Annotated[
+        int, typer.Option(help="Single exposure time (s).")
+    ] = 900,
     max_exec_time: Annotated[
         int,
         typer.Option(
@@ -196,7 +199,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         _,  # ppp_status
-    ) = PPPrunStart(tb_visible, None, max_exec_time, max_nppc=max_nppc)
+    ) = PPPrunStart(
+        tb_visible,
+        None,
+        max_exec_time,
+        max_nppc=max_nppc,
+        single_exptime=single_exptime,
+    )
 
     logger.info("Summarizing the results")
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
@@ -208,11 +217,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         uS_M2,
+        single_exptime=single_exptime,
     )
 
     _status_widget = StatusWidgets()
     _status_widget.show_results(df_validated, validation_status)
 
+    df_validated["single_exptime"] = single_exptime
     df_summary = _status_widget.df_summary
 
     logger.info("Saving the results")
@@ -226,6 +237,7 @@ def simulate(
         origname=os.path.basename(input_list),
         origdata=open(input_list, "rb").read(),
         skip_subdirectories=True,
+        single_exptime=single_exptime,
     )
 
 
