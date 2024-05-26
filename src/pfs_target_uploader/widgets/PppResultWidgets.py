@@ -308,6 +308,8 @@ class PppResultWidgets:
         if single_exptime is None:
             single_exptime = self.single_exptime
 
+        self.df_input["single_exptime"] = single_exptime
+
         try:
             df_psl = self.p_result_tab.value
             df_ppc = self.p_result_ppc.value
