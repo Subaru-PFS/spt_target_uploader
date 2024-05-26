@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 from datetime import date
 from enum import Enum
 from typing import Annotated, List
@@ -24,6 +25,14 @@ app = typer.Typer(
 class PanelAppName(str, Enum):
     uploader = "uploader"
     admin = "admin"
+
+
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 @app.command(help="Validate a target list for PFS openuse.")
@@ -54,7 +63,12 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
 
     df_input, dict_load = load_input(input_list)
 
@@ -135,7 +149,13 @@ def simulate(
             help="Max number of pointings to consider. Default is 0 (no limit).",
         ),
     ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
+
     df_input, dict_load = load_input(input_list)
 
     if not dict_load["status"]:
@@ -235,7 +255,12 @@ def start_app(
     basic_login_template: Annotated[
         str, typer.Option(help="Basic login template.")
     ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
 
     pn.extension(
         "floatpanel",
