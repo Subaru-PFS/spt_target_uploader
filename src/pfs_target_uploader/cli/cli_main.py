@@ -248,6 +248,9 @@ def start_app(
     max_upload_size: Annotated[
         int, typer.Option(help="Maximum file size in MB.")
     ] = 500,
+    session_token_expiration: Annotated[
+        int, typer.Option(help="Session token expiration time in seconds.")
+    ] = 1800,
     basic_auth: Annotated[
         str, typer.Option(help="Basic authentication config (.json).")
     ] = None,
@@ -338,6 +341,7 @@ def start_app(
         # use_xheaders=use_xheaders,
         num_procs=num_procs,
         websocket_origin=allow_websocket_origin,
+        session_token_expiration=session_token_expiration,
         static_dirs=static_dirs_dict,
         show=False,
         autoreload=autoreload,
