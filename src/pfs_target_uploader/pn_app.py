@@ -2,6 +2,7 @@
 
 import glob
 import os
+import time
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -95,6 +96,24 @@ def target_uploader_app(use_panel_cli=False):
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
 
+    # if no file is uploaded, disable the buttons
+    # This would work only at the first time the app is loaded.
+    def enable_buttons_by_fileinput(v):
+        if v is None:
+            logger.info("Buttons are disabled because no file is uploaded.")
+            _toggle_buttons(
+                [panel_validate_button.validate, panel_ppp_button.PPPrun],
+                disabled=True,
+            )
+        else:
+            logger.info("Buttons are enabled because file upload is detected.")
+            _toggle_buttons(
+                [panel_validate_button.validate, panel_ppp_button.PPPrun],
+                disabled=False,
+            )
+
+    fileinput_watcher = pn.bind(enable_buttons_by_fileinput, panel_input.file_input)
+
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
         panel_input.pane,
@@ -113,6 +132,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_status.pane,
             margin=(10, 0, 0, 0),
         ),
+        fileinput_watcher,
     )
 
     sidebar_configs = pn.Column(panel_dates.pane, panel_exptime.pane)

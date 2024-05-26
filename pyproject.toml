@@ -84,7 +84,7 @@ serve-app = { cmd = [
     "doc=docs/site",
     "--static-dirs",
     "data=data",
-    "--max-upload-size=100",
+    "--max-upload-size=500",
     "--autoreload",
 ], help = "Start the dev server for app and admin pages" }
 serve-app-admin = { cmd = [
