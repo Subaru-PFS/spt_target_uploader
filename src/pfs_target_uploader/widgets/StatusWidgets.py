@@ -52,11 +52,18 @@ class StatusWidgets:
             hidden_columns=["index"],
             selectable=False,
             # width=350,
-            width=380,
+            # width=380,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
             stylesheets=[stylesheet],
+            widths={
+                "Priority": "18%",
+                "N (L)": "20%",
+                "Texp (L)": "21%",
+                "N (M)": "20%",
+                "Texp (M)": "21%",
+            },
             # min_width=480,
         )
 
