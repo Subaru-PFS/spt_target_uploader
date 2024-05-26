@@ -60,9 +60,9 @@ class StatusWidgets:
             widths={
                 "Priority": "18%",
                 "N (L)": "20%",
-                "Texp (L)": "21%",
+                "Texp (L)": "20%",
                 "N (M)": "20%",
-                "Texp (M)": "21%",
+                "Texp (M)": "20%",
             },
             # min_width=480,
         )
