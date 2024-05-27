@@ -22,15 +22,27 @@ class ExpTimeWidgets(param.Parameterized):
             end=7200,
             disabled=True,
         )
-        self.is_classical = pn.widgets.Checkbox(
-            name="Classical-mode Observation", value=False
+        # self.is_classical = pn.widgets.Checkbox(
+        #     name="Classical-mode Observation", value=False
+        # )
+        self.is_classical = pn.widgets.Switch(
+            name="Classical-mode Observation",
+            value=False,
+            width=25,
+            align=("start", "center"),
         )
 
         i_activate_exptime = pn.bind(_activate_exptime, self.is_classical)
 
         self.pane = pn.Column(
             "### Individual Exposure Time (s)",
-            self.is_classical,
+            pn.Row(
+                self.is_classical,
+                pn.pane.Markdown(
+                    "<font size=3>Classical-mode Observation</font>",
+                    align=("start", "center"),
+                ),
+            ),
             self.single_exptime,
             i_activate_exptime,
         )

@@ -135,7 +135,10 @@ def target_uploader_app(use_panel_cli=False):
         fileinput_watcher,
     )
 
-    sidebar_configs = pn.Column(panel_dates.pane, panel_exptime.pane)
+    sidebar_configs = pn.Column(
+        pn.Column(panel_dates.pane, margin=(10, 0, 0, 0)),
+        pn.Column(panel_exptime.pane, margin=(10, 0, 0, 0)),
+    )
 
     tab_sidebar = pn.Tabs(
         ("Home", sidebar_column),
