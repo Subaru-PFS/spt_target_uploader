@@ -44,7 +44,14 @@ warnings.filterwarnings("ignore")
 pn.extension(notifications=True)
 
 
-def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
+def PPPrunStart(
+    uS,
+    weight_para,
+    exetime: int,
+    single_exptime: int = 900,
+    max_nppc: int = 200,
+    d_pfi=1.38,
+):
     r_pfi = d_pfi / 2.0
 
     if weight_para is None:
@@ -102,7 +109,8 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
         """
         weight_t = (
             pow(conta, 2.0 + 0.1 * (9 - sample["priority"]))
-            * pow(sample["exptime_PPP"] / 900.0, contb)
+            # * pow(sample["exptime_PPP"] / 900.0, contb)
+            * pow(sample["exptime_PPP"] / single_exptime, contb)
             * pow(sample["local_count"], contc)
         )
 
@@ -414,7 +422,7 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
 
                 sample_s["exptime_PPP"][
                     list(index_)
-                ] -= 900  # targets in the PPC observed with 900 sec
+                ] -= single_exptime  # targets in the PPC observed with a specified single_exptime (s)
 
                 sample_s = sample_s[sample_s["exptime_PPP"] > 0]  # targets not finished
                 sample_s = count_N(sample_s)
@@ -557,7 +565,8 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
             tgt,
             tpos,
             classdict,
-            900,
+            # 900,
+            single_exptime,
             vis_cost,
             cobraMoveCost=cobraMoveCost,
             collision_distance=2.0,
@@ -763,8 +772,9 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime"]) / 900.0] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        count_sub_fh = [sum(sample["exptime"]) / single_exptime] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / single_exptime
+            for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
             sum(sample["priority"] == ll) for ll in sub_l
@@ -778,11 +788,11 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
 
         for ppc in point_l_pri:
             lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
-            sample["exptime_assign"].data[lst] += 900
+            sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t_fh = [sum(sample["exptime_assign"]) / 900.0] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+            comT_t_fh = [sum(sample["exptime_assign"]) / single_exptime] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / single_exptime
                 for ll in sub_l
             ]
 
@@ -890,7 +900,7 @@ def PPPrunStart(uS, weight_para, exetime: int, max_nppc: int = 200, d_pfi=1.38):
     logger.info("PPP run started")
     t_ppp_start = time.time()
 
-    exptime_ppp = np.ceil(uS["exptime"] / 900) * 900
+    exptime_ppp = np.ceil(uS["exptime"] / single_exptime) * single_exptime
     uS.add_column(exptime_ppp, name="exptime_PPP")
 
     uS_L = uS[uS["resolution"] == "L"]
@@ -1005,6 +1015,7 @@ def ppp_result(
     sub_m,
     obj_allo_m,
     uS_M2,
+    single_exptime=900,
     d_pfi=1.38,
     box_width=1200.0,
     plot_height=400,
@@ -1034,7 +1045,8 @@ def ppp_result(
 
     def overheads(n_sci_frame):
         # in seconds
-        t_exp_sci: float = 900.0
+        # t_exp_sci: float = 900.0
+        t_exp_sci: float = single_exptime
         t_overhead_misc: float = 60.0
         t_overhead_fiber: float = 180.0
 
@@ -1281,11 +1293,11 @@ def ppp_result(
 
         @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
-            hour_tot = nppc_fin * 15.0 / 60.0  # hour
+            hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Fhour_tot = (
                 sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
-                * 15.0
-                / 60.0
+                * single_exptime
+                / 3600.0
             )  # fiber_count*hour
             Ttot_best = overheads(nppc_fin)
             fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
@@ -1444,9 +1456,9 @@ def ppp_result(
     return (nppc_fin, p_result_fig_fin, p_result_ppc_fin, p_result_tab)
 
 
-## PPP result reproduction
-
-
+#
+# PPP result reproduction
+#
 def ppp_result_reproduce(
     obj_allo,
     uS,
@@ -1456,6 +1468,9 @@ def ppp_result_reproduce(
     box_width=1200.0,
     plot_height=400,
 ):
+
+    single_exptime = uS.meta["single_exptime"] if "single_exptime" in uS.meta else 900.0
+
     if "ppc_code" not in obj_allo.colnames:
         pn.state.notifications.error(
             "This submission is too old and not compatible for the operation.",
@@ -1501,8 +1516,9 @@ def ppp_result_reproduce(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime"]) / 900.0] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / 900.0 for ll in sub_l
+        count_sub_fh = [sum(sample["exptime"]) / single_exptime] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / single_exptime
+            for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
             sum(sample["priority"] == ll) for ll in sub_l
@@ -1516,11 +1532,11 @@ def ppp_result_reproduce(
 
         for ppc in point_l_pri:
             lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
-            sample["exptime_assign"].data[lst] += 900
+            sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t_fh = [sum(sample["exptime_assign"]) / 900.0] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 900.0
+            comT_t_fh = [sum(sample["exptime_assign"]) / single_exptime] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / single_exptime
                 for ll in sub_l
             ]
 
@@ -1553,7 +1569,7 @@ def ppp_result_reproduce(
 
     def overheads(n_sci_frame):
         # in seconds
-        t_exp_sci: float = 900.0
+        t_exp_sci: float = single_exptime
         t_overhead_misc: float = 60.0
         t_overhead_fiber: float = 180.0
 
@@ -1566,7 +1582,7 @@ def ppp_result_reproduce(
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr, nppc_tac=0):
         def nppc2rot(nppc_):
             # in seconds
-            t_exp_sci: float = 900.0
+            t_exp_sci: float = single_exptime
             t_overhead_misc: float = 60.0
             t_overhead_fiber: float = 180.0
 
@@ -1578,7 +1594,7 @@ def ppp_result_reproduce(
 
         def rot2nppc(rot):
             # in seconds
-            t_exp_sci: float = 900.0
+            t_exp_sci: float = single_exptime
             t_overhead_misc: float = 60.0
             t_overhead_fiber: float = 180.0
 
@@ -1852,14 +1868,14 @@ def ppp_result_reproduce(
 
         @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
-            hour_tot = nppc_fin * 15.0 / 60.0  # hour
+            hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Ttot_best = overheads(nppc_fin)
 
             if nppc_fin > 0:
                 Fhour_tot = (
                     sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
-                    * 15.0
-                    / 60.0
+                    * single_exptime
+                    / 3600.0
                 )  # fiber_count*hour
                 fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
                 fib_eff_small = (
@@ -1958,7 +1974,7 @@ def ppp_result_reproduce(
             format="0.0", text_align="right"
         )
 
-    exptime_ppp = np.ceil(uS["exptime"] / 900) * 900
+    exptime_ppp = np.ceil(uS["exptime"] / single_exptime) * single_exptime
     uS.add_column(exptime_ppp, name="exptime_PPP")
 
     uS_L = uS[uS["resolution"] == "L"]

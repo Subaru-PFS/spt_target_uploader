@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 from datetime import date
 from enum import Enum
 from typing import Annotated, List
@@ -24,6 +25,14 @@ app = typer.Typer(
 class PanelAppName(str, Enum):
     uploader = "uploader"
     admin = "admin"
+
+
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 @app.command(help="Validate a target list for PFS openuse.")
@@ -54,7 +63,12 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
 
     df_input, dict_load = load_input(input_list)
 
@@ -122,6 +136,9 @@ def simulate(
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
         ),
     ] = None,
+    single_exptime: Annotated[
+        int, typer.Option(help="Single exposure time (s).")
+    ] = 900,
     max_exec_time: Annotated[
         int,
         typer.Option(
@@ -135,7 +152,13 @@ def simulate(
             help="Max number of pointings to consider. Default is 0 (no limit).",
         ),
     ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
+
     df_input, dict_load = load_input(input_list)
 
     if not dict_load["status"]:
@@ -176,7 +199,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         _,  # ppp_status
-    ) = PPPrunStart(tb_visible, None, max_exec_time, max_nppc=max_nppc)
+    ) = PPPrunStart(
+        tb_visible,
+        None,
+        max_exec_time,
+        max_nppc=max_nppc,
+        single_exptime=single_exptime,
+    )
 
     logger.info("Summarizing the results")
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
@@ -188,11 +217,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         uS_M2,
+        single_exptime=single_exptime,
     )
 
     _status_widget = StatusWidgets()
     _status_widget.show_results(df_validated, validation_status)
 
+    df_validated["single_exptime"] = single_exptime
     df_summary = _status_widget.df_summary
 
     logger.info("Saving the results")
@@ -206,6 +237,7 @@ def simulate(
         origname=os.path.basename(input_list),
         origdata=open(input_list, "rb").read(),
         skip_subdirectories=True,
+        single_exptime=single_exptime,
     )
 
 
@@ -228,6 +260,9 @@ def start_app(
     max_upload_size: Annotated[
         int, typer.Option(help="Maximum file size in MB.")
     ] = 500,
+    session_token_expiration: Annotated[
+        int, typer.Option(help="Session token expiration time in seconds.")
+    ] = 1800,
     basic_auth: Annotated[
         str, typer.Option(help="Basic authentication config (.json).")
     ] = None,
@@ -235,12 +270,12 @@ def start_app(
     basic_login_template: Annotated[
         str, typer.Option(help="Basic login template.")
     ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
-
-    if app == "uploader":
-        from ..pn_app import target_uploader_app as pn_app
-    elif app == "admin":
-        from ..pn_app import list_files_app as pn_app
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
 
     pn.extension(
         "floatpanel",
@@ -263,7 +298,12 @@ def start_app(
         layout_compatibility="error",
     )
 
-    pn.state.notifications.position = "bottom-left"
+    # pn.state.notifications.position = "bottom-left"
+
+    if app == "uploader":
+        from ..pn_app import target_uploader_app as pn_app
+    elif app == "admin":
+        from ..pn_app import list_files_app as pn_app
 
     if allow_websocket_origin is None:
         allow_websocket_origin = ["localhost"]
@@ -313,6 +353,7 @@ def start_app(
         # use_xheaders=use_xheaders,
         num_procs=num_procs,
         websocket_origin=allow_websocket_origin,
+        session_token_expiration=session_token_expiration,
         static_dirs=static_dirs_dict,
         show=False,
         autoreload=autoreload,

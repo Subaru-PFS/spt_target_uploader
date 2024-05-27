@@ -396,7 +396,7 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                         continue
 
                     flux = s[c]
-                    logger.info(
+                    logger.debug(
                         f"{b} band filter column ({c}) found for OB {s['ob_code']} as {flux}"
                     )
                     is_found_filter = True
@@ -408,7 +408,7 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                         if np.isfinite(s[f"{c}_error"]):
                             flux_error = s[f"{c}_error"]
                             s[f"flux_error_{b}"] = flux_error
-                            logger.info(
+                            logger.debug(
                                 f"{b} band flux error ({c}_error) found as {flux_error}"
                             )
                     except KeyError:

@@ -13,9 +13,23 @@ Please be aware that the online PPP only simulates the classic observation mode 
 
 ## Run the online PPP
 
+### Execute the online PPP
+
 - Press the **_Simulate_** button in the sidebar to run the online PPP.
 - The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
 - In the case of [the example file](examples/example_perseus_cluster_r60arcmin.csv) shown in the [Inputs](inputs.md) section, the computational time would be about 10 seconds.
+
+#### (Optional) Configure the individual exposure time
+
+The primary observing mode of PFS openuse is the queue mode with an individual exposure time of 900 seconds.
+**If you are applying for the classical mode observation**, you can run PPP with a custom individual exposure time in the `Config` tab
+in the side panel.
+
+<figure markdown>
+  ![Config queue](images/ppp_single_exptime_queue.png){ width="300"}
+  ![Config classical](images/ppp_single_exptime_classical.png){ width="300" }
+  <figcaption>(Left) The Config tab for the queue mode. (Right) The Config tab for the classical mode</figcaption>
+</figure>
 
 ## Understand the results
 
@@ -118,3 +132,17 @@ Vertical <span style="color: grey;">gray</span> dashed line
 
 Targets in each priority group are plotted in different colors, with the primary sample (which has the smallest internal priority P) in red.
 Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at pointing centers.
+
+## Fixed Parameters
+
+In the PPP calculation, the following parameters are fixed.
+
+
+| Description                           | Value | Unit |
+|---------------------------------------|------:|------|
+| Number of fibers                      |  2394 |      |
+| Number of calibrators                 |   200 |      |
+| Fiber configuration time per exposure |   180 | s    |
+| Miscellaneous overheads               |    60 | s    |
+| Maximum PPP running time              |   900 | s    |
+| Maximum number of pointings           |   200 |      |
