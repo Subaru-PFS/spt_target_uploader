@@ -137,7 +137,6 @@ Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at 
 
 In the PPP calculation, the following parameters are fixed.
 
-
 | Description                           | Value | Unit |
 |---------------------------------------|------:|------|
 | Number of fibers                      |  2394 |      |
