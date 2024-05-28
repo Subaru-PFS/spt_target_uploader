@@ -157,7 +157,8 @@ class PppResultWidgets:
             text = (
                 f"- <font size=3>You have requested **{int(n_ppc)}** **PFS pointing centers (PPCs)**.</font>\n"
                 f"- <font size=3>The optimized PPCs correspond to **{t_fh:.1f} fiber hours**.</font>\n"
-                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f} hours** ({int(n_ppc)} x 15 minutes).</font>\n"
+                f"- <font size=3>The **exposure time** to complete {int(n_ppc)} PPCs (without overhead) is **{t_exp:.1f} hours** "
+                f"({int(n_ppc)} x {self.single_exptime/60:.2f} minutes).</font>\n"
                 f"- <font size=3>The **requested observing time (ROT)** including overhead is **{rot:.1f} hours**.</font>\n"
                 f"{text_comp_low}"
                 f"{text_comp_med}"
@@ -253,12 +254,16 @@ class PppResultWidgets:
         self,
         df,
         validation_status,
+        single_exptime=900,
         weights=None,
     ):
         if weights is None:
             weights = [4.02, 0.01, 0.01]
 
         self.df_input = df
+        self.df_input["single_exptime"] = single_exptime
+
+        self.single_exptime = single_exptime
 
         tb_input = Table.from_pandas(df)
         tb_visible = tb_input[validation_status["visibility"]["success"]]
@@ -275,7 +280,9 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             self.status_,
-        ) = PPPrunStart(tb_visible, weights, self.exetime)
+        ) = PPPrunStart(
+            tb_visible, weights, self.exetime, single_exptime=self.single_exptime
+        )
 
         (
             self.nppc,
@@ -291,12 +298,18 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             uS_M2,
+            single_exptime=self.single_exptime,
             box_width=self.box_width,
         )
 
         self.ppp_status = True
 
-    def upload(self, outdir_prefix=".", export=False):
+    def upload(self, outdir_prefix=".", export=False, single_exptime=None):
+        if single_exptime is None:
+            single_exptime = self.single_exptime
+
+        self.df_input["single_exptime"] = single_exptime
+
         try:
             df_psl = self.p_result_tab.value
             df_ppc = self.p_result_ppc.value
@@ -318,6 +331,7 @@ class PppResultWidgets:
             secret_token=self.secret_token,
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,
+            single_exptime=single_exptime,
         )
 
         return outdir, outfile_zip, None

@@ -51,17 +51,25 @@ class StatusWidgets:
             # layout="fit_data_table",
             hidden_columns=["index"],
             selectable=False,
-            width=350,
+            # width=350,
+            # width=380,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
             stylesheets=[stylesheet],
+            widths={
+                "Priority": "18%",
+                "N (L)": "20%",
+                "Texp (L)": "20%",
+                "N (M)": "20%",
+                "Texp (M)": "20%",
+            },
             # min_width=480,
         )
 
         self.table_footnote = pn.pane.Markdown(
             "- <font size=2>`N` is the number of `ob_code`s for each priority.</font>\n"
-            "- <font size=2>`T` is the total fiberhours of `ob_code`s for each priority.</font>\n"
+            "- <font size=2>`Texp` is the total fiberhours of `ob_code`s for each priority.</font>\n"
             "- <font size=2>`L` and `M` correspond to the low- and medium-resolution modes, respectively.</font>",
         )
         # self.table_footnote.visible = False

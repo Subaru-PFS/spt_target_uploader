@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-
 import os
+import sys
 from datetime import date
-from typing import Annotated
+from enum import Enum
+from typing import Annotated, List
 
+import panel as pn
 import typer
 from astropy.table import Table
 from loguru import logger
@@ -18,6 +20,19 @@ app = typer.Typer(
     context_settings={"help_option_names": ["--help", "-h"]},
     add_completion=False,
 )
+
+
+class PanelAppName(str, Enum):
+    uploader = "uploader"
+    admin = "admin"
+
+
+class LogLevel(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 @app.command(help="Validate a target list for PFS openuse.")
@@ -48,7 +63,12 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
 
     df_input, dict_load = load_input(input_list)
 
@@ -116,6 +136,9 @@ def simulate(
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
         ),
     ] = None,
+    single_exptime: Annotated[
+        int, typer.Option(help="Single exposure time (s).")
+    ] = 900,
     max_exec_time: Annotated[
         int,
         typer.Option(
@@ -129,7 +152,13 @@ def simulate(
             help="Max number of pointings to consider. Default is 0 (no limit).",
         ),
     ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
 ):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
+
     df_input, dict_load = load_input(input_list)
 
     if not dict_load["status"]:
@@ -170,7 +199,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         _,  # ppp_status
-    ) = PPPrunStart(tb_visible, None, max_exec_time, max_nppc=max_nppc)
+    ) = PPPrunStart(
+        tb_visible,
+        None,
+        max_exec_time,
+        max_nppc=max_nppc,
+        single_exptime=single_exptime,
+    )
 
     logger.info("Summarizing the results")
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
@@ -182,11 +217,13 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         uS_M2,
+        single_exptime=single_exptime,
     )
 
     _status_widget = StatusWidgets()
     _status_widget.show_results(df_validated, validation_status)
 
+    df_validated["single_exptime"] = single_exptime
     df_summary = _status_widget.df_summary
 
     logger.info("Saving the results")
@@ -200,4 +237,132 @@ def simulate(
         origname=os.path.basename(input_list),
         origdata=open(input_list, "rb").read(),
         skip_subdirectories=True,
+        single_exptime=single_exptime,
+    )
+
+
+@app.command(help="Launch the PFS Target Uploader Web App.")
+def start_app(
+    app: Annotated[PanelAppName, typer.Argument(help="App to launch.")],
+    port: Annotated[
+        int, typer.Option(show_default=True, help="Port number to run the server.")
+    ] = 5008,
+    prefix: Annotated[str, typer.Option(help="URL prefix to serve the app.")] = "",
+    allow_websocket_origin: Annotated[
+        List[str], typer.Option(help="Allow websocket origin.")
+    ] = None,
+    static_dirs: Annotated[List[str], typer.Option(help="Static directories.")] = None,
+    use_xheaders: Annotated[
+        bool, typer.Option(help="Set --use-xheaders option.")
+    ] = False,
+    num_procs: Annotated[int, typer.Option(help="Number of processes to run.")] = 1,
+    autoreload: Annotated[bool, typer.Option(help="Set --autoreload option.")] = False,
+    max_upload_size: Annotated[
+        int, typer.Option(help="Maximum file size in MB.")
+    ] = 500,
+    session_token_expiration: Annotated[
+        int, typer.Option(help="Session token expiration time in seconds.")
+    ] = 1800,
+    basic_auth: Annotated[
+        str, typer.Option(help="Basic authentication config (.json).")
+    ] = None,
+    cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
+    basic_login_template: Annotated[
+        str, typer.Option(help="Basic login template.")
+    ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
+):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level)
+
+    pn.extension(
+        "floatpanel",
+        "mathjax",
+        "tabulator",
+        notifications=True,
+        loading_spinner="dots",
+        # loading_color="#6A589D",
+        sizing_mode="stretch_width",
+        # sizing_mode="scale_width",
+        js_files={
+            "font-awesome": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js",
+            # "bootstrap": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css",
+        },
+        css_files=[
+            "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
+            # "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js",
+            # "https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext",
+        ],
+        layout_compatibility="error",
+    )
+
+    # pn.state.notifications.position = "bottom-left"
+
+    if app == "uploader":
+        from ..pn_app import target_uploader_app as pn_app
+    elif app == "admin":
+        from ..pn_app import list_files_app as pn_app
+
+    if allow_websocket_origin is None:
+        allow_websocket_origin = ["localhost"]
+    # else:
+    #     allow_websocket_origin = [f"{a}:{port}" for a in allow_websocket_origin]
+
+    logger.info(f"{allow_websocket_origin=}")
+
+    if autoreload:
+        logger.info("num_procs is set to 1 as autoreload is enabled.")
+        num_procs = 1
+
+    if static_dirs is None:
+        static_dirs_dict = {}
+    else:
+        logger.info(f"{static_dirs=}")
+        for d in static_dirs:
+            if "=" not in d:
+                logger.error(
+                    "Invalid static directory format. Please use the format 'name=path'."
+                )
+                return
+        static_dirs_dict = {d.split("=")[0]: d.split("=")[1] for d in static_dirs}
+
+    logger.info(f"Set maximum upload size to {max_upload_size} MB")
+
+    logger.info(f"Starting the {app} app on port {port}.")
+
+    if basic_auth is not None:
+        if not os.path.exists(basic_auth):
+            logger.error(f"Basic authentication file not found: {basic_auth}")
+            return
+        admin_options = dict(
+            basic_auth=basic_auth,
+            cookie_secret=cookie_secret,
+            basic_login_template=basic_login_template,
+        )
+        kwargs = admin_options
+    else:
+        kwargs = {}
+
+    # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
+    pn.serve(
+        pn_app,
+        port=port,
+        prefix=prefix,
+        # use_xheaders=use_xheaders,
+        num_procs=num_procs,
+        websocket_origin=allow_websocket_origin,
+        session_token_expiration=session_token_expiration,
+        static_dirs=static_dirs_dict,
+        show=False,
+        autoreload=autoreload,
+        # Increase the maximum websocket message size allowed by Bokeh
+        websocket_max_message_size=max_upload_size * 1024 * 1024,
+        # Increase the maximum buffer size allowed by Tornado
+        http_server_kwargs={
+            "max_buffer_size": max_upload_size * 1024 * 1024,
+            "xheaders": use_xheaders,
+        },
+        **kwargs,
     )

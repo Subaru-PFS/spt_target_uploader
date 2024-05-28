@@ -18,6 +18,7 @@ from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
+    ExpTimeWidgets,
     FileInputWidgets,
     PppResultWidgets,
     RunPppButtonWidgets,
@@ -36,7 +37,9 @@ def _toggle_buttons(buttons: list, disabled: bool = True):
         b.disabled = disabled
 
 
-def target_uploader_app():
+def target_uploader_app(use_panel_cli=False):
+    pn.state.notifications.position = "bottom-left"
+
     config = dotenv_values(".env.shared")
 
     if "MAX_EXETIME" not in config.keys():
@@ -74,6 +77,7 @@ def target_uploader_app():
     panel_submit_button = SubmitButtonWidgets()
 
     panel_dates = DatePickerWidgets()
+    panel_exptime = ExpTimeWidgets()
 
     panel_timer = TimerWidgets()
 
@@ -90,6 +94,24 @@ def target_uploader_app():
     ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
+
+    # if no file is uploaded, disable the buttons
+    # This would work only at the first time the app is loaded.
+    def enable_buttons_by_fileinput(v):
+        if v is None:
+            logger.info("Buttons are disabled because no file is uploaded.")
+            _toggle_buttons(
+                [panel_validate_button.validate, panel_ppp_button.PPPrun],
+                disabled=True,
+            )
+        else:
+            logger.info("Buttons are enabled because file upload is detected.")
+            _toggle_buttons(
+                [panel_validate_button.validate, panel_ppp_button.PPPrun],
+                disabled=False,
+            )
+
+    fileinput_watcher = pn.bind(enable_buttons_by_fileinput, panel_input.file_input)
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
@@ -109,14 +131,19 @@ def target_uploader_app():
             panel_status.pane,
             margin=(10, 0, 0, 0),
         ),
+        fileinput_watcher,
     )
 
-    sidebar_configs = pn.Column(panel_dates.pane)
+    sidebar_configs = pn.Column(
+        pn.Column(panel_dates.pane, margin=(10, 0, 0, 0)),
+        pn.Column(panel_exptime.pane, margin=(10, 0, 0, 0)),
+    )
 
     tab_sidebar = pn.Tabs(
         ("Home", sidebar_column),
         ("Config", sidebar_configs),
     )
+    # tab_sidebar.active = 1
 
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
@@ -231,7 +258,11 @@ def target_uploader_app():
             panel_ppp.origdata = panel_input.file_input.value
             panel_ppp.df_summary = panel_status.df_summary
 
-            panel_ppp.run_ppp(df_validated, validation_status)
+            panel_ppp.run_ppp(
+                df_validated,
+                validation_status,
+                single_exptime=panel_exptime.single_exptime.value,
+            )
             panel_ppp.show_results()
 
             tab_panels.active = 2
@@ -287,13 +318,17 @@ def target_uploader_app():
                 panel_timer.timer(False)
                 return
 
+        panel_ppp.df_input = df_validated
+        panel_ppp.df_summary = panel_status.df_summary
         panel_ppp.origname = panel_input.file_input.filename
         panel_ppp.origdata = panel_input.file_input.value
-        panel_ppp.df_summary = panel_status.df_summary
         panel_ppp.upload_time = datetime.now(timezone.utc)
         panel_ppp.secret_token = panel_input.secret_token
 
-        outdir, outfile_zip, _ = panel_ppp.upload(outdir_prefix=config["OUTPUT_DIR"])
+        outdir, outfile_zip, _ = panel_ppp.upload(
+            outdir_prefix=config["OUTPUT_DIR"],
+            single_exptime=panel_exptime.single_exptime.value,
+        )
 
         panel_notes = UploadNoteWidgets(
             panel_ppp.secret_token,
@@ -312,15 +347,20 @@ def target_uploader_app():
     panel_ppp_button.PPPrun.on_click(cb_PPP)
     panel_submit_button.submit.on_click(cb_submit)
 
-    app = template.servable()
+    app = template
 
-    return app
+    if use_panel_cli:
+        return app.servable()
+    else:
+        return app
 
 
 #
 # admin app
 #
-def list_files_app():
+def list_files_app(use_panel_cli=False):
+    pn.state.notifications.position = "bottom-left"
+
     config = dotenv_values(".env.shared")
 
     logger.info(f"config params from dotenv: {config}")
@@ -728,6 +768,9 @@ def list_files_app():
     template.sidebar.append(sidebar_column)
     template.main.append(tab_panels)
 
-    app = template.servable()
+    app = template
 
-    return app
+    if use_panel_cli:
+        return app.servable()
+    else:
+        return app
