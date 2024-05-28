@@ -5,6 +5,7 @@ from datetime import date
 from enum import Enum
 from typing import Annotated, List
 
+import memray
 import panel as pn
 import typer
 from astropy.table import Table
@@ -186,26 +187,27 @@ def simulate(
     tb_input = Table.from_pandas(df_validated)
     tb_visible = tb_input[validation_status["visibility"]["success"]]
 
-    logger.info("Running the online PPP to simulate pointings")
-    (
-        uS_L2,
-        _,
-        cR_L_,
-        sub_l,
-        obj_allo_L_fin,
-        uS_M2,
-        _,
-        cR_M_,
-        sub_m,
-        obj_allo_M_fin,
-        _,  # ppp_status
-    ) = PPPrunStart(
-        tb_visible,
-        None,
-        max_exec_time,
-        max_nppc=max_nppc,
-        single_exptime=single_exptime,
-    )
+    with memray.Tracker("memray-ppprunstart.bin"):
+        logger.info("Running the online PPP to simulate pointings")
+        (
+            uS_L2,
+            _,
+            cR_L_,
+            sub_l,
+            obj_allo_L_fin,
+            uS_M2,
+            _,
+            cR_M_,
+            sub_m,
+            obj_allo_M_fin,
+            _,  # ppp_status
+        ) = PPPrunStart(
+            tb_visible,
+            None,
+            max_exec_time,
+            max_nppc=max_nppc,
+            single_exptime=single_exptime,
+        )
 
     logger.info("Summarizing the results")
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
