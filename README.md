@@ -2,7 +2,7 @@
 
 The PFS Target Uploader is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
 
-- Web App: https://pfs-etc.naoj.hawaii.edu/uploader/app
+- Web App: https://pfs-etc.naoj.hawaii.edu/uploader/
 - User Guide: https://pfs-etc.naoj.hawaii.edu/uploader/doc/index.html
 
 ## Install
@@ -36,10 +36,10 @@ cd ..
 ### Run the app
 
 ```sh
-panel serve ./app.py ./admin.py --autoreload --static-dirs doc=./docs/site data=./data
+pfs-uploader-cli start-app uploader --allow-websocket-origin=localhost:5008 --static-dirs doc="./docs/site/" --static-dirs data="./data"
 ```
 
-Open the target uploader at http://localhost:5006/app and the admin page at http://localhost:5006/admin.
+Open the target uploader at http://localhost:5008/ .
 Uploaded files will be stored under `data` with the following structure.
 
 ```
