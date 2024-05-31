@@ -350,7 +350,7 @@ def start_app(
         pn_app,
         port=port,
         prefix=prefix,
-        # use_xheaders=use_xheaders,
+        use_xheaders=use_xheaders,
         num_procs=num_procs,
         websocket_origin=allow_websocket_origin,
         session_token_expiration=session_token_expiration,
@@ -362,7 +362,7 @@ def start_app(
         # Increase the maximum buffer size allowed by Tornado
         http_server_kwargs={
             "max_buffer_size": max_upload_size * 1024 * 1024,
-            "xheaders": use_xheaders,
+            # "user_xheaders": use_xheaders,
         },
         **kwargs,
     )
