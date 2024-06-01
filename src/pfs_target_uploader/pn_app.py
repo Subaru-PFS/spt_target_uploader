@@ -47,7 +47,13 @@ def target_uploader_app(use_panel_cli=False):
     else:
         max_exetime = int(config["MAX_EXETIME"])
 
+    if "MAX_NPPC" not in config.keys():
+        max_nppc: int = 200
+    else:
+        max_nppc = int(config["MAX_NPPC"])
+
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
+    logger.info(f"Maximum number of PPCs is set to {max_nppc}.")
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -83,7 +89,7 @@ def target_uploader_app(use_panel_cli=False):
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PppResultWidgets(exetime=max_exetime)
+    panel_ppp = PppResultWidgets(exetime=max_exetime, max_nppc=max_nppc)
 
     panel_input.reset()
 

@@ -21,6 +21,7 @@ class PppResultWidgets:
     def __init__(
         self,
         exetime: int = 15 * 60,  # [s] tentatively set to 15 min
+        max_nppc: int = 200,  # max number of PPCs
     ):
         # PPP status
         # True if PPP has been run
@@ -33,6 +34,7 @@ class PppResultWidgets:
         self.upload_time = None
         self.secret_token = None
         self.exetime: int = exetime
+        self.max_nppc = max_nppc
 
         self.ppp_title = pn.pane.Markdown(
             """# Results of PFS pointing simulation""",
@@ -281,7 +283,11 @@ class PppResultWidgets:
             obj_allo_M_fin,
             self.status_,
         ) = PPPrunStart(
-            tb_visible, weights, self.exetime, single_exptime=self.single_exptime
+            tb_visible,
+            weights,
+            self.exetime,
+            single_exptime=self.single_exptime,
+            max_nppc=self.max_nppc,
         )
 
         (
