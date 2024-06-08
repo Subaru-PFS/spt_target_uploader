@@ -20,6 +20,7 @@ required_keys = [
     "priority",
     "exptime",
     "resolution",
+    "reference_arm",
 ]
 
 
@@ -48,6 +49,7 @@ target_datatype = {
     "parallax": float,  # mas
     "tract": int,
     "patch": int,
+    "reference_arm": str,
     # # filter keys
     # "filter_g": str,
     # "filter_r": str,
@@ -128,3 +130,5 @@ filter_keys = [
     "flux_error_y",
     "flux_error_j",
 ]
+
+arm_values = ["b", "r", "n", "m"]

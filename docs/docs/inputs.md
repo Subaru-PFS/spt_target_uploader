@@ -15,25 +15,26 @@ Here the word "target" is a combination of values of the fields described below.
 
 A quick example of the content is shown below.
 
-| ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution |     g_hsc | g_hsc_error |
-|-------------|-------:|-------------------:|-------------------:|--------:|---------:|------------|----------:|------------:|
-| ob_00000000 |      0 |  278.6241774801468 |  56.29564017478978 |  3600.0 |        9 | L          |   3093.21 |      388.14 |
-| ob_00000001 |      1 | 157.99623831073885 |  31.71664232033844 |  3600.0 |        7 | M          | 108911.74 |    30452.86 |
-| ob_00000002 |      2 | 309.09525116809766 | -6.329978341797448 |  3600.0 |        3 | M          |  11842.32 |     2905.20 |
+| ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution | reference_arm |     g_hsc | g_hsc_error |
+|-------------|-------:|-------------------:|-------------------:|--------:|---------:|------------|---------------|----------:|------------:|
+| ob_00000000 |      0 |  278.6241774801468 |  56.29564017478978 |  3600.0 |        9 | L          | b             |   3093.21 |      388.14 |
+| ob_00000001 |      1 | 157.99623831073885 |  31.71664232033844 |  3600.0 |        7 | M          | r             | 108911.74 |    30452.86 |
+| ob_00000002 |      2 | 309.09525116809766 | -6.329978341797448 |  3600.0 |        3 | M          | n             |  11842.32 |     2905.20 |
 
 ### Required fields
 
 Mandatory fields are listed below.
 
-| Name       | Datatype   | Unit   | Description                                                                                              |
-|------------|------------|--------|----------------------------------------------------------------------------------------------------------|
-| ob_code    | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                       |
-| obj_id     | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                |
-| ra         | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                 |
-| dec        | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                     |
-| exptime    | float      | second | Exposure time requested for the object under the nominal observing condition.                            |
-| priority   | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority |
-| resolution | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution       |
+| Name          | Datatype   | Unit   | Description                                                                                                                          |
+|---------------|------------|--------|--------------------------------------------------------------------------------------------------------------------------------------|
+| ob_code       | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                                                   |
+| obj_id        | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                                            |
+| ra            | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                                             |
+| dec           | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                                                 |
+| exptime       | float      | second | Exposure time requested for the object under the nominal observing condition.                                                        |
+| priority      | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority                             |
+| resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
+| reference_arm | str        |        | Reference arm name used to evaluate the effective exposure  time (`b`: blue, `r`: red, `n`: near-IR, and `m`: medium-resolution red) |
 
 
 #### About uniqueness condition by `(obj_id, resolution)` and `ob_code`
