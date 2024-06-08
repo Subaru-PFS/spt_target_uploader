@@ -35,6 +35,12 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class ObsType(str, Enum):
+    queue = "queue"
+    classical = "classical"
+    filler = "filler"
+
+
 @app.command(help="Validate a target list for PFS openuse.")
 def validate(
     input_list: Annotated[
@@ -63,12 +69,13 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
+    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
     logger.remove(0)
-    logger.add(sys.stderr, level=log_level)
+    logger.add(sys.stderr, level=log_level.value)
 
     df_input, dict_load = load_input(input_list)
 
@@ -109,6 +116,7 @@ def validate(
             origname=os.path.basename(input_list),
             origdata=open(input_list, "rb").read(),
             skip_subdirectories=True,
+            observation_type=obs_type.value,
         )
 
 
@@ -152,12 +160,19 @@ def simulate(
             help="Max number of pointings to consider. Default is 0 (no limit).",
         ),
     ] = None,
+    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
     logger.remove(0)
-    logger.add(sys.stderr, level=log_level)
+    logger.add(sys.stderr, level=log_level.value)
+
+    if obs_type != "classical":
+        logger.warning(
+            f'Force to set the single exposure time as 900s for the observation type "{obs_type.value}".'
+        )
+        single_exptime = 900
 
     df_input, dict_load = load_input(input_list)
 
@@ -238,6 +253,7 @@ def simulate(
         origdata=open(input_list, "rb").read(),
         skip_subdirectories=True,
         single_exptime=single_exptime,
+        observation_type=obs_type.value,
     )
 
 
@@ -275,7 +291,7 @@ def start_app(
     ] = LogLevel.INFO,
 ):
     logger.remove(0)
-    logger.add(sys.stderr, level=log_level)
+    logger.add(sys.stderr, level=log_level.value)
 
     pn.extension(
         "floatpanel",

@@ -18,8 +18,9 @@ from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
-    ExpTimeWidgets,
+    # ExpTimeWidgets,
     FileInputWidgets,
+    ObsTypeWidgets,
     PPCInputWidgets,
     PppResultWidgets,
     RunPppButtonWidgets,
@@ -33,9 +34,9 @@ from .widgets import (
 )
 
 
-def _toggle_buttons(buttons: list, disabled: bool = True):
-    for b in buttons:
-        b.disabled = disabled
+def _toggle_widgets(widgets: list, disabled: bool = True):
+    for w in widgets:
+        w.disabled = disabled
 
 
 def target_uploader_app(use_panel_cli=False):
@@ -77,6 +78,8 @@ def target_uploader_app(use_panel_cli=False):
     # setup panel components
     panel_doc = DocLinkWidgets()
 
+    panel_obs_type = ObsTypeWidgets()
+
     panel_input = FileInputWidgets()
     panel_validate_button = ValidateButtonWidgets()
     panel_status = StatusWidgets()
@@ -84,7 +87,7 @@ def target_uploader_app(use_panel_cli=False):
     panel_submit_button = SubmitButtonWidgets()
 
     panel_dates = DatePickerWidgets()
-    panel_exptime = ExpTimeWidgets()
+    # panel_exptime = ExpTimeWidgets()
     panel_ppcinput = PPCInputWidgets()
 
     panel_timer = TimerWidgets()
@@ -100,30 +103,61 @@ def target_uploader_app(use_panel_cli=False):
         panel_validate_button.validate,
         panel_ppp_button.PPPrun,
     ]
+    widget_set = [
+        panel_obs_type.single_exptime,
+        panel_obs_type.obs_type,
+        panel_dates.date_begin,
+        panel_dates.date_end,
+    ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
 
     # if no file is uploaded, disable the buttons
     # This would work only at the first time the app is loaded.
-    def enable_buttons_by_fileinput(v):
+    #
+    # If the observatin type is 'queue' or 'classical', enable the validate and simulate buttons.
+    # If the observation type is 'filler', enable only the validate button.
+    def enable_buttons_by_fileinput(v, obs_type):
         if v is None:
             logger.info("Buttons are disabled because no file is uploaded.")
-            _toggle_buttons(
+            _toggle_widgets(
                 [panel_validate_button.validate, panel_ppp_button.PPPrun],
                 disabled=True,
             )
-        else:
-            logger.info("Buttons are enabled because file upload is detected.")
-            _toggle_buttons(
-                [panel_validate_button.validate, panel_ppp_button.PPPrun],
+            return
+        logger.info("Buttons are enabled because file upload is detected.")
+        _toggle_widgets(
+            [panel_validate_button.validate],
+            disabled=False,
+        )
+        if obs_type == "queue" or obs_type == "classical":
+            _toggle_widgets(
+                [panel_ppp_button.PPPrun],
                 disabled=False,
             )
+        if obs_type == "filler":
+            logger.info(
+                "Simulate button is disabled because the observation type is 'filler'."
+            )
+            _toggle_widgets(
+                [panel_ppp_button.PPPrun],
+                disabled=True,
+            )
 
-    fileinput_watcher = pn.bind(enable_buttons_by_fileinput, panel_input.file_input)
+    fileinput_watcher = pn.bind(
+        enable_buttons_by_fileinput,
+        panel_input.file_input,
+        panel_obs_type.obs_type,
+    )
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
         panel_input.pane,
+        pn.Column(
+            pn.Row("<font size=5>**Observation Type**</font>"),
+            panel_obs_type.obstype_pane,
+            margin=(10, 0, 0, 0),
+        ),
         pn.Column(
             pn.Row("<font size=5>**Select an operation**</font>", panel_timer.pane),
             pn.Row(
@@ -144,7 +178,7 @@ def target_uploader_app(use_panel_cli=False):
 
     sidebar_configs = pn.Column(
         pn.Column(panel_dates.pane, margin=(10, 0, 0, 0)),
-        pn.Column(panel_exptime.pane, margin=(10, 0, 0, 0)),
+        pn.Column(panel_obs_type.exptime_pane, margin=(10, 0, 0, 0)),
         pn.Column(panel_ppcinput.pane, margin=(10, 0, 0, 0)),
     )
 
@@ -182,7 +216,9 @@ def target_uploader_app(use_panel_cli=False):
     # define on_click callback for the "validate" button
     def cb_validate(event):
         # disable the buttons and input file widget while validation
-        _toggle_buttons(button_set, disabled=True)
+        _toggle_widgets(button_set, disabled=True)
+        _toggle_widgets([panel_submit_button.submit], disabled=True)
+        _toggle_widgets(widget_set, disabled=True)
 
         placeholder_floatpanel.objects = []
 
@@ -201,7 +237,11 @@ def target_uploader_app(use_panel_cli=False):
             date_end=panel_dates.date_end.value,
         )
 
-        _toggle_buttons(button_set, disabled=False)
+        _toggle_widgets(widget_set, disabled=False)
+        _toggle_widgets(button_set, disabled=False)
+        if panel_obs_type.obs_type.value == "filler":
+            _toggle_widgets([panel_ppp_button.PPPrun], disabled=True)
+
         panel_timer.timer(False)
 
         if validation_status is None:
@@ -226,8 +266,9 @@ def target_uploader_app(use_panel_cli=False):
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
-        _toggle_buttons(button_set, disabled=True)
-        panel_submit_button.submit.disabled = True
+        _toggle_widgets(button_set, disabled=True)
+        _toggle_widgets([panel_submit_button.submit], disabled=True)
+        _toggle_widgets(widget_set, disabled=True)
 
         placeholder_floatpanel.objects = []
 
@@ -246,7 +287,7 @@ def target_uploader_app(use_panel_cli=False):
         df_ppc = panel_ppcinput.validate()
 
         if df_ppc is None:
-            _toggle_buttons(button_set, disabled=False)
+            _toggle_widgets(button_set, disabled=False)
             panel_timer.timer(False)
             return
         elif not df_ppc.empty:
@@ -256,7 +297,8 @@ def target_uploader_app(use_panel_cli=False):
             )
 
         if validation_status is None:
-            _toggle_buttons(button_set, disabled=False)
+            _toggle_widgets(button_set, disabled=False)
+            _toggle_widgets(widget_set, disabled=False)
             panel_timer.timer(False)
             return
 
@@ -266,7 +308,8 @@ def target_uploader_app(use_panel_cli=False):
                 "Cannot simulate pointing for 0 visible targets",
                 duration=0,
             )
-            _toggle_buttons(button_set, disabled=False)
+            _toggle_widgets(button_set, disabled=False)
+            _toggle_widgets(widget_set, disabled=False)
             panel_timer.timer(False)
             return
 
@@ -286,7 +329,7 @@ def target_uploader_app(use_panel_cli=False):
                 df_validated,
                 df_ppc,
                 validation_status,
-                single_exptime=panel_exptime.single_exptime.value,
+                single_exptime=panel_obs_type.single_exptime.value,
             )
             panel_ppp.show_results()
 
@@ -301,11 +344,14 @@ def target_uploader_app(use_panel_cli=False):
             pn.state.notifications.error(f"{str(e)}", duration=0)
             pass
 
-        _toggle_buttons(button_set, disabled=False)
+        _toggle_widgets(widget_set, disabled=False)
+        _toggle_widgets(button_set, disabled=False)
         panel_timer.timer(False)
 
     def cb_submit(event):
-        panel_submit_button.submit.disabled = True
+        _toggle_widgets(button_set, disabled=True)
+        _toggle_widgets([panel_submit_button.submit], disabled=True)
+        _toggle_widgets(widget_set, disabled=True)
 
         placeholder_floatpanel.objects = []
 
@@ -332,6 +378,9 @@ def target_uploader_app(use_panel_cli=False):
 
             pn.state.notifications.clear()
 
+            _toggle_widgets(widget_set, disabled=False)
+            _toggle_widgets(button_set, disabled=False)
+
             if validation_status is None:
                 panel_timer.timer(False)
                 return
@@ -352,7 +401,8 @@ def target_uploader_app(use_panel_cli=False):
 
         outdir, outfile_zip, _ = panel_ppp.upload(
             outdir_prefix=config["OUTPUT_DIR"],
-            single_exptime=panel_exptime.single_exptime.value,
+            single_exptime=panel_obs_type.single_exptime.value,
+            observation_type=panel_obs_type.obs_type.value,
         )
 
         panel_notes = UploadNoteWidgets(
@@ -364,7 +414,9 @@ def target_uploader_app(use_panel_cli=False):
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
-        panel_submit_button.submit.disabled = True
+        _toggle_widgets(widget_set, disabled=False)
+        _toggle_widgets(button_set, disabled=False)
+        _toggle_widgets([panel_submit_button.submit], disabled=True)
         panel_timer.timer(False)
 
     # set callback to the buttons

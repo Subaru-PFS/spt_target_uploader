@@ -1,5 +1,9 @@
 # PFS Pointing Simulation
 
+!!! note
+
+    The **_Simulate_** button is active when you select "Queue" or "Classical" in the Observation Type selector. For the "Filler", please go to [Submission](submission.md).
+
 The total exposure time required for a target list can be estimated using the online PFS Pointing Planner (PPP).
 
 The online PPP will simulate the pointing after the validation of the input target list.

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import panel as pn
 import param
-from zoneinfo import ZoneInfo
 
 from ..utils.checker import get_semester_daterange
 
