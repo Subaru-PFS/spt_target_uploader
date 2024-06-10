@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import time
 from io import BytesIO
 
 import panel as pn
