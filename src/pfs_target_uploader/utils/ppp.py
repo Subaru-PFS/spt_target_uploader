@@ -17,7 +17,7 @@ import panel as pn
 import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from astropy.table import Table, vstack
+from astropy.table import Table, vstack, join
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
@@ -46,6 +46,7 @@ pn.extension(notifications=True)
 
 def PPPrunStart(
     uS,
+    uPPC,
     weight_para,
     exetime: int,
     single_exptime: int = 900,
@@ -55,7 +56,7 @@ def PPPrunStart(
     r_pfi = d_pfi / 2.0
 
     if weight_para is None:
-        weight_para = [4.02, 0.01, 0.01]
+        weight_para = [2.02, 0.01, 0.01]
 
     is_exetime = (exetime is not None) and (exetime > 0)
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
@@ -338,7 +339,7 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, mutiPro, weight_para, starttime, exetime: int):
+    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, starttime, exetime: int):
         """determine pointing centers
 
         Parameters
@@ -361,6 +362,12 @@ def PPPrunStart(
         Nfiber = int(2394 - 200)  # 200 for calibrators
         sample_f = count_N(sample_f)
         sample_f = weight(sample_f, conta, contb, contc)
+
+        if len(ppc_f) > 0:
+            sample_f.meta["PPC"] = np.array([list(ppc_t) for ppc_t in ppc_f.as_array()])
+            status = 2
+            logger.info("PPC determined from the user input [PPP_centers s1]")
+            return sample_f, status
 
         if is_exetime and ((time.time() - starttime) > exetime):
             sample_f.meta["PPC"] = []
@@ -447,7 +454,7 @@ def PPPrunStart(
 
         # haversine uses (dec,ra) in radian;
         db = DBSCAN(eps=np.radians(d_pfi), min_samples=1, metric="haversine").fit(
-            np.fliplr(np.radians(ppc_xy[:, [1, 2]]))
+            np.fliplr(np.radians(ppc_xy[:, [1, 2]].astype(np.float_)))
         )
 
         labels = db.labels_
@@ -665,9 +672,9 @@ def PPPrunStart(
                     [
                         list(
                             PFS_FoV(
-                                ppc_g[uu][iii, 1],
-                                ppc_g[uu][iii, 2],
-                                ppc_g[uu][iii, 3],
+                                float(ppc_g[uu][iii, 1]),
+                                float(ppc_g[uu][iii, 2]),
+                                float(ppc_g[uu][iii, 3]),
                                 sample,
                             )
                         )
@@ -877,7 +884,7 @@ def PPPrunStart(
                     uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
                 )  # remained exposure time
 
-                uS_t2 = PPP_centers(uS_t1, True, weight_para, starttime, exetime)[0]
+                uS_t2 = PPP_centers(uS_t1, [], True, weight_para, starttime, exetime)[0]
 
                 obj_allo_t = netflowRun(uS_t2)
 
@@ -905,6 +912,12 @@ def PPPrunStart(
 
     uS_L = uS[uS["resolution"] == "L"]
     uS_M = uS[uS["resolution"] == "M"]
+    if len(uPPC) > 0:
+        uPPC_L = uPPC[uPPC["ppc_resolution"] == "L"]
+        uPPC_M = uPPC[uPPC["ppc_resolution"] == "M"]
+    else:
+        uPPC_L = []
+        uPPC_M = []
 
     out_uS_L2 = []
     out_cR_L = []
@@ -918,74 +931,106 @@ def PPPrunStart(
     out_obj_allo_M_fin = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
-        uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
+        uS_L_s2, status_ = PPP_centers(
+            uS_L, uPPC_L, True, weight_para, t_ppp_start, exetime
+        )
         obj_allo_L = netflowRun(uS_L_s2)
-        uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin, status_ = netflow_iter(
-            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
-        )
 
-        uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
-            uS_L_s2, obj_allo_L_fin
-        )
+        if len(uPPC_L) == 0:
+            uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
+            obj_allo_L_fin, status_ = netflow_iter(
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+            )
+            uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
+                uS_L_s2, obj_allo_L_fin
+            )
+            out_obj_allo_L_fin = obj_allo_L_fin
+
+        elif len(uPPC_L) > 0:
+            uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
+                uS_L_s2, obj_allo_L
+            )
+            out_obj_allo_L_fin = obj_allo_L
 
         out_uS_L2 = uS_L2
         out_cR_L = [cR_L_fh, cR_L_n]
         out_cR_L_ = [cR_L_fh_, cR_L_n_]
         out_sub_l = sub_l
-        out_obj_allo_L_fin = obj_allo_L_fin
 
     if len(uS_M) > 0 and len(uS_L) == 0:
-        uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
+        uS_M_s2, status_ = PPP_centers(
+            uS_M, uPPC_M, True, weight_para, t_ppp_start, exetime
+        )
         obj_allo_M = netflowRun(uS_M_s2)
-        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin, status_ = netflow_iter(
-            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
-        )
 
-        uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
-            uS_M_s2, obj_allo_M_fin
-        )
+        if len(uPPC_M) == 0:
+            uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
+            obj_allo_M_fin, status_ = netflow_iter(
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+            )
+            uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
+                uS_M_s2, obj_allo_M_fin
+            )
+            out_obj_allo_M_fin = obj_allo_M_fin
+        elif len(uPPC_M) > 0:
+            uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
+                uS_M_s2, obj_allo_M
+            )
+            out_obj_allo_M_fin = obj_allo_M
 
         out_uS_M2 = uS_M2
         out_cR_M = [cR_M_fh, cR_M_n]
         out_cR_M_ = [cR_M_fh_, cR_M_n_]
         out_sub_m = sub_m
-        out_obj_allo_M_fin = obj_allo_M_fin
 
     if len(uS_L) > 0 and len(uS_M) > 0:
-        uS_L_s2, status_ = PPP_centers(uS_L, True, weight_para, t_ppp_start, exetime)
+        uS_L_s2, status_ = PPP_centers(
+            uS_L, uPPC_L, True, weight_para, t_ppp_start, exetime
+        )
         obj_allo_L = netflowRun(uS_L_s2)
-        uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
-        obj_allo_L_fin, status_ = netflow_iter(
-            uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
-        )
+        if len(uPPC_L) == 0:
+            uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
+            obj_allo_L_fin, status_ = netflow_iter(
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+            )
+            uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
+                uS_L_s2, obj_allo_L_fin
+            )
+            out_obj_allo_L_fin = obj_allo_L_fin
+        elif len(uPPC_L) > 0:
+            uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
+                uS_L_s2, obj_allo_L
+            )
+            out_obj_allo_L_fin = obj_allo_L
 
-        uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
-            uS_L_s2, obj_allo_L_fin
+        uS_M_s2, status_ = PPP_centers(
+            uS_M, uPPC_M, True, weight_para, t_ppp_start, exetime
         )
-
-        uS_M_s2, status_ = PPP_centers(uS_M, True, weight_para, t_ppp_start, exetime)
         obj_allo_M = netflowRun(uS_M_s2)
-        uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
-        obj_allo_M_fin, status_ = netflow_iter(
-            uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
-        )
-
-        uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
-            uS_M_s2, obj_allo_M_fin
-        )
+        if len(uPPC_M) == 0:
+            uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
+            obj_allo_M_fin, status_ = netflow_iter(
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+            )
+            uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
+                uS_M_s2, obj_allo_M_fin
+            )
+            out_obj_allo_M_fin = obj_allo_M_fin
+        elif len(uPPC_M) > 0:
+            uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
+                uS_M_s2, obj_allo_M
+            )
+            out_obj_allo_M_fin = obj_allo_M
 
         out_uS_L2 = uS_L2
         out_cR_L = [cR_L_fh, cR_L_n]
         out_cR_L_ = [cR_L_fh_, cR_L_n_]
         out_sub_l = sub_l
-        out_obj_allo_L_fin = obj_allo_L_fin
+
         out_uS_M2 = uS_M2
         out_cR_M = [cR_M_fh, cR_M_n]
         out_cR_M_ = [cR_M_fh_, cR_M_n_]
         out_sub_m = sub_m
-        out_obj_allo_M_fin = obj_allo_M_fin
 
     t_ppp_stop = time.time()
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
@@ -1015,6 +1060,7 @@ def ppp_result(
     sub_m,
     obj_allo_m,
     uS_M2,
+    uPPC,
     single_exptime=900,
     d_pfi=1.38,
     box_width=1200.0,
@@ -1077,10 +1123,18 @@ def ppp_result(
 
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
-        obj_allo1["ppc_code"] = [
-            "Point_" + RESmode + "_" + str(count)
-            for count in (np.arange(0, len(obj_allo), 1) + 1)
-        ]
+        if len(uPPC) > 0:
+            if "ppc_priority" in uPPC.colnames:
+                uPPC.remove_column("ppc_priority")
+            obj_allo1 = join(
+                obj_allo1, uPPC, keys=["ppc_ra", "ppc_dec", "ppc_pa", "ppc_resolution"]
+            )
+        else:
+            obj_allo1["ppc_code"] = [
+                "Point_" + RESmode + "_" + str(count)
+                for count in (np.arange(0, len(obj_allo), 1) + 1)
+            ]
+        obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
@@ -1468,7 +1522,6 @@ def ppp_result_reproduce(
     box_width=1200.0,
     plot_height=400,
 ):
-
     single_exptime = uS.meta["single_exptime"] if "single_exptime" in uS.meta else 900.0
 
     if "ppc_code" not in obj_allo.colnames:

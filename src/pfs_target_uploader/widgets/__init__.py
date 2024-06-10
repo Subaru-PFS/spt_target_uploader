@@ -5,6 +5,7 @@ from .DatePickerWidgets import DatePickerWidgets
 from .DocLinkWidgets import DocLinkWidgets
 from .ExpTimeWidgets import ExpTimeWidgets
 from .FileInputWidgets import FileInputWidgets
+from .PPCInputWidgets import PPCInputWidgets
 from .PppResultWidgets import PppResultWidgets
 from .StatusWidgets import StatusWidgets
 from .TargetWidgets import TargetWidgets
@@ -20,6 +21,7 @@ __all__ = [
     "ExpTimeWidgets",
     "DocLinkWidgets",
     "FileInputWidgets",
+    "PPCInputWidgets",
     "PppResultWidgets",
     "StatusWidgets",
     "TimerWidgets",
