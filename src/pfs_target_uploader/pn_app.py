@@ -20,6 +20,7 @@ from .widgets import (
     DocLinkWidgets,
     ExpTimeWidgets,
     FileInputWidgets,
+    PPCInputWidgets,
     PppResultWidgets,
     RunPppButtonWidgets,
     StatusWidgets,
@@ -84,6 +85,7 @@ def target_uploader_app(use_panel_cli=False):
 
     panel_dates = DatePickerWidgets()
     panel_exptime = ExpTimeWidgets()
+    panel_ppcinput = PPCInputWidgets()
 
     panel_timer = TimerWidgets()
 
@@ -143,6 +145,7 @@ def target_uploader_app(use_panel_cli=False):
     sidebar_configs = pn.Column(
         pn.Column(panel_dates.pane, margin=(10, 0, 0, 0)),
         pn.Column(panel_exptime.pane, margin=(10, 0, 0, 0)),
+        pn.Column(panel_ppcinput.pane, margin=(10, 0, 0, 0)),
     )
 
     tab_sidebar = pn.Tabs(
@@ -236,6 +239,12 @@ def target_uploader_app(use_panel_cli=False):
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
+        df_ppc = panel_ppcinput.validate()
+
+        if df_ppc is None:
+            _toggle_buttons(button_set, disabled=False)
+            panel_timer.timer(False)
+            return
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)
@@ -266,6 +275,7 @@ def target_uploader_app(use_panel_cli=False):
 
             panel_ppp.run_ppp(
                 df_validated,
+                df_ppc,
                 validation_status,
                 single_exptime=panel_exptime.single_exptime.value,
             )
