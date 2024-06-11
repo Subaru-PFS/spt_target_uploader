@@ -119,6 +119,8 @@ class FileInputWidgets(param.Parameterized):
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
 
         # convert obj_id to string
-        df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
+        logger.debug(f"{validation_status=}")
+        if validation_status["required_keys"]["status"]:
+            df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
 
         return validation_status, df_input, df_output

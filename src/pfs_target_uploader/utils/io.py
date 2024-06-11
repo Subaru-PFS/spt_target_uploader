@@ -48,7 +48,10 @@ About the Enhanced Character-Separated Values (ECSV) format, visit https://docs.
         return readme_text
 
 
-def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
+def load_input(byte_string, format="csv", dtype=None, logger=logger):
+    if dtype is None:
+        dtype = target_datatype
+
     def check_integer(value):
         try:
             int_value = int(value)
