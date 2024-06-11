@@ -212,7 +212,11 @@ def target_uploader_app(use_panel_cli=False):
         panel_results.show_results(df_validated, validation_status)
 
         panel_ppp.df_input = df_validated
-        panel_ppp.df_summary = panel_status.df_summary
+        try:
+            panel_ppp.df_summary = panel_status.df_summary
+        except AttributeError as e:
+            logger.error(f"{str(e)}")
+            pass
 
         tab_panels.active = 1
         tab_panels.visible = True
@@ -245,6 +249,11 @@ def target_uploader_app(use_panel_cli=False):
             _toggle_buttons(button_set, disabled=False)
             panel_timer.timer(False)
             return
+        elif not df_ppc.empty:
+            pn.state.notifications.info(
+                "No automatic pointing determination will be performed as a user-defined pointing list is provided",
+                duration=5000,  # 5sec
+            )
 
         if validation_status is None:
             _toggle_buttons(button_set, disabled=False)

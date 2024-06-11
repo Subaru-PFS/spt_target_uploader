@@ -3,9 +3,11 @@
 import os
 from io import BytesIO
 
+import pandas as pd
 import panel as pn
 from loguru import logger
 
+from ..utils import ppc_datatype
 from ..utils.io import load_input
 
 
@@ -35,29 +37,34 @@ class PPCInputWidgets:
             )
             df_input, dict_load = load_input(
                 BytesIO(self.file_input.value),
+                dtype=ppc_datatype,
                 format=file_format,
             )
             # if the input file cannot be read, raise a sticky error notifications
             if not dict_load["status"]:
+                logger.error(f"Cannot load the input file {self.file_input.filename}.")
                 pn.state.notifications.error(
-                    f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
+                    f"Cannot load the input file {self.file_input.filename}. Please check the content.\n"
+                    f"\nError: {dict_load['error']}",
                     duration=0,
                 )
                 return None
-            for col_t in ["ppc_ra", "ppc_dec", "ppc_pa", "ppc_resolution"]:
+
+            is_required_columns = True
+            for col_t in ["ppc_ra", "ppc_dec", "ppc_resolution"]:
                 if col_t not in df_input.columns:
+                    is_required_columns = False
+                    logger.error(f"Missing mandatory column: {col_t}")
                     pn.state.notifications.error(
-                        f"Cannot load the input pointing list due to the missing columns: {col_t}",
-                        duration=0,
+                        f"Missing mandatory column: {col_t}", duration=0
                     )
-                    return None
+
+            if not is_required_columns:
+                return None
+
         else:
             logger.info("No pointing list selected.")
-            pn.state.notifications.info(
-                "No pointing list input, the automatic pointing simulation will run instead",
-                duration=0,
-            )
-            return []
+            return pd.DataFrame()  # return an empty DataFrame
 
         if "ppc_pa" not in df_input.columns:
             df_input["ppc_pa"] = 0.0
