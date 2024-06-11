@@ -364,7 +364,13 @@ def PPPrunStart(
         sample_f = weight(sample_f, conta, contb, contc)
 
         if len(ppc_f) > 0:
-            sample_f.meta["PPC"] = np.array([list(ppc_t) for ppc_t in ppc_f.as_array()])
+            sample_f.meta["PPC"] = np.array(
+                [
+                    [tt, ppc_f["ppc_ra"][tt], ppc_f["ppc_dec"][tt], ppc_f["ppc_pa"][tt]]
+                    for tt in range(len(ppc_f))
+                ]
+            )
+            # np.array([list(ppc_t) for ppc_t in ppc_f.as_array()])
             status = 2
             logger.info("PPC determined from the user input [PPP_centers s1]")
             return sample_f, status

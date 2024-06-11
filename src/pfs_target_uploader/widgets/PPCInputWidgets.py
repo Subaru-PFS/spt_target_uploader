@@ -59,4 +59,13 @@ class PPCInputWidgets:
             )
             return []
 
+        if "ppc_pa" not in df_input.columns:
+            df_input["ppc_pa"] = 0.0
+
+        if "ppc_priority" not in df_input.columns:
+            df_input["ppc_priority"] = 0.0
+
+        if "ppc_code" not in df_input.columns:
+            df_input["ppc_code"] = ["Point_" + str(tt) for tt in range(len(df_input))]
+
         return df_input
