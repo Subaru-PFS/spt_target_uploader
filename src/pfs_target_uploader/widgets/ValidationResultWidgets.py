@@ -270,17 +270,15 @@ class ValidationResultWidgets:
             pass
         elif validation_status["values"]["status"]:
             self.append_title("info")
-            self.info_text_vals.object = """<font size=4><u>Data ranges</u></font>
-
-<font size=3>All values of `ra`, `dec`, `priority`, `exptime`, `resolution`, and `reference_arm` satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>
-"""
+            self.info_text_vals.object = "<font size=4><u>Data ranges</u></font>\n\n"
+            "<font size=3>All values of `ra`, `dec`, `priority`, `exptime`, `resolution`, and `reference_arm` "
+            "satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>"
             self.info_pane.append(self.info_text_vals)
         elif not validation_status["values"]["status"]:
             self.append_title("error")
-            self.error_text_vals.object = """<font size=4><u>Value errors</u></font>
-
-<font size=3>Invalid values are detected for the following columns in the following entries (see [documentation](doc/validation.html)).</font>
-"""
+            self.error_text_vals.object = "<font size=4><u>Value errors</u></font>\n\n"
+            "<font size=3>Invalid values are detected for the following columns in the following entries "
+            "(see [documentation](doc/validation.html)).</font>"
             for k, v in zip(
                 ["ra", "dec", "priority", "exptime", "resolution", "reference_arm"],
                 [
