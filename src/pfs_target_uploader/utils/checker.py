@@ -340,9 +340,20 @@ def check_values(df, logger=logger):
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
 
-    is_refarm = np.logical_or(df["reference_arm"] == "b", df["reference_arm"] == "r")
-    is_refarm = np.logical_or(is_refarm, df["reference_arm"] == "n")
-    is_refarm = np.logical_or(is_refarm, df["reference_arm"] == "m")
+    is_refarm = np.full(df.index.size, False, dtype=bool)
+    for arm in arm_values:
+        is_refarm = np.logical_or(is_refarm, df["reference_arm"] == arm)
+
+    # refarm shouldn't be 'medium' for the low resolution mode
+    is_wrong_refarm_lr = np.logical_and(
+        df["resolution"] == "L", df["reference_arm"] == "m"
+    )
+    # refarm shouldn't be 'red' for the low resolution mode
+    is_wrong_refarm_mr = np.logical_and(
+        df["resolution"] == "M", df["reference_arm"] == "r"
+    )
+    is_refarm = np.logical_and(is_refarm, np.all(~is_wrong_refarm_lr))
+    is_refarm = np.logical_and(is_refarm, np.all(~is_wrong_refarm_mr))
 
     dict_values = {}
     is_success = True
