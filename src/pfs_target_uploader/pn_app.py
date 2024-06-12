@@ -18,7 +18,6 @@ from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
     DocLinkWidgets,
-    # ExpTimeWidgets,
     FileInputWidgets,
     ObsTypeWidgets,
     PPCInputWidgets,
@@ -144,6 +143,8 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
+    # if the observation type is 'classical', enable the exposure time widget.
+    # if the observation type is 'queue' or 'filler', disable the exposure time widget and reset the file input widget.
     def toggle_classical_mode(obs_type):
         if obs_type == "classical":
             panel_obs_type.single_exptime.disabled = False

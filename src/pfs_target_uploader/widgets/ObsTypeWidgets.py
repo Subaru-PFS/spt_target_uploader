@@ -17,13 +17,6 @@ class ObsTypeWidgets(param.Parameterized):
 
     def __init__(self):
 
-        def _activate_exptime(event):
-            if self.obs_type.value == "classical":
-                self.single_exptime.disabled = False
-            else:
-                self.single_exptime.disabled = True
-                self.single_exptime.value = 900
-
         # single exposure time widget
         self.single_exptime = pn.widgets.IntInput(
             # name="Individual Exposure Time (s) in [10, 7200]",
@@ -51,11 +44,6 @@ class ObsTypeWidgets(param.Parameterized):
 
         self.obstype_pane = pn.Column(self.obs_type)
 
-        # activate the exposure time widget based on the observation type
-        i_activate_exptime = pn.bind(_activate_exptime, self.obs_type)
-
         self.exptime_pane = pn.Column(
-            "### Individual Exposure Time (s)",
-            self.single_exptime,
-            i_activate_exptime,
+            "### Individual Exposure Time (s)", self.single_exptime
         )
