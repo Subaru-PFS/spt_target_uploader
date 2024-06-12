@@ -45,7 +45,8 @@ class FileInputWidgets(param.Parameterized):
             # ## Select a target list (<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)""",
             self.file_input,
             pn.pane.Markdown(
-                "<font size=3 color='dimgray'>(Optional) Configure the **observation period**, **individual exposure time**, and **pointing centers** in the **Config** tab.</font>",
+                "<font size=3 color='dimgray'>(Optional) Configure the **observation period**, **individual exposure time**, "
+                "and **pointing centers** in the **Config** tab.</font>",
                 styles={"padding-left": "0.5em", "margin-bottom": "0"},
             ),
             margin=(10, 0, -10, 0),
