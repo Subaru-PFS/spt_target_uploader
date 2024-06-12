@@ -87,7 +87,6 @@ def target_uploader_app(use_panel_cli=False):
     panel_submit_button = SubmitButtonWidgets()
 
     panel_dates = DatePickerWidgets()
-    # panel_exptime = ExpTimeWidgets()
     panel_ppcinput = PPCInputWidgets()
 
     panel_timer = TimerWidgets()
@@ -108,6 +107,7 @@ def target_uploader_app(use_panel_cli=False):
         panel_obs_type.obs_type,
         panel_dates.date_begin,
         panel_dates.date_end,
+        panel_ppcinput.file_input,
     ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
@@ -253,8 +253,21 @@ def target_uploader_app(use_panel_cli=False):
 
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
+
+        if panel_obs_type.obs_type.value == "queue":
+            _toggle_widgets(
+                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
+                disabled=True,
+            )
         if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets([panel_ppp_button.PPPrun], disabled=True)
+            _toggle_widgets(
+                [
+                    panel_ppp_button.PPPrun,
+                    panel_obs_type.single_exptime,
+                    panel_ppcinput.file_input,
+                ],
+                disabled=True,
+            )
 
         panel_timer.timer(False)
 
@@ -360,6 +373,21 @@ def target_uploader_app(use_panel_cli=False):
 
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
+        if panel_obs_type.obs_type.value == "queue":
+            _toggle_widgets(
+                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
+                disabled=True,
+            )
+        if panel_obs_type.obs_type.value == "filler":
+            _toggle_widgets(
+                [
+                    panel_ppp_button.PPPrun,
+                    panel_obs_type.single_exptime,
+                    panel_ppcinput.file_input,
+                ],
+                disabled=True,
+            )
+
         panel_timer.timer(False)
 
     def cb_submit(event):
@@ -431,6 +459,20 @@ def target_uploader_app(use_panel_cli=False):
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
         _toggle_widgets([panel_submit_button.submit], disabled=True)
+        if panel_obs_type.obs_type.value == "queue":
+            _toggle_widgets(
+                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
+                disabled=True,
+            )
+        if panel_obs_type.obs_type.value == "filler":
+            _toggle_widgets(
+                [
+                    panel_ppp_button.PPPrun,
+                    panel_obs_type.single_exptime,
+                    panel_ppcinput.file_input,
+                ],
+                disabled=True,
+            )
         panel_timer.timer(False)
 
     # set callback to the buttons
