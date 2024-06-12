@@ -144,11 +144,24 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
+    def toggle_classical_mode(obs_type):
+        if obs_type == "classical":
+            panel_obs_type.single_exptime.disabled = False
+            panel_ppcinput.file_input.disabled = False
+        else:
+            panel_obs_type.single_exptime.disabled = True
+            panel_obs_type.single_exptime.value = 900
+            panel_ppcinput.file_input.disabled = True
+            panel_ppcinput.file_input.filename = None
+            panel_ppcinput.file_input.value = None
+
     fileinput_watcher = pn.bind(
         enable_buttons_by_fileinput,
         panel_input.file_input,
         panel_obs_type.obs_type,
     )
+
+    ppcinput_watcher = pn.bind(toggle_classical_mode, panel_obs_type.obs_type)
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
@@ -180,6 +193,7 @@ def target_uploader_app(use_panel_cli=False):
         pn.Column(panel_dates.pane, margin=(10, 0, 0, 0)),
         pn.Column(panel_obs_type.exptime_pane, margin=(10, 0, 0, 0)),
         pn.Column(panel_ppcinput.pane, margin=(10, 0, 0, 0)),
+        ppcinput_watcher,
     )
 
     tab_sidebar = pn.Tabs(

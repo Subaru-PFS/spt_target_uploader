@@ -24,6 +24,7 @@ class ObsTypeWidgets(param.Parameterized):
                 self.single_exptime.disabled = True
                 self.single_exptime.value = 900
 
+        # single exposure time widget
         self.single_exptime = pn.widgets.IntInput(
             # name="Individual Exposure Time (s) in [10, 7200]",
             value=900,
@@ -33,6 +34,9 @@ class ObsTypeWidgets(param.Parameterized):
             disabled=True,
         )
 
+        #
+        # observation type widget
+        #
         # self.obs_type = pn.widgets.RadioButtonGroup(
         #     options={"Queue": "queue", "Classical": "classical", "Filler": "filler"},
         #     value="queue",
@@ -47,6 +51,7 @@ class ObsTypeWidgets(param.Parameterized):
 
         self.obstype_pane = pn.Column(self.obs_type)
 
+        # activate the exposure time widget based on the observation type
         i_activate_exptime = pn.bind(_activate_exptime, self.obs_type)
 
         self.exptime_pane = pn.Column(
