@@ -319,7 +319,13 @@ class PppResultWidgets:
 
         self.ppp_status = True
 
-    def upload(self, outdir_prefix=".", export=False, single_exptime=None):
+    def upload(
+        self,
+        outdir_prefix=".",
+        export=False,
+        single_exptime=None,
+        observation_type="queue",
+    ):
         if single_exptime is None:
             single_exptime = self.single_exptime
 
@@ -347,6 +353,7 @@ class PppResultWidgets:
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,
             single_exptime=single_exptime,
+            observation_type=observation_type,
         )
 
         return outdir, outfile_zip, None

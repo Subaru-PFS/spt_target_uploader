@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import panel as pn
 import param
-from zoneinfo import ZoneInfo
 
 from ..utils.checker import get_semester_daterange
 
@@ -25,4 +25,8 @@ class DatePickerWidgets(param.Parameterized):
             name="Date End (HST)", value=semester_end.date()
         )
 
-        self.pane = pn.Column("### Observation Period", self.date_begin, self.date_end)
+        self.pane = pn.Column(
+            "<font size=3>**Observation Period**</font>",
+            self.date_begin,
+            self.date_end,
+        )

@@ -3,8 +3,8 @@
 from .buttons import RunPppButtonWidgets, SubmitButtonWidgets, ValidateButtonWidgets
 from .DatePickerWidgets import DatePickerWidgets
 from .DocLinkWidgets import DocLinkWidgets
-from .ExpTimeWidgets import ExpTimeWidgets
 from .FileInputWidgets import FileInputWidgets
+from .ObsTypeWidgets import ObsTypeWidgets
 from .PPCInputWidgets import PPCInputWidgets
 from .PppResultWidgets import PppResultWidgets
 from .StatusWidgets import StatusWidgets
@@ -13,15 +13,17 @@ from .TimerWidgets import TimerWidgets
 from .UploadNoteWidgets import UploadNoteWidgets
 from .ValidationResultWidgets import ValidationResultWidgets
 
+# from .ExpTimeWidgets import ExpTimeWidgets
+
 __all__ = [
     "RunPppButtonWidgets",
     "SubmitButtonWidgets",
     "ValidateButtonWidgets",
     "DatePickerWidgets",
-    "ExpTimeWidgets",
     "DocLinkWidgets",
     "FileInputWidgets",
     "PPCInputWidgets",
+    "ObsTypeWidgets",
     "PppResultWidgets",
     "StatusWidgets",
     "TimerWidgets",
