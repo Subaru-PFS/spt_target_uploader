@@ -272,7 +272,7 @@ class ValidationResultWidgets:
             self.append_title("info")
             self.info_text_vals.object = """<font size=4><u>Data ranges</u></font>
 
-<font size=3>All values of `ra`, `dec`, `priority`, `exptime`, and `resolution` satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>
+<font size=3>All values of `ra`, `dec`, `priority`, `exptime`, `resolution`, and `reference_arm` satisfy the allowed ranges (see [documentation](doc/validation.html)).</font>
 """
             self.info_pane.append(self.info_text_vals)
         elif not validation_status["values"]["status"]:
@@ -282,13 +282,14 @@ class ValidationResultWidgets:
 <font size=3>Invalid values are detected for the following columns in the following entries (see [documentation](doc/validation.html)).</font>
 """
             for k, v in zip(
-                ["ra", "dec", "priority", "exptime", "resolution"],
+                ["ra", "dec", "priority", "exptime", "resolution", "reference_arm"],
                 [
                     "0 < `ra` < 360",
                     "-90 < `dec` < 90",
                     "[0, 9]",
                     "positive `float` value",
                     "`L` or `M`",
+                    "`b`, `r`, `n`, or `m`, and `r` and `m` cannot be used with `resolution` of `M` and `L`, respectively",
                 ],
             ):
                 if not validation_status["values"][f"status_{k}"]:

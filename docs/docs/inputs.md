@@ -36,6 +36,10 @@ Mandatory fields are listed below.
 | resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
 | reference_arm | str        |        | Reference arm name used to evaluate the effective exposure  time (`b`: blue, `r`: red, `n`: near-IR, and `m`: medium-resolution red) |
 
+#### About `reference_arm`
+
+When `resolution` is `L`, `reference_arm` must be one of `b`, `r`, and `n`.
+On the other hand, `reference_arm` must be one of `b`, `m`, and `n` when `resolution` is `M`.
 
 #### About uniqueness condition by `(obj_id, resolution)` and `ob_code`
 
