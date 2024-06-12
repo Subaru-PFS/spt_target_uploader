@@ -255,12 +255,13 @@ class PppResultWidgets:
     def run_ppp(
         self,
         df,
+        df_ppc,
         validation_status,
         single_exptime=900,
         weights=None,
     ):
         if weights is None:
-            weights = [4.02, 0.01, 0.01]
+            weights = [2.02, 0.01, 0.01]
 
         self.df_input = df
         self.df_input["single_exptime"] = single_exptime
@@ -269,6 +270,12 @@ class PppResultWidgets:
 
         tb_input = Table.from_pandas(df)
         tb_visible = tb_input[validation_status["visibility"]["success"]]
+
+        if len(df_ppc) > 0:
+            tb_ppc = Table.from_pandas(df_ppc)
+            logger.info(f"PPCs are input by users: {tb_ppc}")
+        else:
+            tb_ppc = []
 
         (
             uS_L2,
@@ -284,6 +291,7 @@ class PppResultWidgets:
             self.status_,
         ) = PPPrunStart(
             tb_visible,
+            tb_ppc,
             weights,
             self.exetime,
             single_exptime=self.single_exptime,
@@ -304,6 +312,7 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             uS_M2,
+            tb_ppc,
             single_exptime=self.single_exptime,
             box_width=self.box_width,
         )

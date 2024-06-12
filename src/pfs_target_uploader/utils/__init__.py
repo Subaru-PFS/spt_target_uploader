@@ -8,6 +8,7 @@ __all__ = [
     "optional_keys_default",
     "filter_keys",
     "target_datatype",
+    "ppc_datatype",
     "filter_category",
 ]
 
@@ -67,6 +68,15 @@ target_datatype = {
     # "flux_error_z": float,  # nJy
     # "flux_error_y": float,  # nJy
     # "flux_error_j": float,  # nJy
+}
+
+ppc_datatype = {
+    "ppc_code": str,
+    "ppc_ra": float,
+    "ppc_dec": float,
+    "ppc_pa": float,
+    "ppc_resolution": str,
+    "ppc_priority": float,
 }
 
 
