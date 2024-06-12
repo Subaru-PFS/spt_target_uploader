@@ -25,4 +25,8 @@ class DatePickerWidgets(param.Parameterized):
             name="Date End (HST)", value=semester_end.date()
         )
 
-        self.pane = pn.Column("### Observation Period", self.date_begin, self.date_end)
+        self.pane = pn.Column(
+            "<font size=3>**Observation Period**</font>",
+            self.date_begin,
+            self.date_end,
+        )

@@ -9,9 +9,14 @@ class ObsTypeWidgets(param.Parameterized):
             // border-color: #d2e7de !important;
         }
 
-        .bk-btn-primary:hover, .bk-btn-primary.bk-active {
+        .bk-btn-primary.bk-active {
             color: #ffffff !important;
             background-color: #008899 !important;
+        }
+
+        .bk-btn-primary:hover {
+            background-color: #008899 !important;
+            opacity: 0.8; !important;
         }
         """
 
@@ -42,8 +47,13 @@ class ObsTypeWidgets(param.Parameterized):
             value="Queue",
         )
 
-        self.obstype_pane = pn.Column(self.obs_type)
+        self.obstype_pane = pn.Column(
+            pn.Row("<font size=4>**Select an observation type**</font>"),
+            self.obs_type,
+            "<font size=3 color='dimgray'>(Optional for Classical) Set **individual exposure time** and **pointing centers** in the **Config** tab.</font>",
+        )
 
         self.exptime_pane = pn.Column(
-            "### Individual Exposure Time (s)", self.single_exptime
+            "<font size=3>**Individual exposure time (s)**</font>",
+            self.single_exptime,
         )

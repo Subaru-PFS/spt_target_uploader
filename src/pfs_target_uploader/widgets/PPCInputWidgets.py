@@ -27,7 +27,7 @@ class PPCInputWidgets:
                 "<font size=3>(<a href='doc/examples/example_ppclist.csv' target='_blank'>example</a>)</font>",
             ),
             self.file_input,
-            margin=(-30, 0, 0, 0),
+            # margin=(-30, 0, 0, 0),
         )
 
     def validate(self):
