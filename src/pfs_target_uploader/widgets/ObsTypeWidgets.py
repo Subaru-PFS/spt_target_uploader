@@ -21,7 +21,6 @@ class ObsTypeWidgets(param.Parameterized):
         """
 
     def __init__(self):
-
         # single exposure time widget
         self.single_exptime = pn.widgets.IntInput(
             # name="Individual Exposure Time (s) in [10, 7200]",
@@ -42,15 +41,24 @@ class ObsTypeWidgets(param.Parameterized):
         #     button_type="primary",
         #     stylesheets=[self.stylesheet],
         # )
-        self.obs_type = pn.widgets.Select(
+        self.obs_type = pn.widgets.RadioBoxGroup(
             options={"Queue": "queue", "Classical": "classical", "Filler": "filler"},
             value="Queue",
+            inline=True,
         )
 
         self.obstype_pane = pn.Column(
-            pn.Row("<font size=4>**Select an observation type**</font>"),
+            pn.Row(
+                pn.pane.Markdown(
+                    "<font size=4>**Select an observation type**</font>",
+                    width=400,
+                ),
+                pn.widgets.TooltipIcon(
+                    value="(Optional for Classical) Set **individual exposure time** and **pointing centers** in the **Config** tab.",
+                    margin=(0, 0, 0, -180),
+                ),
+            ),
             self.obs_type,
-            "<font size=3 color='dimgray'>(Optional for Classical) Set **individual exposure time** and **pointing centers** in the **Config** tab.</font>",
         )
 
         self.exptime_pane = pn.Column(
