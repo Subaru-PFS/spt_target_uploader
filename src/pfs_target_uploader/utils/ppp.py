@@ -785,8 +785,8 @@ def PPPrunStart(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime"]) / single_exptime] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / single_exptime
+        count_sub_fh = [sum(sample["exptime_PPP"]) / 3600.0] + [
+            sum(sample[sample["priority"] == ll]["exptime_PPP"]) / 3600.0
             for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
@@ -804,12 +804,12 @@ def PPPrunStart(
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t_fh = [sum(sample["exptime_assign"]) / single_exptime] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"]) / single_exptime
+            comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 3600.0
                 for ll in sub_l
             ]
 
-            comp_s = np.where(sample["exptime_PPP"] == sample["exptime_assign"])[0]
+            comp_s = np.where(sample["exptime_PPP"] <= sample["exptime_assign"])[0]
             comT_t_n = [len(comp_s)] + [
                 sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
             ]
@@ -1575,8 +1575,8 @@ def ppp_result_reproduce(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime"]) / single_exptime] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / single_exptime
+        count_sub_fh = [sum(sample["exptime_PPP"]) / 3600.0] + [
+            sum(sample[sample["priority"] == ll]["exptime_PPP"]) / 3600.0
             for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
@@ -1594,12 +1594,12 @@ def ppp_result_reproduce(
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
-            comT_t_fh = [sum(sample["exptime_assign"]) / single_exptime] + [
-                sum(sample[sample["priority"] == ll]["exptime_assign"]) / single_exptime
+            comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
+                sum(sample[sample["priority"] == ll]["exptime_assign"]) / 3600.0
                 for ll in sub_l
             ]
 
-            comp_s = np.where(sample["exptime_PPP"] == sample["exptime_assign"])[0]
+            comp_s = np.where(sample["exptime_PPP"] <= sample["exptime_assign"])[0]
             comT_t_n = [len(comp_s)] + [
                 sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
             ]
