@@ -4,7 +4,8 @@ import panel as pn
 
 stylesheet = """
     .bk-btn-primary {
-        background-color: #eaf4fc   !important;
+        // background-color: #eaf4fc   !important;
+        background-color: #C7E2D6 !important;
         border-color: #008899;
         border-width: 2px;
     }
