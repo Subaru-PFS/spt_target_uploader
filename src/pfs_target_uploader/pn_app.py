@@ -116,7 +116,7 @@ def target_uploader_app(use_panel_cli=False):
     #
     # If the observatin type is 'queue' or 'classical', enable the validate and simulate buttons.
     # If the observation type is 'filler', enable only the validate button.
-    def enable_buttons_by_fileinput(v, obs_type):
+    def enable_buttons_by_fileinput(v, pv, obs_type):
         if v is None:
             logger.info("Buttons are disabled because no file is uploaded.")
             _toggle_widgets(
@@ -129,6 +129,7 @@ def target_uploader_app(use_panel_cli=False):
             [panel_validate_button.validate],
             disabled=False,
         )
+
         if obs_type == "queue" or obs_type == "classical":
             _toggle_widgets(
                 [panel_ppp_button.PPPrun],
@@ -140,6 +141,11 @@ def target_uploader_app(use_panel_cli=False):
             )
             _toggle_widgets(
                 [panel_ppp_button.PPPrun],
+                disabled=True,
+            )
+        if (v is not None) and (v != pv):
+            _toggle_widgets(
+                [panel_submit_button.submit],
                 disabled=True,
             )
 
@@ -159,6 +165,7 @@ def target_uploader_app(use_panel_cli=False):
     fileinput_watcher = pn.bind(
         enable_buttons_by_fileinput,
         panel_input.file_input,
+        panel_input.previous_value,
         panel_obs_type.obs_type,
     )
 
@@ -298,7 +305,13 @@ def target_uploader_app(use_panel_cli=False):
         tab_panels.visible = True
 
         if validation_status["status"]:
-            panel_submit_button.enable_button(panel_ppp.ppp_status)
+            ready_to_submit = (
+                panel_ppp.ppp_status
+                if panel_obs_type.obs_type.value in ["queue", "classical"]
+                else True
+            )
+            # panel_submit_button.enable_button(panel_ppp.ppp_status)
+            panel_submit_button.enable_button(ready_to_submit)
 
     # define on_click callback for the "PPP start" button
     def cb_PPP(event):
@@ -360,6 +373,13 @@ def target_uploader_app(use_panel_cli=False):
             panel_ppp.origname = panel_input.file_input.filename
             panel_ppp.origdata = panel_input.file_input.value
             panel_ppp.df_summary = panel_status.df_summary
+
+            if not validation_status["status"]:
+                logger.error("Validation failed")
+                _toggle_widgets(button_set, disabled=False)
+                _toggle_widgets(widget_set, disabled=False)
+                panel_timer.timer(False)
+                return
 
             panel_ppp.run_ppp(
                 df_validated,
