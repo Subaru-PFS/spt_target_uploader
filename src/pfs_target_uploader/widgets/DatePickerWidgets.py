@@ -26,7 +26,7 @@ class DatePickerWidgets(param.Parameterized):
         )
 
         self.pane = pn.Column(
-            "<font size=3>**Observation Period**</font>",
+            "<font size=3><i class='far fa-calendar'></i> **Observation Period**</font>",
             self.date_begin,
             self.date_end,
         )

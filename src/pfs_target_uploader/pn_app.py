@@ -176,22 +176,28 @@ def target_uploader_app(use_panel_cli=False):
         panel_input.pane,
         pn.Column(
             panel_obs_type.obstype_pane,
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         pn.Column(
-            pn.Row("<font size=4>**Select an operation**</font>", panel_timer.pane),
+            # pn.Row("<font size=4>**Select an operation**</font>", panel_timer.pane),
+            pn.Row(
+                "<font size=4><i class='fas fa-calculator'></i> **Execute an operation**</font>",
+                panel_timer.pane,
+            ),
             pn.Row(
                 panel_validate_button.pane,
                 panel_ppp_button.pane,
                 panel_submit_button.pane,
                 sizing_mode="stretch_width",
             ),
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         pn.Column(
-            pn.Row("<font size=4>**Validation status**</font>"),
+            pn.Row(
+                "<font size=4><i class='fas fa-stethoscope'></i> **Validation status**</font>"
+            ),
             panel_status.pane,
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         fileinput_watcher,
     )
@@ -199,15 +205,15 @@ def target_uploader_app(use_panel_cli=False):
     sidebar_configs = pn.Column(
         pn.Column(
             panel_dates.pane,
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         pn.Column(
             panel_obs_type.exptime_pane,
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         pn.Column(
             panel_ppcinput.pane,
-            # margin=(10, 0, 0, 0),
+            margin=(10, 0, 0, 0),
         ),
         ppcinput_watcher,
     )

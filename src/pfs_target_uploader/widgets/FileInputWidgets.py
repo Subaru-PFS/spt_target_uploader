@@ -34,8 +34,8 @@ class FileInputWidgets(param.Parameterized):
         self.pane = pn.Column(
             pn.Row(
                 pn.pane.Markdown(
-                    "<font size=4>**Select an input CSV file**</font> "
-                    "<font size=4>(<a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
+                    "<font size=4><i class='fas fa-list-ul'></i>  **Target list**</font> "
+                    "<font size=4>(CSV; <a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
                     # styles={"margin-bottom": "-10px"},
                     # styles={
                     #     "border-left": "10px solid #3A7D7E",
@@ -43,10 +43,13 @@ class FileInputWidgets(param.Parameterized):
                     #     "padding-left": "0.5em",
                     # },
                     width=400,
+                    # width=370,
                 ),
                 pn.widgets.TooltipIcon(
                     value="(Optional) Configure the **observation period** in the **Config** tab.",
-                    margin=(0, 0, 0, -120),
+                    # width=50,
+                    margin=(0, 0, 0, -165),
+                    # align=("start", "center"),
                 ),
             ),
             self.file_input,

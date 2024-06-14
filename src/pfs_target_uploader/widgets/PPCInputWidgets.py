@@ -23,8 +23,8 @@ class PPCInputWidgets:
 
         self.pane = pn.Column(
             pn.pane.Markdown(
-                "<font size=3>**Select an input pointing list**</font> "
-                "<font size=3>(<a href='doc/examples/example_ppclist.csv' target='_blank'>example</a>)</font>",
+                "<font size=3><i class='fab fa-hive'></i> **User-defined pointing list**</font> "
+                "<font size=3>(CSV; <a href='doc/examples/example_ppclist.csv' target='_blank'>example</a>)</font>",
             ),
             self.file_input,
             # margin=(-30, 0, 0, 0),
