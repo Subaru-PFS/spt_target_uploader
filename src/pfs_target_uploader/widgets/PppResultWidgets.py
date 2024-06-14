@@ -65,7 +65,7 @@ class PppResultWidgets:
 
         self.ppp_error_text_1 = (
             "<font size=5>⚠️ **Error**</font>\n\n"
-            f"<font size=3>No fiber can be assigned. Please check the input pointing list, or the single exposure time.</font>"
+            "<font size=3>No fiber can be assigned. Please check the input pointing list, or the single exposure time.</font>"
         )
 
         self.ppp_success_text = (
