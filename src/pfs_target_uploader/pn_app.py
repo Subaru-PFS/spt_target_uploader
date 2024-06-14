@@ -402,6 +402,14 @@ def target_uploader_app(use_panel_cli=False):
                 panel_submit_button.enable_button(panel_ppp.ppp_status)
                 panel_submit_button.submit.disabled = False
 
+            if panel_ppp.nppc is None:
+                logger.error("Pointing simulation failed")
+                _toggle_widgets(button_set, disabled=False)
+                _toggle_widgets(widget_set, disabled=False)
+                _toggle_widgets([panel_submit_button.submit], disabled=True)
+                panel_timer.timer(False)
+                return
+
         except gurobipy.GurobiError as e:
             pn.state.notifications.error(f"{str(e)}", duration=0)
             pass
