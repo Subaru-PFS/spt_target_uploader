@@ -194,7 +194,7 @@ def target_uploader_app(use_panel_cli=False):
         ),
         pn.Column(
             pn.Row(
-                "<font size=4><i class='fas fa-stethoscope'></i> **Validation status**</font>"
+                "<font size=4><i class='fa-solid fa-magnifying-glass-chart fa-lg'></i> **Validation status**</font>"
             ),
             panel_status.pane,
             margin=(10, 0, 0, 0),

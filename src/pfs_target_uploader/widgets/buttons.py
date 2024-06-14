@@ -3,20 +3,27 @@
 import panel as pn
 
 stylesheet = """
-    .bk-btn-primary {
-        // background-color: #eaf4fc   !important;
+    .bk-btn {
+        color: var(--success-text-color) !important;
         background-color: #C7E2D6 !important;
-        border-color: #008899;
-        border-width: 2px;
+        border-color: var(--success-border-subtle) !important;
+        border-width: 1px;
+        // color: #145B33;
+        // background-color: #eaf4fc;
+        // background-color: var(--success-bg-color);
+        // border-color: #008899;
     }
 
-    .bk-btn-primary:hover {
+    .bk-btn:hover {
         color: #ffffff !important;
         background-color: #008899 !important;
-        border-color: #008899;
+        // border-color: #008899;
+        // background-color: var(--success-text-color) !important;
+        border-color: var(--success-border-subtle) !important;
     }
 
-    .bk-btn-primary:disabled {
+    .bk-btn:disabled {
+        color: var(--secondary-text-color) !important;
         border-color: #d2e7de !important;
         background-color: #ffffff !important;
         border-width: 1px;
@@ -24,19 +31,23 @@ stylesheet = """
     """
 
 stylesheet_warning = """
-    .bk-btn-primary {
+    .bk-btn {
+        color: var(--warning-text-color) !important;
         background-color: #fdf3d1 !important;
-        border-color: #866109;
-        border-width: 2px;
+        border-color: var(--warning-border-subtle);
+        border-width: 1px;
+        // border-color: #866109;
     }
 
-    .bk-btn-primary:hover {
+    .bk-btn:hover {
         color: #ffffff !important;
         background-color: #b8860b  !important;
-        border-color: #866109;
+        border-color: var(--warning-border-subtle);
+        // border-color: #866109;
     }
 
-    .bk-btn-primary:disabled {
+    .bk-btn:disabled {
+        color: var(--secondary-text-color) !important;
         border-color: #d2e7de !important;
         background-color: #ffffff !important;
         border-width: 1px;
