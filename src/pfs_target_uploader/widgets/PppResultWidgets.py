@@ -63,6 +63,11 @@ class PppResultWidgets:
             "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
+        self.ppp_error_text_1 = (
+            "<font size=5>⚠️ **Error**</font>\n\n"
+            "<font size=3>No fiber can be assigned. Please check the input pointing list, or the single exposure time.</font>"
+        )
+
         self.ppp_success_text = (
             "<font size=5>✅ **Success**</font>\n\n"
             "<font size=3>The total requested time is reasonable for normal program. "
@@ -111,6 +116,9 @@ class PppResultWidgets:
             elif self.status_ == 1 and rot <= self.max_reqtime_normal:
                 text = self.ppp_warning_text_2
                 type = "warning"
+            elif self.status_ == 2 and df is None:
+                text = self.ppp_error_text_1
+                type = "danger"
             else:
                 text = self.ppp_success_text
                 type = "success"

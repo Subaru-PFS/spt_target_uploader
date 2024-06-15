@@ -1443,7 +1443,20 @@ def ppp_result(
 
     # exit if no PPP outputs
     if len(obj_allo_l) == 0 and len(obj_allo_m) == 0:
-        logger.info("No PPP results due to running out of time [ppp_result]")
+        logger.info("No PPP results [ppp_result]")
+        return (None, None, None, None)
+
+    # exit if no assignment by netflow
+    if len(obj_allo_l) > 0 and sum(obj_allo_l["tel_fiber_usage_frac"] == 0) == len(
+        obj_allo_l
+    ):
+        logger.info("No netflow assignment (L) [ppp_result]")
+        return (None, None, None, None)
+
+    if len(obj_allo_m) > 0 and sum(obj_allo_m["tel_fiber_usage_frac"] == 0) == len(
+        obj_allo_m
+    ):
+        logger.info("No netflow assignment (M) [ppp_result]")
         return (None, None, None, None)
 
     # generate figures and tables for low resolution
