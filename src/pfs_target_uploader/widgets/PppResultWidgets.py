@@ -213,10 +213,19 @@ class PppResultWidgets:
 
         # set export files
         stylesheet = """
+        .bk-btn {
+            // border-color: #3A7D7E !important;
+            // border-color: var(--success-border-subtle) !important;
+            display: inline !important;
+            // vertical-align: bottom !important;
+        }
         .bk-btn a {
-            border-color: #3A7D7E !important;
-            display: inline;
-        }"""
+            vertical-align: middle !important;
+            text-align: left !important;
+            padding-left: 0px !important;
+            padding-right: 12px !important;
+        }
+        """
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
