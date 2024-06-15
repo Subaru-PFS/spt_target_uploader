@@ -8,6 +8,7 @@ stylesheet = """
         background-color: #C7E2D6 !important;
         border-color: var(--success-border-subtle) !important;
         border-width: 1px;
+        font-weight: bold !important;
         // color: #145B33;
         // background-color: #eaf4fc;
         // background-color: var(--success-bg-color);
@@ -36,6 +37,7 @@ stylesheet_warning = """
         background-color: #fdf3d1 !important;
         border-color: var(--warning-border-subtle);
         border-width: 1px;
+        font-weight: bold !important;
         // border-color: #866109;
     }
 
