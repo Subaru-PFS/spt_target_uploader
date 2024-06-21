@@ -9,7 +9,9 @@ import pytz
 from loguru import logger
 
 
-def send_email(config, outdir=None, outfile=None, upload_id=None, upload_time=None):
+def send_email(
+    config, outdir=None, outfile=None, upload_id=None, upload_time=None, url=None
+):
     """
     Send an email notification about a new submission to the PFS Target Uploader.
 
@@ -25,6 +27,8 @@ def send_email(config, outdir=None, outfile=None, upload_id=None, upload_time=No
         The upload ID. Default is None.
     upload_time : datetime, optional
         The upload time. Default is None.
+    url : str, optional
+        The URL to the PFS Target Uploader. Default is None
 
     Returns:
     -------
@@ -47,12 +51,15 @@ Upload Time (UTC): {t_utc}
 Upload Time (HST): {t_hst}
 Upload Directory: {outdir}
 Upload File: {outfile}
+Upload URL: {url}
 """
 
     logger.info(f"Seinding an email:\n{message_text}")
 
     msg = EmailMessage()
-    msg["Subject"] = "New submission on the PFS Target Uploader"
+    msg["Subject"] = (
+        f"[pfs-target-uploader] New submission {upload_id} on the PFS Target Uploader"
+    )
     msg["From"] = config["EMAIL_FROM"]
     msg["To"] = config["EMAIL_TO"]
     msg.set_content(message_text)

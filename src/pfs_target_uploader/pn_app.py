@@ -42,6 +42,9 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
+    logger.info(f"{pn.state.headers=}")
+    logger.info(f"{pn.state.location.href=}")
+
     config = dotenv_values(".env.shared")
 
     if "MAX_EXETIME" not in config.keys():
@@ -498,6 +501,7 @@ def target_uploader_app(use_panel_cli=False):
                 outfile=outfile_zip,
                 upload_id=panel_ppp.secret_token,
                 upload_time=panel_ppp.upload_time,
+                url=pn.state.location.href,
             )
         except Exception as e:
             logger.error(f"Failed to send an email: {str(e)}")
