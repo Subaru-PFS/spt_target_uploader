@@ -79,6 +79,8 @@ serve-app = { cmd = [
     "5008",
     "--allow-websocket-origin",
     "localhost:5008",
+    "--allow-websocket-origin",
+    "localhost:8080",
     "--prefix=uploader/",
     "--static-dirs",
     "doc=docs/site",
