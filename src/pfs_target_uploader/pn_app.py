@@ -14,6 +14,7 @@ from dotenv import dotenv_values
 from loguru import logger
 
 from .utils.io import load_file_properties, load_input
+from .utils.mail import send_email
 from .utils.ppp import ppp_result_reproduce
 from .widgets import (
     DatePickerWidgets,
@@ -40,6 +41,9 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
 
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
+
+    logger.info(f"{pn.state.headers=}")
+    logger.info(f"{pn.state.location.href=}")
 
     config = dotenv_values(".env.shared")
 
@@ -489,6 +493,18 @@ def target_uploader_app(use_panel_cli=False):
             single_exptime=panel_obs_type.single_exptime.value,
             observation_type=panel_obs_type.obs_type.value,
         )
+
+        try:
+            send_email(
+                config,
+                outdir=outdir,
+                outfile=outfile_zip,
+                upload_id=panel_ppp.secret_token,
+                upload_time=panel_ppp.upload_time,
+                url=pn.state.location.href,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send an email: {str(e)}")
 
         panel_notes = UploadNoteWidgets(
             panel_ppp.secret_token,
