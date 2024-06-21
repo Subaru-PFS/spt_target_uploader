@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-import datetime
 import smtplib
-import time
 from email.message import EmailMessage
 
 import pytz
