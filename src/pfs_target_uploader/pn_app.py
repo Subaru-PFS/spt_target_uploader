@@ -495,14 +495,23 @@ def target_uploader_app(use_panel_cli=False):
         )
 
         try:
-            send_email(
-                config,
-                outdir=outdir,
-                outfile=outfile_zip,
-                upload_id=panel_ppp.secret_token,
-                upload_time=panel_ppp.upload_time,
-                url=pn.state.location.href,
-            )
+            if (
+                ("EMAIL_FROM" not in config.keys() or "EMAIL_FROM" == "")
+                or ("EMAIL_TO" not in config.keys() or "EMAIL_TO" == "")
+                or ("SMTP_SERVER" not in config.keys() or "SMTP_SERVER" == "")
+            ):
+                logger.warning(
+                    "Email configuration is not found. No email will be sent."
+                )
+            else:
+                send_email(
+                    config,
+                    outdir=outdir,
+                    outfile=outfile_zip,
+                    upload_id=panel_ppp.secret_token,
+                    upload_time=panel_ppp.upload_time,
+                    url=pn.state.location.href,
+                )
         except Exception as e:
             logger.error(f"Failed to send an email: {str(e)}")
 
