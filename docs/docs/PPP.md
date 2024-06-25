@@ -11,7 +11,7 @@ The procedure is briefly listed below:
 
 !!! note
 
-    Please be aware that the online PPP only simulates the classic observation mode without sharing fibers with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after sharing fibers may **differ from the simulated results provided here**.
+    Please be aware that the online PPP only simulates the classical-mode observation without sharing fibers with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after sharing fibers may **differ from the simulated results provided here**.
 
 ## Run the online PPP
 
@@ -29,12 +29,19 @@ in the side panel
 
     - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
 
-    | Name          | Datatype   | Unit   | Description                                                                                                                          |
-    |---------------|------------|--------|--------------------------------------------------------------------------------------------------------------------------------------|
-    | ppc_ra            | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                                             |
-    | ppc_dec           | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                                                 |
-    | ppc_pa       | float      | degree | Position angle                                                      |
-    | ppc_resolution      | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
+    | Name           | Datatype | Unit   | Description                                                                                        |
+    |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
+    | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
+    | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
+    | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+
+    - Optional fields of the custom pointing list are listed below.
+
+    | Name         | Datatype | Unit   | Description                                 |
+    |--------------|----------|--------|---------------------------------------------|
+    | ppc_pa       | float    | degree | Position angle                              |
+    | ppc_priority | float    | degree | Priority of the pointing center in the list |
+    | ppc_code     | str      | degree | Name of the pointing center                 |
 
 <figure markdown>
   ![Config queue](images/ppp_queue.png){ width="300"}
@@ -43,7 +50,6 @@ in the side panel
 </figure>
 
 - **Filler** type: the online PPP will be disabled due to the limited computational resources
-
 
 ## Understand the results
 
@@ -60,7 +66,6 @@ The online PPP will give a status report of the pointing simulation.
 
     - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with an individual exposure time of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying individual exposure time can solve the problem.
     - No fibers can be assigned due to no available fibers. Slightly shifting the pointing by ~0.2-0.5 degree can solve the problem in most cases.
-
 
 !!! warning "Warnings are raised in the following cases:"
 

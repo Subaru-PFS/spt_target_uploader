@@ -4,7 +4,7 @@ The PFS Target Uploader is a web app to validate and submit the target list supp
 
 ## Demo
 
-![type:video](videos/demo_new.mp4)
+![type:video](videos/demo_v2.mp4)
 
 ## Workflow
 
@@ -40,7 +40,6 @@ graph TD
   run_ppp1 -->|Unhappy|fix_errors1;
   submit_results1 --> done1[Done];
   end
-  
 ```
 
 ## Table of Contents
@@ -71,13 +70,13 @@ graph TD
 
     Submit the target list and receive a `Upload ID`.
 
--   :material-chat-question-outline:{ .lg .middle } [__FAQ & Known Issues__](issues.md)
+- :material-chat-question-outline:{ .lg .middle } [__FAQ & Known Issues__](issues.md)
 
     ---
 
     Check frequently asked questions and known issues first when you have any troubles with the app.
 
--   :material-account-box-outline:{ .lg .middle } [__Contact__](contact.md)
+- :material-account-box-outline:{ .lg .middle } [__Contact__](contact.md)
 
     ---
 
