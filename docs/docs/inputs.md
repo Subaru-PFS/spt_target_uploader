@@ -34,6 +34,7 @@ Mandatory fields are listed below.
 | exptime       | float      | second | Exposure time requested for the object under the nominal observing condition.                                                        |
 | priority      | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority                             |
 | resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
+| flux          | float      | nJy    | Flux of at least one filter in the pre-defined [list](#filters)                                                                      |
 | reference_arm | str        |        | Reference arm name used to evaluate the effective exposure  time (`b`: blue, `r`: red, `n`: near-IR, and `m`: medium-resolution red) |
 
 #### About `reference_arm`

@@ -1,9 +1,5 @@
 # PFS Pointing Simulation
 
-!!! note
-
-    The **_Simulate_** button is active when you select "Queue" or "Classical" in the Observation Type selector. For the "Filler", please go to [Submission](submission.md).
-
 The total exposure time required for a target list can be estimated using the online PFS Pointing Planner (PPP).
 
 The online PPP will simulate the pointing after the validation of the input target list.
@@ -13,7 +9,9 @@ The procedure is briefly listed below:
 2. Pick a density peak with the highest weight and assign PFS fibers using [the netflow algorithm](https://github.com/Subaru-PFS/ets_fiberalloc/).
 3. Repeat 1 and 2 until all input targets are completed or the running time exceeds about 15 minutes.
 
-Please be aware that the online PPP only simulates the classic observation mode without fiber-sharing with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after fiber-sharing may differ from the simulated results provided here.
+!!! note
+
+    Please be aware that the online PPP only simulates the classical-mode observation without sharing fibers with other programs. We advise users to consider the results as a statistical reference. The final pointing coordinates and fiber assignments after sharing fibers may **differ from the simulated results provided here**.
 
 ## Run the online PPP
 
@@ -23,17 +21,35 @@ Please be aware that the online PPP only simulates the classic observation mode 
 - The running time ranges from a few minutes to hours depending on the input target list. To save computational resources, the online PPP will **stop** if the running time exceeds **15 minutes**. Please prevent uploading a huge list.
 - In the case of [the example file](examples/example_perseus_cluster_r60arcmin.csv) shown in the [Inputs](inputs.md) section, the computational time would be about 10 seconds.
 
-#### (Optional) Configure the individual exposure time
+#### Different observation types
 
-The primary observing mode of PFS openuse is the queue mode with an individual exposure time of 900 seconds.
-**If you are applying for the classical mode observation**, you can run PPP with a custom individual exposure time in the `Config` tab
-in the side panel.
+- **Queue** type (default): the online PPP will run to automatically determine pointings with a fixed individual exposure time of 900 seconds
+- **Classical** type: the online PPP can accept a custom individual exposure time and/or pointing list from the `Config` tab
+in the side panel
+
+  - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
+
+  | Name           | Datatype | Unit   | Description                                                                                        |
+  |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
+  | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
+  | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
+  | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+
+  - Optional fields of the custom pointing list are listed below.
+
+  | Name         | Datatype | Unit   | Description                                 |
+  |--------------|----------|--------|---------------------------------------------|
+  | ppc_pa       | float    | degree | Position angle                              |
+  | ppc_priority | float    |        | Priority of the pointing center in the list |
+  | ppc_code     | str      |        | Name of the pointing center                 |
 
 <figure markdown>
-  ![Config queue](images/ppp_single_exptime_queue.png){ width="300"}
-  ![Config classical](images/ppp_single_exptime_classical.png){ width="300" }
+  ![Config queue](images/ppp_queue.png){ width="300"}
+  ![Config classical](images/ppp_classical_custom.png){ width="300" }
   <figcaption>(Left) The Config tab for the queue mode. (Right) The Config tab for the classical mode</figcaption>
 </figure>
+
+- **Filler** type: the online PPP will be disabled due to the limited computational resources
 
 ## Understand the results
 
@@ -45,6 +61,11 @@ in the side panel.
 ### Simulation status
 
 The online PPP will give a status report of the pointing simulation.
+
+!!! danger "Errors are raised in the following cases"
+
+    - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with an individual exposure time of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying individual exposure time can solve the problem.
+    - No fibers can be assigned due to no available fibers. Slightly shifting the pointing by ~0.2-0.5 degree can solve the problem in most cases.
 
 !!! warning "Warnings are raised in the following cases:"
 
@@ -104,7 +125,7 @@ The table contents change interactively with the draggable slider(s) above the t
 
 ### Interactive plots of the results
 
-The <u>Completion Rate</u> (top), <u>Fiber Usage Fraction</u> (middle), and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
+The <u>Completion Rate</u> (top and middle) and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
 
 #### Completion Rate
 `PPC_id`
@@ -121,16 +142,6 @@ Other lines
 
 Vertical <span style="color: grey;">gray</span> dashed line
 : Number of pointings required, can be adjusted by the slider above
-
-#### Fiber Usage Fraction
-`PPC_id`
-: ID of PFS pointing center, pointings are sorted by the total priority of targets assigned to them
-
-Thick <span style="color: red;">red</span> solid line
-: average fiber usage fraction of pointings
-
-Vertical <span style="color: grey;">gray</span> dashed line
-: number of pointings required, can be adjusted by the slider above
 
 #### Target Distribution
 

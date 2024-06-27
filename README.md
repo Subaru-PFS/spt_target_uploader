@@ -1,9 +1,6 @@
 # PFS Target Uploader
 
-The PFS Target Uploader is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
-
-- Web App: https://pfs-etc.naoj.hawaii.edu/uploader/
-- User Guide: https://pfs-etc.naoj.hawaii.edu/uploader/doc/index.html
+[The PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
 
 ## Install
 
@@ -17,13 +14,12 @@ cd pfs_target_uploader
 ### Installing dependencies
 
 ```sh
-pip install -r requirements.txt
+pip install -r requirements.txt  # perhaps optional
 pip install -e .
 
 mkdir -p data/
 mkdir -p data/temp/
 ```
-
 
 ### Build documentation
 
@@ -33,10 +29,13 @@ mkdocs build
 cd ..
 ```
 
-### Run the app
+## Run the app
 
 ```sh
-pfs-uploader-cli start-app uploader --allow-websocket-origin=localhost:5008 --static-dirs doc="./docs/site/" --static-dirs data="./data"
+pfs-uploader-cli start-app uploader \
+    --allow-websocket-origin=localhost:5008 \
+    --static-dirs doc="./docs/site/" \
+    --static-dirs data="./data"
 ```
 
 Open the target uploader at http://localhost:5008/ .
@@ -48,33 +47,42 @@ data/
 └── <year>
     └── <month>
         └── <year month day>-<hour minute second>-<upload_id>
+            ├── README.txt
+            ├── pfs_target-yyyymmdd-hhmmss-<upload_id>.zip
             ├── ppc_<upload_id>.ecsv
+            ├── ppp_figure_<upload_id>.html
             ├── psl_<upload_id>.ecsv
             ├── target_<upload_id>.ecsv
+            ├── target_summary_<upload_id>.ecsv
             └── <original file>
-#
-# data/
-# └── 2023
-#     └── 10
-#         ├── 20231001-055542-fd56fdccf644972f
-#         │   ├── ppc_fd56fdccf644972f.ecsv
-#         │   ├── psl_fd56fdccf644972f.ecsv
-#         │   └── target_fd56fdccf644972f.ecsv
-#         ├── 20231021-010841-ecb95398a3fd10ff
-#         │   ├── ppc_ecb95398a3fd10ff.ecsv
-#         │   ├── psl_ecb95398a3fd10ff.ecsv
-#         │   └── target_ecb95398a3fd10ff.ecsv
-#         └── 20231025-042607-5b7849c9ec92703b
-#             ├── ppc_5b7849c9ec92703b.ecsv
-#             ├── psl_5b7849c9ec92703b.ecsv
-#             ├── random_example_n00010.csv
-#             └── target_5b7849c9ec92703b.ecsv
 ```
 
 `ppc`, `psl`, and `target` files correspond to the lists of pointing centers, the pointing summary, and input targets, respectively.
-The `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
+Plots are available in the `ppp_figure` file and all files are included in the `zip` file.
+
+The path to the `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
 
 ```
 # OUTPUT_DIR_PREFIX must be identical to the directory value specified as `data` above.
 OUTPUT_DIR="data"
+```
+
+## Configuration
+
+The following parameters can be set in the `.env.shared` file to configure the app.
+
+```
+# Output directory for the submitted files
+OUTPUT_DIR="data"
+
+# maximum execution time (s) to terminate the calculation (default: 900s = 15min, 0 = no limit)
+# MAX_EXETIME=0
+
+# maximum number of pointings to be considered (default: 200, 0 = no limit)
+# MAX_NPPC=100
+
+# email setting (email will be sent at each submission)
+# EMAIL_FROM=
+# EMAIL_TO=
+# SMTP_SERVER=
 ```
