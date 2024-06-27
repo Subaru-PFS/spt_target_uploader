@@ -1,0 +1,22 @@
+name: Build and deploy documentation for the dev-main branch
+
+on:
+  push:
+    branches:
+      - dev-main
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, pfs-etc]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run commands
+        run: |
+          pyenv local 3.11.9
+          python3 -m venv .venv
+          source .venv/bin/activate
+          cd docs
+          python3 -m pip install -U mkdocs "mkdocs-material[imaging]" mkdocs-video mkdocs-macros-plugin
+          mkdocs build --site-dir ${{ vars.DOC_PATH_DEV }}
