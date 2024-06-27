@@ -27,21 +27,21 @@ The procedure is briefly listed below:
 - **Classical** type: the online PPP can accept a custom individual exposure time and/or pointing list from the `Config` tab
 in the side panel
 
-  - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
+    - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
 
-  | Name           | Datatype | Unit   | Description                                                                                        |
-  |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
-  | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
-  | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
-  | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+    | Name           | Datatype | Unit   | Description                                                                                        |
+    |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
+    | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
+    | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
+    | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
 
-  - Optional fields of the custom pointing list are listed below.
+    - Optional fields of the custom pointing list are listed below.
 
-  | Name         | Datatype | Unit   | Description                                 |
-  |--------------|----------|--------|---------------------------------------------|
-  | ppc_pa       | float    | degree | Position angle                              |
-  | ppc_priority | float    |        | Priority of the pointing center in the list |
-  | ppc_code     | str      |        | Name of the pointing center                 |
+    | Name         | Datatype | Unit   | Description                                 |
+    |--------------|----------|--------|---------------------------------------------|
+    | ppc_pa       | float    | degree | Position angle                              |
+    | ppc_priority | float    |        | Priority of the pointing center in the list |
+    | ppc_code     | str      |        | Name of the pointing center                 |
 
 <figure markdown>
   ![Config queue](images/ppp_queue.png){ width="300"}
@@ -115,7 +115,7 @@ The table contents change interactively with the draggable slider(s) above the t
 | Texp                 | hour      | Total on-source time requested to complete `N_ppc` pointings                                                       |
 | Texp                 | fiberhour | Total on-source fiberhours requested                                                                               |
 | Request time         | hour      | Total request time including overheads (e.g., calibration frames, fiber configuration, readout, telescope slewing) |
-| Fiber usage fraction | %         | Average fiber usage fraction of pointings                                                                          |
+| Used fiber fraction  | %         | Average fiber usage fraction of pointings                                                                          |
 | Fraction of PPC <30% | %         | Fration of pointings having the fiber usage fraction < 30%                                                         |
 | P_all                | %         | Completion rate of the entire program                                                                              |
 | P_[0-9]              | %         | Completion rate of each priority group                                                                             |
