@@ -6,7 +6,7 @@ on:
       - dev-main
 
 jobs:
-  deploy:
+  deploy-dev-docs:
     runs-on: [self-hosted, pfs-etc]
     steps:
       - name: Checkout code
