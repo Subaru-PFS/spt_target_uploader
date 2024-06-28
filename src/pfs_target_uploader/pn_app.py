@@ -75,7 +75,7 @@ def target_uploader_app(use_panel_cli=False):
         sidebar_width=420,
         header_background="#3A7D7E",
         busy_indicator=None,
-        favicon="docs/site/assets/images/favicon.png",
+        favicon="doc/assets/images/favicon.png",
     )
 
     # setup panel components
@@ -577,7 +577,7 @@ def list_files_app(use_panel_cli=False):
         # header_background="#C71585",  # mediumvioletred
         header_background="#dc143c",  # crimson
         busy_indicator=None,
-        favicon="docs/site/assets/images/favicon.png",
+        favicon="doc/assets/images/favicon.png",
         # sidebar_width=400,
     )
 
