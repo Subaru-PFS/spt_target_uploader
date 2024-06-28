@@ -6,7 +6,7 @@ on:
       - dev-main
 
 jobs:
-  deploy:
+  deploy-dev-docs:
     runs-on: [self-hosted, pfs-etc]
     steps:
       - name: Checkout code
@@ -18,5 +18,5 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           cd docs
-          python3 -m pip install -U mkdocs "mkdocs-material[imaging]" mkdocs-video mkdocs-macros-plugin
+          python3 -m pip install -U mkdocs "mkdocs-material[imaging]" mkdocs-video pymdown-extensions
           mkdocs build --site-dir ${{ vars.DOC_PATH_DEV }}
