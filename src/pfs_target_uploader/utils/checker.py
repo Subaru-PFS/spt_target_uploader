@@ -16,6 +16,7 @@ from qplan.entity import StaticTarget
 from qplan.util.site import site_subaru as observer
 
 from . import (
+    arm_values,
     filter_category,
     filter_keys,
     optional_keys,
@@ -339,14 +340,29 @@ def check_values(df, logger=logger):
     is_exptime = df["exptime"] > 0.0
     is_resolution = np.logical_or(df["resolution"] == "L", df["resolution"] == "M")
 
+    is_refarm = np.full(df.index.size, False, dtype=bool)
+    for arm in arm_values:
+        is_refarm = np.logical_or(is_refarm, df["reference_arm"] == arm)
+
+    # refarm shouldn't be 'medium' for the low resolution mode
+    is_wrong_refarm_lr = np.logical_and(
+        df["resolution"] == "L", df["reference_arm"] == "m"
+    )
+    # refarm shouldn't be 'red' for the low resolution mode
+    is_wrong_refarm_mr = np.logical_and(
+        df["resolution"] == "M", df["reference_arm"] == "r"
+    )
+    is_refarm = np.logical_and(is_refarm, np.all(~is_wrong_refarm_lr))
+    is_refarm = np.logical_and(is_refarm, np.all(~is_wrong_refarm_mr))
+
     dict_values = {}
     is_success = True
 
     success_all = np.ones(df.index.size, dtype=bool)  # True if success
 
     for k, v in zip(
-        ["ra", "dec", "priority", "exptime", "resolution"],
-        [is_ra, is_dec, is_priority, is_exptime, is_resolution],
+        ["ra", "dec", "priority", "exptime", "resolution", "reference_arm"],
+        [is_ra, is_dec, is_priority, is_exptime, is_resolution, is_refarm],
     ):
         dict_values[f"status_{k}"] = np.all(v)
         dict_values[f"success_{k}"] = v
@@ -354,9 +370,9 @@ def check_values(df, logger=logger):
         success_all = np.logical_and(success_all, v)
 
         if np.all(v):
-            logger.info(f"[{k}] validation for values in {k} is successful")
+            logger.info(f"[{k}] validation for values in {k} successful")
         else:
-            logger.error(f"[{k}] validation for values in {k} is failed")
+            logger.error(f"[{k}] validation for values in {k} failed")
 
     dict_values["status"] = is_success
     dict_values["success"] = success_all
@@ -583,13 +599,13 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     validation_status["unique"] = {"status": None}
 
     # check mandatory columns
-    logger.info("[STAGE 1] Checking column names")
+    logger.info("[Column names] Checking column names")
     dict_required_keys, dict_optional_keys = check_keys(df)
     logger.info(
-        f"[STAGE 1] required_keys status: {dict_required_keys['status']} (Success if True)"
+        f"[Columns] required_keys status: {dict_required_keys['status']} (Success if True)"
     )
     logger.info(
-        f"[STAGE 1] optional_keys status: {dict_required_keys['status']} (Success if True)"
+        f"[Columns] optional_keys status: {dict_optional_keys['status']} (Success if True)"
     )
     validation_status["required_keys"] = dict_required_keys
     validation_status["optional_keys"] = dict_optional_keys
@@ -599,41 +615,41 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
         return validation_status, df
 
     # check string values
-    logger.info("[STAGE 2] Checking string values")
+    logger.info("[Strings] Checking string values")
     dict_str = check_str(df)
-    logger.info(f"[STAGE 2] status: {dict_str['status']} (Success if True)")
+    logger.info(f"[Strings] status: {dict_str['status']} (Success if True)")
     validation_status["str"] = dict_str
     if not dict_str["status"]:
         msg_t_stop()
         return validation_status, df
 
     # check value against allowed ranges
-    logger.info("[STAGE 3] Checking whether values are in allowed ranges")
+    logger.info("[Values] Checking whether values are in allowed ranges")
     dict_values = check_values(df)
-    logger.info(f"[STAGE 3] status: {dict_values['status']} (Success if True)")
+    logger.info(f"[Values] status: {dict_values['status']} (Success if True)")
     validation_status["values"] = dict_values
     if not dict_values["status"]:
         msg_t_stop()
         return validation_status, df
 
     # check columns for flux
-    logger.info("[STAGE 3'] Checking flux information")
+    logger.info("[Fluxes] Checking flux information")
     dict_flux, df = check_fluxcolumns(df)
-    logger.info(f"[STAGE 3'] status: {dict_flux['status']} (Success if True)")
+    logger.info(f"[Fluxes] status: {dict_flux['status']} (Success if True)")
     validation_status["flux"] = dict_flux
 
     # check columns for visibility
-    logger.info("[STAGE 3''] Checking target visibility")
+    logger.info("[Visibility] Checking target visibility")
     dict_visibility = check_visibility(
         df, date_begin=date_begin, date_end=date_end, vectorized=True
     )
-    logger.info(f"[STAGE 3''] status: {dict_visibility['status']} (Success if True)")
+    logger.info(f"[Visibility] status: {dict_visibility['status']} (Success if True)")
     validation_status["visibility"] = dict_visibility
 
     # check unique constraint for `ob_code`
-    logger.info("[STAGE 4] Checking whether all ob_code are unique")
+    logger.info("[Uniqueness] Checking whether all ob_code are unique")
     dict_unique = check_unique(df)
-    logger.info(f"[STAGE 4] status: {dict_unique['status']} (Success if True)")
+    logger.info(f"[Uniqueness] status: {dict_unique['status']} (Success if True)")
     validation_status["unique"] = dict_unique
 
     if (

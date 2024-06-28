@@ -32,23 +32,28 @@ class FileInputWidgets(param.Parameterized):
         self.secret_token = None
 
         self.pane = pn.Column(
-            pn.pane.Markdown(
-                "<font size=5>**Select an input CSV file**</font> "
-                "<font size=4>(<a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
-                # styles={
-                #     "border-left": "10px solid #3A7D7E",
-                #     "border-bottom": "1px solid #3A7D7E",
-                #     "padding-left": "0.5em",
-                # },
+            pn.Row(
+                pn.pane.Markdown(
+                    "<font size=4><i class='fas fa-list-ul'></i>  **Target list**</font> "
+                    "<font size=4>(CSV; <a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
+                    # styles={"margin-bottom": "-10px"},
+                    # styles={
+                    #     "border-left": "10px solid #3A7D7E",
+                    #     "border-bottom": "1px solid #3A7D7E",
+                    #     "padding-left": "0.5em",
+                    # },
+                    width=400,
+                    # width=370,
+                ),
+                pn.widgets.TooltipIcon(
+                    value="(Optional) Configure the **observation period** in the **Config** tab.",
+                    # width=50,
+                    margin=(0, 0, 0, -165),
+                    # align=("start", "center"),
+                ),
             ),
-            #             """# Step 1:
-            # ## Select a target list (<a href='doc/examples/example_targetlist_random100.csv' target='_blank'>example</a>)""",
             self.file_input,
-            pn.pane.Markdown(
-                "<font size=3 color='dimgray'>(Optional) Configure the **observation period** and **individual exposure time** in the **Config** tab.</font>",
-                styles={"padding-left": "0.5em", "margin-bottom": "0"},
-            ),
-            margin=(10, 0, -10, 0),
+            # margin=(10, 0, -10, 0),
         )
 
     def reset(self):
@@ -119,6 +124,8 @@ class FileInputWidgets(param.Parameterized):
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
 
         # convert obj_id to string
-        df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
+        logger.debug(f"{validation_status=}")
+        if validation_status["required_keys"]["status"]:
+            df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
 
         return validation_status, df_input, df_output

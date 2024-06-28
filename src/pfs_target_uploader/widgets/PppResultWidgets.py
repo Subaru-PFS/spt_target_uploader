@@ -63,6 +63,11 @@ class PppResultWidgets:
             "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
+        self.ppp_error_text_1 = (
+            "<font size=5>⚠️ **Error**</font>\n\n"
+            "<font size=3>No fiber can be assigned. Please check the input pointing list, or the single exposure time.</font>"
+        )
+
         self.ppp_success_text = (
             "<font size=5>✅ **Success**</font>\n\n"
             "<font size=3>The total requested time is reasonable for normal program. "
@@ -111,6 +116,9 @@ class PppResultWidgets:
             elif self.status_ == 1 and rot <= self.max_reqtime_normal:
                 text = self.ppp_warning_text_2
                 type = "warning"
+            elif self.status_ == 2 and df is None:
+                text = self.ppp_error_text_1
+                type = "danger"
             else:
                 text = self.ppp_success_text
                 type = "success"
@@ -205,10 +213,19 @@ class PppResultWidgets:
 
         # set export files
         stylesheet = """
+        .bk-btn {
+            // border-color: #3A7D7E !important;
+            // border-color: var(--success-border-subtle) !important;
+            display: inline !important;
+            // vertical-align: bottom !important;
+        }
         .bk-btn a {
-            border-color: #3A7D7E !important;
-            display: inline;
-        }"""
+            vertical-align: middle !important;
+            text-align: left !important;
+            padding-left: 0px !important;
+            padding-right: 12px !important;
+        }
+        """
 
         # compose the pane
         self.ppp_figure.append(self.ppp_alert)
@@ -255,12 +272,13 @@ class PppResultWidgets:
     def run_ppp(
         self,
         df,
+        df_ppc,
         validation_status,
         single_exptime=900,
         weights=None,
     ):
         if weights is None:
-            weights = [4.02, 0.01, 0.01]
+            weights = [2.02, 0.01, 0.01]
 
         self.df_input = df
         self.df_input["single_exptime"] = single_exptime
@@ -269,6 +287,12 @@ class PppResultWidgets:
 
         tb_input = Table.from_pandas(df)
         tb_visible = tb_input[validation_status["visibility"]["success"]]
+
+        if len(df_ppc) > 0:
+            tb_ppc = Table.from_pandas(df_ppc)
+            logger.info(f"PPCs are input by users: {tb_ppc}")
+        else:
+            tb_ppc = []
 
         (
             uS_L2,
@@ -284,6 +308,7 @@ class PppResultWidgets:
             self.status_,
         ) = PPPrunStart(
             tb_visible,
+            tb_ppc,
             weights,
             self.exetime,
             single_exptime=self.single_exptime,
@@ -304,13 +329,20 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             uS_M2,
+            tb_ppc,
             single_exptime=self.single_exptime,
             box_width=self.box_width,
         )
 
         self.ppp_status = True
 
-    def upload(self, outdir_prefix=".", export=False, single_exptime=None):
+    def upload(
+        self,
+        outdir_prefix=".",
+        export=False,
+        single_exptime=None,
+        observation_type="queue",
+    ):
         if single_exptime is None:
             single_exptime = self.single_exptime
 
@@ -338,6 +370,7 @@ class PppResultWidgets:
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,
             single_exptime=single_exptime,
+            observation_type=observation_type,
         )
 
         return outdir, outfile_zip, None

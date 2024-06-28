@@ -8,6 +8,7 @@ __all__ = [
     "optional_keys_default",
     "filter_keys",
     "target_datatype",
+    "ppc_datatype",
     "filter_category",
 ]
 
@@ -20,6 +21,7 @@ required_keys = [
     "priority",
     "exptime",
     "resolution",
+    "reference_arm",
 ]
 
 
@@ -48,6 +50,7 @@ target_datatype = {
     "parallax": float,  # mas
     "tract": int,
     "patch": int,
+    "reference_arm": str,
     # # filter keys
     # "filter_g": str,
     # "filter_r": str,
@@ -67,6 +70,15 @@ target_datatype = {
     # "flux_error_z": float,  # nJy
     # "flux_error_y": float,  # nJy
     # "flux_error_j": float,  # nJy
+}
+
+ppc_datatype = {
+    "ppc_code": str,
+    "ppc_ra": float,
+    "ppc_dec": float,
+    "ppc_pa": float,
+    "ppc_resolution": str,
+    "ppc_priority": float,
 }
 
 
@@ -128,3 +140,5 @@ filter_keys = [
     "flux_error_y",
     "flux_error_j",
 ]
+
+arm_values = ["b", "r", "n", "m"]

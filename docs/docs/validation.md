@@ -55,6 +55,8 @@ Along with the comments, a table is shown for rows with invalid values.
     - `priority` must be an integer in $[0, 9]$.
     - `exptime` must be positive.
     - `resolution` must be either `L` or `M`.
+    - `reference_arm` must be one of `b`, `r`, `n`, and `m`.
+    - `reference_arm` must not be `r` when `resolution` is `M`, while `reference_arm` must not be `m` when `resolution` is `L`.
 
 !!! danger "Error message is raised as follows"
 

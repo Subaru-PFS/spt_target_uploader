@@ -48,7 +48,10 @@ About the Enhanced Character-Separated Values (ECSV) format, visit https://docs.
         return readme_text
 
 
-def load_input(byte_string, format="csv", dtype=target_datatype, logger=logger):
+def load_input(byte_string, format="csv", dtype=None, logger=logger):
+    if dtype is None:
+        dtype = target_datatype
+
     def check_integer(value):
         try:
             int_value = int(value)
@@ -133,6 +136,7 @@ def upload_file(
     export=False,
     skip_subdirectories=False,
     single_exptime=900,
+    observation_type="queue",
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
@@ -238,6 +242,7 @@ def upload_file(
                 obj.meta["upload_at"] = upload_time
                 obj.meta["ppp_status"] = ppp_status
                 obj.meta["single_exptime"] = single_exptime
+                obj.meta["observation_type"] = observation_type
             filename = f"{file_prefix}_{secret_token}.ecsv"
         elif type == "figure":
             filename = f"{file_prefix}_{secret_token}.html"

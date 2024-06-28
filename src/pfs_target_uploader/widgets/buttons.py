@@ -2,19 +2,62 @@
 
 import panel as pn
 
+stylesheet = """
+    .bk-btn {
+        color: var(--success-text-color) !important;
+        background-color: #C7E2D6 !important;
+        border-color: var(--success-border-subtle) !important;
+        border-width: 1px;
+        font-weight: bold !important;
+        // color: #145B33;
+        // background-color: #eaf4fc;
+        // background-color: var(--success-bg-color);
+        // border-color: #008899;
+    }
+
+    .bk-btn:hover {
+        color: #ffffff !important;
+        background-color: #008899 !important;
+        // border-color: #008899;
+        // background-color: var(--success-text-color) !important;
+        border-color: var(--success-border-subtle) !important;
+    }
+
+    .bk-btn:disabled {
+        color: var(--secondary-text-color) !important;
+        border-color: #d2e7de !important;
+        background-color: #ffffff !important;
+        border-width: 1px;
+    }
+    """
+
+stylesheet_warning = """
+    .bk-btn {
+        color: var(--warning-text-color) !important;
+        background-color: #fdf3d1 !important;
+        border-color: var(--warning-border-subtle);
+        border-width: 1px;
+        font-weight: bold !important;
+        // border-color: #866109;
+    }
+
+    .bk-btn:hover {
+        color: #ffffff !important;
+        background-color: #b8860b  !important;
+        border-color: var(--warning-border-subtle);
+        // border-color: #866109;
+    }
+
+    .bk-btn:disabled {
+        color: var(--secondary-text-color) !important;
+        border-color: #d2e7de !important;
+        background-color: #ffffff !important;
+        border-width: 1px;
+    }
+    """
+
 
 class ValidateButtonWidgets:
-    stylesheet = """
-        .bk-btn-primary {
-            border-color: #3A7D7E !important;
-            // border-color: #d2e7de !important;
-        }
-
-        .bk-btn-primary:hover {
-            color: #ffffff !important;
-            background-color: #008899 !important;
-        }"""
-
     def __init__(self):
         self.validate = pn.widgets.Button(
             name="Validate",
@@ -23,22 +66,12 @@ class ValidateButtonWidgets:
             icon="stethoscope",
             height=60,
             max_width=130,
-            stylesheets=[self.stylesheet],
+            stylesheets=[stylesheet],
         )
         self.pane = self.validate
 
 
 class RunPppButtonWidgets:
-    stylesheet = """
-        .bk-btn-primary {
-            border-color: #3A7D7E !important;
-        }
-
-        .bk-btn-primary:hover {
-            color: #ffffff !important;
-            background-color: #008899 !important;
-        }"""
-
     def __init__(self):
         self.PPPrun = pn.widgets.Button(
             name="Simulate",
@@ -47,34 +80,13 @@ class RunPppButtonWidgets:
             icon="player-play-filled",
             height=60,
             max_width=130,
-            stylesheets=[self.stylesheet],
+            stylesheets=[stylesheet],
         )
 
         self.pane = self.PPPrun
 
 
 class SubmitButtonWidgets:
-    stylesheet = """
-        .bk-btn-primary {
-            border-color: #3A7D7E !important;
-        }
-
-        .bk-btn-primary:hover {
-            color: #ffffff !important;
-            background-color: #008899 !important;
-        }"""
-
-    stylesheet_warning = """
-        .bk-btn-primary {
-            border-color: #3A7D7E !important;
-        }
-
-        .bk-btn-primary:hover {
-            color: #000000 !important;
-            // background-color: salmon !important;
-            background-color: #fdf3d1 !important;
-        }"""
-
     def __init__(self):
         self.submit = pn.widgets.Button(
             name="Submit",
@@ -84,16 +96,16 @@ class SubmitButtonWidgets:
             disabled=True,
             height=60,
             max_width=130,
-            stylesheets=[self.stylesheet],
+            stylesheets=[stylesheet],
         )
         self.pane = self.submit
 
     def enable_button(self, ppp_status):
         if ppp_status:
             self.submit.stylesheets = []
-            self.submit.stylesheets = [self.stylesheet]
+            self.submit.stylesheets = [stylesheet]
             self.submit.disabled = False
         else:
             self.submit.stylesheets = []
-            self.submit.stylesheets = [self.stylesheet_warning]
+            self.submit.stylesheets = [stylesheet_warning]
             self.submit.disabled = False
