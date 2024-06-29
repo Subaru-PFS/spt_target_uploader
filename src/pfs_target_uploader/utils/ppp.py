@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import os
 import random
+import sys
 import time
 import warnings
+from contextlib import redirect_stdout
 from functools import partial
 from itertools import chain
 
@@ -17,7 +20,7 @@ import panel as pn
 import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from astropy.table import Table, vstack, join
+from astropy.table import Table, join, vstack
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
@@ -52,8 +55,11 @@ def PPPrunStart(
     single_exptime: int = 900,
     max_nppc: int = 200,
     d_pfi=1.38,
+    quiet=True,
 ):
     r_pfi = d_pfi / 2.0
+
+    ppp_quiet = quiet
 
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
@@ -572,25 +578,31 @@ def PPPrunStart(
 
         forbiddenPairs = [[] for i in range(nvisit)]
 
-        # compute observation strategy
-        prob = nf.buildProblem(
-            bench,
-            tgt,
-            tpos,
-            classdict,
-            # 900,
-            single_exptime,
-            vis_cost,
-            cobraMoveCost=cobraMoveCost,
-            collision_distance=2.0,
-            elbow_collisions=True,
-            gurobi=True,
-            gurobiOptions=gurobiOptions,
-            alreadyObserved=alreadyObserved,
-            forbiddenPairs=forbiddenPairs,
-        )
+        if ppp_quiet:
+            out_target = open(os.devnull, "w")
+        else:
+            out_target = sys.stdout
+        # disable netflow output
+        with redirect_stdout(out_target):
+            # compute observation strategy
+            prob = nf.buildProblem(
+                bench,
+                tgt,
+                tpos,
+                classdict,
+                # 900,
+                single_exptime,
+                vis_cost,
+                cobraMoveCost=cobraMoveCost,
+                collision_distance=2.0,
+                elbow_collisions=True,
+                gurobi=True,
+                gurobiOptions=gurobiOptions,
+                alreadyObserved=alreadyObserved,
+                forbiddenPairs=forbiddenPairs,
+            )
 
-        prob.solve()
+            prob.solve()
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
         for k1, v1 in prob._vardict.items():

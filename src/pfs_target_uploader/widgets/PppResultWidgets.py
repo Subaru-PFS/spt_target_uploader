@@ -276,6 +276,7 @@ class PppResultWidgets:
         validation_status,
         single_exptime=900,
         weights=None,
+        quiet=True,
     ):
         if weights is None:
             weights = [2.02, 0.01, 0.01]
@@ -313,6 +314,7 @@ class PppResultWidgets:
             self.exetime,
             single_exptime=self.single_exptime,
             max_nppc=self.max_nppc,
+            quiet=quiet,
         )
 
         (
