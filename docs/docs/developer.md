@@ -85,4 +85,9 @@ OUTPUT_DIR="data"
 # EMAIL_FROM=
 # EMAIL_TO=
 # SMTP_SERVER=
+
+# suppress netflow print messages
+# 1: quiet
+# 0: verbose
+PPP_QUIET=1
 ```
