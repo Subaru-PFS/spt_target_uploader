@@ -12,7 +12,6 @@ from itertools import chain
 import colorcet as cc
 import holoviews as hv
 import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
-import matplotlib.pyplot as plt
 import multiprocess
 import numpy as np
 import pandas as pd
@@ -1133,6 +1132,8 @@ def ppp_result(
             max_width=450,
         )
 
+        legend_cols = 2 if len(sub) >= 6 else 1
+
         name = ["P_all"] + ["P_" + str(int(ii)) for ii in sub] + ["PPC_id"]
         # colors for priority 0-9
         # red + first colors from glasbey_dark colormap as strings
@@ -1294,9 +1295,10 @@ def ppp_result(
                 active_tools=["box_zoom"],
                 show_grid=True,
                 shared_axes=False,
-                legend_cols=2,
+                legend_offset=(10, 0),
+                legend_cols=legend_cols,
                 height=int(plot_height * 0.75),
-                #height=plot_height,
+                # height=plot_height,
             )
 
             # update completion rates as a function of PPC ID
@@ -1310,11 +1312,11 @@ def ppp_result(
                 shared_axes=False,
                 toolbar="left",
                 active_tools=["box_zoom"],
-                legend_position='right', 
-                legend_offset=(0, -30),
-                legend_cols=2,
+                legend_position="right",
+                legend_offset=(10, -30),
+                legend_cols=legend_cols,
                 height=int(plot_height * 0.55),
-                #height=plot_height,
+                # height=plot_height,
             )
             p_comp_tot_n = (p_comp_rate_n * p_comp_nppc).opts(
                 xlim=(0.5, len(obj_allo) + 0.5),
@@ -1323,11 +1325,11 @@ def ppp_result(
                 shared_axes=False,
                 toolbar="left",
                 active_tools=["box_zoom"],
-                legend_position='right', 
-                legend_offset=(0, -30),
-                legend_cols=2,
+                legend_position="right",
+                legend_offset=(10, -30),
+                legend_cols=legend_cols,
                 height=int(plot_height * 0.55),
-                #height=plot_height,
+                # height=plot_height,
             )
 
             """
