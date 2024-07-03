@@ -282,7 +282,7 @@ def start_app(
     basic_auth: Annotated[
         str, typer.Option(help="Basic authentication config (.json).")
     ] = None,
-    cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
+    # cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
     basic_login_template: Annotated[
         str, typer.Option(help="Basic login template.")
     ] = None,
@@ -354,12 +354,12 @@ def start_app(
             return
         admin_options = dict(
             basic_auth=basic_auth,
-            cookie_secret=cookie_secret,
+            # cookie_secret=cookie_secret,
             basic_login_template=basic_login_template,
         )
         kwargs = admin_options
     else:
-        kwargs = {}
+        kwargs = {}  # dict(cookie_secret=cookie_secret)
 
     # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
     pn.serve(
