@@ -17,7 +17,7 @@ nav:
   - 'CLI tool': cli.md
   - 'FAQ & Known Issues': issues.md
   - 'For Developer': developer.md
-  - 'Contact': contact.md
+  - 'About Us': about.md
 
 use_directory_urls: false
 
