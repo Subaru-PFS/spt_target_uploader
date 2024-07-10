@@ -46,7 +46,7 @@ Please copy the `Upload ID` by clicking the area around the `Upload ID` and keep
     there is no trivial way to recover your `Upload ID`.
     If you forget to record your `Upload ID`, you may want to do the following.
 
-    - [Contact us](contact.md) and the observatory staff will look up `Upload ID`. We would need to know the original filename and approximate time of the submission.
+    - [Contact us](about.md) and the observatory staff will look up `Upload ID`. We would need to know the original filename and approximate time of the submission.
     - You can repeat the entire process as a new submission. A new `Upload ID` will be issued and you can use it for subsequent processes.
 
 The `Upload ID` may be used for the following purposes.
