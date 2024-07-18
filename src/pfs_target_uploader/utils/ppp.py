@@ -163,6 +163,9 @@ def PPPrunStart(
             tgt_t = sample[labels == jj]
             tgt_group.append(tgt_t)
 
+        # delete db object to release memory
+        del db
+
         return tgt_group
 
     def target_collision(sample, sep=2 / 3600.0):
