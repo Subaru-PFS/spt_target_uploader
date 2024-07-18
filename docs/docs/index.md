@@ -36,11 +36,11 @@ The [PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web ap
 
     Check frequently asked questions and known issues first when you have any troubles with the app.
 
-- :material-account-box-outline:{ .lg .middle } [__Contact__](contact.md)
+- :material-account-box-outline:{ .lg .middle } [__About Us__](about.md)
 
     ---
 
-    If you have any questions, comments, or suggestions on the app, please feel free to contact us.
+    Contact information and the privacy policy of the app and documationation are available.
 
 </div>
 
