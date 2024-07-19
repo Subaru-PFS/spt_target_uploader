@@ -61,7 +61,7 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.mime_type = None
         self.file_input.value = None
 
-    def validate(self, date_begin=None, date_end=None):
+    def validate(self, date_begin=None, date_end=None, warn_threshold=100000):
         t_start = time.time()
         if date_begin >= date_end:
             pn.state.notifications.error(
@@ -112,6 +112,12 @@ class FileInputWidgets(param.Parameterized):
                     duration=0,
                 )
                 return None, None, None
+
+            if df_input.index.size >= warn_threshold:
+                pn.state.notifications.info(
+                    "The number of objects is very large. It may take a long time to process.",
+                    duration=0,
+                )
         else:
             logger.info("No file selected.")
             pn.state.notifications.error("Please select a CSV file.")
