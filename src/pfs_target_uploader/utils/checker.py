@@ -288,7 +288,10 @@ def check_str(
     pattern = r"^[A-Za-z0-9_+\-\.]+$"
 
     def check_pattern(element):
-        return bool(re.match(pattern, element))
+        try:
+            return bool(re.match(pattern, element))
+        except TypeError:
+            return False
 
     vectorized_check = np.vectorize(check_pattern)
 
