@@ -276,6 +276,7 @@ class PppResultWidgets:
         validation_status,
         single_exptime=900,
         weights=None,
+        clustering_algorithm="HDBSCAN",
         quiet=True,
     ):
         if weights is None:
@@ -315,6 +316,7 @@ class PppResultWidgets:
             single_exptime=self.single_exptime,
             max_nppc=self.max_nppc,
             quiet=quiet,
+            clustering_algorithm=clustering_algorithm,
         )
 
         (

@@ -23,7 +23,7 @@ from astropy.table import Table, join, vstack
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
-from sklearn.cluster import DBSCAN, AgglomerativeClustering
+from sklearn.cluster import DBSCAN, HDBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
 
@@ -55,6 +55,7 @@ def PPPrunStart(
     max_nppc: int = 200,
     d_pfi=1.38,
     quiet=True,
+    clustering_algorithm="HDBSCAN",
 ):
     r_pfi = d_pfi / 2.0
 
@@ -127,26 +128,43 @@ def PPPrunStart(
 
         return sample
 
-    def target_DBSCAN(sample, sep=d_pfi):
+    def target_clustering(sample, sep=d_pfi, algorithm="DBSCAN"):
         """separate pointings/targets into different groups
 
         Parameters
         ==========
-        sample:table
+        sample: astropy table
+            astropy table with columns of ra, dec, weight
         sep: float
             angular separation set to group, degree
-        Print:boolean
+        algorithm: str
+            clustering algorithm, either "DBSCAN" or "HDBSCAN"
 
         Returns
         =======
         list of pointing centers in different group
         """
-        # haversine uses (dec,ra) in radian;
-        db = DBSCAN(eps=np.radians(sep), min_samples=1, metric="haversine").fit(
-            np.radians([sample["dec"], sample["ra"]]).T
-        )
+        logger.debug(f"{sample['ra']=}")
+        logger.debug(f"{sample['dec']=}")
 
-        labels = db.labels_
+        # haversine uses (dec,ra) in radian
+        # HDBSCAN needs more than 1 data point to work, so use DBSCAN for single target clustering.
+        if algorithm.upper() == "DBSCAN" or len(sample["ra"]) < 2:
+            logger.info("algorithm for target clustering: DBSCAN")
+            db = DBSCAN(eps=np.radians(sep), min_samples=1, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.labels_
+        elif algorithm.upper() == "HDBSCAN":
+            logger.info("algorithm for target clustering: HDBSCAN")
+            db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
+        else:
+            logger.error("algorithm should be either DBSCAN or HDBSCAN")
+            raise ValueError("algorithm should be either DBSCAN or HDBSCAN")
+
         unique_labels = set(labels)
         n_clusters = len(unique_labels)
 
@@ -391,7 +409,9 @@ def PPPrunStart(
 
         peak = []
 
-        for sample in target_DBSCAN(sample_f, d_pfi):
+        for sample in target_clustering(
+            sample_f, d_pfi, algorithm=clustering_algorithm
+        ):
             if is_exetime and ((time.time() - starttime) > exetime):
                 status = 1
                 logger.info(
