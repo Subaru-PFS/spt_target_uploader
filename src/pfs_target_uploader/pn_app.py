@@ -62,6 +62,11 @@ def target_uploader_app(use_panel_cli=False):
     else:
         ppp_quiet: bool = bool(int(config["PPP_QUIET"]))
 
+    if "CLUSTERING_ALGORITHM" not in config.keys():
+        clustering_algorithm = "HDBSCAN"
+    else:
+        clustering_algorithm = config["CLUSTERING_ALGORITHM"]
+
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
     logger.info(f"Maximum number of PPCs is set to {max_nppc}.")
 
@@ -401,6 +406,7 @@ def target_uploader_app(use_panel_cli=False):
                 df_ppc,
                 validation_status,
                 single_exptime=panel_obs_type.single_exptime.value,
+                clustering_algorithm=clustering_algorithm,
                 quiet=ppp_quiet,
             )
             panel_ppp.show_results()
