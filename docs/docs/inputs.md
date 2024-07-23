@@ -44,7 +44,7 @@ On the other hand, `reference_arm` must be one of `b`, `m`, and `n` when `resolu
 
 #### About uniqueness condition by `(obj_id, resolution)` and `ob_code`
 
-In a given target list, each pair of `(ob_code, resolution)` must be unique.
+In a given target list, each pair of `(obj_id, resolution)` must be unique.
 Each `ob_code` must also be unique.
 
 Some examples of good and bad cases are shown below.
