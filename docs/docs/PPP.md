@@ -163,4 +163,4 @@ In the PPP calculation, the following parameters are fixed.
 | Maximum number of pointings           |   200 |         |
 
 [^1]: Overhead time charged for individual exposure such as readout, slew the telescope, field acquisition, and guide star acquisition.
-[^2]: Overhead time to obtain calibration data. Current best estimate is 1.2 h per night. That is, 1.2 h is charged for each 8.8 h individual exposures.
+[^2]: Overhead time to obtain calibration data. Current best estimate is 1.2 h per night. That is, 1.2 h is charged for every 8.8 h individual exposures.
