@@ -1130,15 +1130,32 @@ def ppp_result(
         )
 
     def overheads(n_sci_frame):
+
+        t_night_hours: float = 10.0  # [h] total observing time per night
+
         # in seconds
         # t_exp_sci: float = 900.0
-        t_exp_sci: float = single_exptime
-        t_overhead_misc: float = 60.0
-        t_overhead_fiber: float = 180.0
+        t_exp_sci: float = single_exptime  # [s]
 
-        Toverheads_tot_best = (
+        t_overhead_misc: float = 120.0  # [s] miscellanous overheads
+        t_overhead_fiber: float = 180.0  # [s] fiber reconfiguration overheads
+
+        t_overhead_shared_hours: float = 1.2  # [h] calibrations per night
+
+        # [s] total time for all pointings
+        t_total_pointings = (
             t_exp_sci + t_overhead_misc + t_overhead_fiber
         ) * n_sci_frame
+
+        # [s] overheads for the program
+        t_overhead_program = (
+            t_total_pointings
+            / (t_night_hours - t_overhead_shared_hours)
+            * t_overhead_shared_hours
+        )
+
+        # [s] total request observing time (ROT)
+        Toverheads_tot_best = t_total_pointings + t_overhead_program
 
         return Toverheads_tot_best / 3600.0
 
