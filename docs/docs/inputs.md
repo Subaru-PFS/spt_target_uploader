@@ -29,8 +29,8 @@ Mandatory fields are listed below.
 |---------------|------------|--------|--------------------------------------------------------------------------------------------------------------------------------------|
 | ob_code       | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                                                   |
 | obj_id        | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                                            |
-| ra            | float      | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                                                             |
-| dec           | float      | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                                                                 |
+| ra            | float      | degree | Right Ascension (ICRS at the reference epoch of 2000.0)                                                                              |
+| dec           | float      | degree | Declination (ICRS at the reference epoch of 2000.0)                                                                                  |
 | exptime       | float      | second | Exposure time requested for the object under the nominal observing condition.                                                        |
 | priority      | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority                             |
 | resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
@@ -99,8 +99,7 @@ For the case above, please make a row by summing up the exposure time as follows
 
 Since the [Gaia DR3](https://www.cosmos.esa.int/web/gaia/data-release-3) catalog is used to find guide stars,
 coordinates must be in the International Celestial Reference System (ICRS).
-Users are required to make coordinates of targets consistent with the Gaia astrometry at the epoch of 2000.0.
-Note that coordinates in ICRS at the epoch of 2000.0 are known to be consistent with those with equinox J2000.0 represented by the FK5 within the errors of the FK5.
+Users are required to make coordinates of targets consistent with the Gaia astrometry at the reference epoch of 2000.0.
 
 #### About Flux information
 
@@ -112,7 +111,7 @@ Flux columns must conform to the following requirements.
   An `ob_code` cannot have more than one flux in the same filter category.
 - If more than one flux columns with finite values are found for an `ob_code`,
   the value of the first column (the left-most one in the input CSV file) will be used.
-- Flux values are in the unit of <font size=5>**nJy**</font>.
+- Flux values are in the unit of <font size=5>**nJy**</font> (nano-Jansky).
 - Flux values are assumed to be total flux.
 - Errors can be provided by using column names by adding `_error` following the filter names.
 
