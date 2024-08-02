@@ -100,7 +100,7 @@ class PppResultWidgets:
 
         # print(self.df_summary)
 
-        @pn.io.profile("update_alert")
+        # @pn.io.profile("update_alert")
         def update_alert(df):
             if df is None:
                 rot = 0
@@ -124,7 +124,7 @@ class PppResultWidgets:
                 type = "success"
             return {"object": text, "alert_type": type}
 
-        @pn.io.profile("update_reqtime")
+        # @pn.io.profile("update_reqtime")
         def update_reqtime(df):
             if df is None:
                 return {"value": 0, "default_color": "#3A7D7E"}
@@ -137,7 +137,7 @@ class PppResultWidgets:
                 c = "#3A7D7E"
             return {"value": rot, "default_color": c}
 
-        @pn.io.profile("update_summary_text")
+        # @pn.io.profile("update_summary_text")
         def update_summary_text(df):
             if df is None:
                 return {"object": " "}
@@ -175,7 +175,7 @@ class PppResultWidgets:
             )
             return {"object": text}
 
-        @pn.io.profile("stream_export_files")
+        # @pn.io.profile("stream_export_files")
         def stream_export_files(df_psl, df_ppc, p_fig):
             _, outfile_zip, sio = upload_file(
                 self.df_input,
@@ -276,6 +276,7 @@ class PppResultWidgets:
         validation_status,
         single_exptime=900,
         weights=None,
+        clustering_algorithm="HDBSCAN",
         quiet=True,
     ):
         if weights is None:
@@ -315,6 +316,7 @@ class PppResultWidgets:
             single_exptime=self.single_exptime,
             max_nppc=self.max_nppc,
             quiet=quiet,
+            clustering_algorithm=clustering_algorithm,
         )
 
         (

@@ -18,7 +18,7 @@ pip install -r requirements.txt  # perhaps optional
 pip install -e .
 
 mkdir -p data/
-mkdir -p data/temp/
+mkdir -p data/tmp/
 ```
 
 ### Build documentation

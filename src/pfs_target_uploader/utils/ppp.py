@@ -23,7 +23,7 @@ from astropy.table import Table, join, vstack
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
-from sklearn.cluster import DBSCAN, AgglomerativeClustering
+from sklearn.cluster import DBSCAN, HDBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
 
@@ -55,6 +55,7 @@ def PPPrunStart(
     max_nppc: int = 200,
     d_pfi=1.38,
     quiet=True,
+    clustering_algorithm="HDBSCAN",
 ):
     r_pfi = d_pfi / 2.0
 
@@ -127,26 +128,43 @@ def PPPrunStart(
 
         return sample
 
-    def target_DBSCAN(sample, sep=d_pfi):
+    def target_clustering(sample, sep=d_pfi, algorithm="DBSCAN"):
         """separate pointings/targets into different groups
 
         Parameters
         ==========
-        sample:table
+        sample: astropy table
+            astropy table with columns of ra, dec, weight
         sep: float
             angular separation set to group, degree
-        Print:boolean
+        algorithm: str
+            clustering algorithm, either "DBSCAN" or "HDBSCAN"
 
         Returns
         =======
         list of pointing centers in different group
         """
-        # haversine uses (dec,ra) in radian;
-        db = DBSCAN(eps=np.radians(sep), min_samples=1, metric="haversine").fit(
-            np.radians([sample["dec"], sample["ra"]]).T
-        )
+        logger.debug(f"{sample['ra']=}")
+        logger.debug(f"{sample['dec']=}")
 
-        labels = db.labels_
+        # haversine uses (dec,ra) in radian
+        # HDBSCAN needs more than 1 data point to work, so use DBSCAN for single target clustering.
+        if algorithm.upper() == "DBSCAN" or len(sample["ra"]) < 2:
+            logger.info("algorithm for target clustering: DBSCAN")
+            db = DBSCAN(eps=np.radians(sep), min_samples=1, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.labels_
+        elif algorithm.upper() == "HDBSCAN":
+            logger.info("algorithm for target clustering: HDBSCAN")
+            db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
+        else:
+            logger.error("algorithm should be either DBSCAN or HDBSCAN")
+            raise ValueError("algorithm should be either DBSCAN or HDBSCAN")
+
         unique_labels = set(labels)
         n_clusters = len(unique_labels)
 
@@ -391,7 +409,9 @@ def PPPrunStart(
 
         peak = []
 
-        for sample in target_DBSCAN(sample_f, d_pfi):
+        for sample in target_clustering(
+            sample_f, d_pfi, algorithm=clustering_algorithm
+        ):
             if is_exetime and ((time.time() - starttime) > exetime):
                 status = 1
                 logger.info(
@@ -1110,15 +1130,32 @@ def ppp_result(
         )
 
     def overheads(n_sci_frame):
+
+        t_night_hours: float = 10.0  # [h] total observing time per night
+
         # in seconds
         # t_exp_sci: float = 900.0
-        t_exp_sci: float = single_exptime
-        t_overhead_misc: float = 60.0
-        t_overhead_fiber: float = 180.0
+        t_exp_sci: float = single_exptime  # [s]
 
-        Toverheads_tot_best = (
+        t_overhead_misc: float = 120.0  # [s] miscellanous overheads
+        t_overhead_fiber: float = 180.0  # [s] fiber reconfiguration overheads
+
+        t_overhead_shared_hours: float = 1.2  # [h] calibrations per night
+
+        # [s] total time for all pointings
+        t_total_pointings = (
             t_exp_sci + t_overhead_misc + t_overhead_fiber
         ) * n_sci_frame
+
+        # [s] overheads for the program
+        t_overhead_program = (
+            t_total_pointings
+            / (t_night_hours - t_overhead_shared_hours)
+            * t_overhead_shared_hours
+        )
+
+        # [s] total request observing time (ROT)
+        Toverheads_tot_best = t_total_pointings + t_overhead_program
 
         return Toverheads_tot_best / 3600.0
 
@@ -1267,7 +1304,7 @@ def ppp_result(
         )
         #"""
 
-        @pn.io.profile("update_ppp_figures")
+        # @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
             # update the plot of sky distribution of pointings and targets
             p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
@@ -1378,7 +1415,7 @@ def ppp_result(
                 pn.panel(p_ppc_tot, linked_axes=False, width=600),
             )
 
-        @pn.io.profile("ppp_res_tab1")
+        # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Fhour_tot = (
@@ -1417,7 +1454,7 @@ def ppp_result(
 
             return ppc_summary_fin
 
-        @pn.io.profile("ppp_res_tab2")
+        # @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2():
             obj_alloc = obj_allo1[
                 "ppc_code",
@@ -1510,7 +1547,7 @@ def ppp_result(
         if fig is not None:
             p_result_fig_fin.append(fig)
 
-    @pn.io.profile("p_result_tab_tot")
+    # @pn.io.profile("p_result_tab_tot")
     def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
         ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
         loc_total = ppc_sum.index.size
@@ -1522,7 +1559,7 @@ def ppp_result(
                 ppc_sum.drop(columns=[k], inplace=True)
         return ppc_sum
 
-    @pn.io.profile("p_result_ppc_tot")
+    # @pn.io.profile("p_result_ppc_tot")
     def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
         ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
         return ppc_lst
@@ -1836,7 +1873,7 @@ def ppp_result_reproduce(
         )
         #"""
 
-        @pn.io.profile("update_ppp_figures")
+        # @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
             if nppc_fin > 0:
                 # update the plot of sky distribution of pointings and targets
@@ -1965,7 +2002,7 @@ def ppp_result_reproduce(
                 pn.panel(p_ppc_tot, linked_axes=False, width=500),
             )
 
-        @pn.io.profile("ppp_res_tab1")
+        # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Ttot_best = overheads(nppc_fin)
@@ -2015,7 +2052,7 @@ def ppp_result_reproduce(
 
             return ppc_summary_fin
 
-        @pn.io.profile("ppp_res_tab2")
+        # @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2(nppc_fin):
             obj_alloc = obj_allo1[:nppc_fin]
             return Table.to_pandas(obj_alloc)
@@ -2132,7 +2169,7 @@ def ppp_result_reproduce(
         if fig is not None:
             p_result_fig_fin.append(fig)
 
-    @pn.io.profile("p_result_tab_tot")
+    # @pn.io.profile("p_result_tab_tot")
     def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
         ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0, ignore_index=True)
         loc_total = ppc_sum.index.size
@@ -2144,7 +2181,7 @@ def ppp_result_reproduce(
                 ppc_sum.drop(columns=[k], inplace=True)
         return ppc_sum
 
-    @pn.io.profile("p_result_ppc_tot")
+    # @pn.io.profile("p_result_ppc_tot")
     def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
         ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0, ignore_index=True)
         return ppc_lst

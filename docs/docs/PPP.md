@@ -152,11 +152,15 @@ Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at 
 
 In the PPP calculation, the following parameters are fixed.
 
-| Description                           | Value | Unit |
-|---------------------------------------|------:|------|
-| Number of fibers                      |  2394 |      |
-| Number of calibrators                 |   200 |      |
-| Fiber configuration time per exposure |   180 | s    |
-| Miscellaneous overheads               |    60 | s    |
-| Maximum PPP running time              |   900 | s    |
-| Maximum number of pointings           |   200 |      |
+| Description                            | Value | Unit    |
+|----------------------------------------|------:|---------|
+| Number of fibers                       |  2394 |         |
+| Number of calibrators                  |   200 |         |
+| Fiber configuration time per exposure  |   180 | s       |
+| Miscellaneous overheads[^1]            |   120 | s       |
+| Calibration and focusing overheads[^2] |   1.2 | h/night |
+| Maximum PPP running time               |   900 | s       |
+| Maximum number of pointings            |   200 |         |
+
+[^1]: Overhead time charged for individual exposure such as readout, slew the telescope, field acquisition, and guide star acquisition.
+[^2]: Overhead time to obtain calibration data and focusing. Current best estimate is 1.2 h per night. That is, 1.2 h is charged for every 8.8 h individual exposures.

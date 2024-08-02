@@ -158,18 +158,56 @@ def visibility_checker_vec(
     logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
 
     # include the last date instead of removing it
-    daterange = pd.date_range(date_begin, date_end + timedelta(days=1), tz=tz_HST)
+    date_middle = date_begin + (date_end - date_begin) / 2
+    logger.info(f"Observation period is divided into two at {date_middle}")
 
-    dates_begin, dates_end = daterange[:-1], daterange[1:]
+    daterange_1 = pd.date_range(
+        date_begin,
+        date_middle,
+        tz=tz_HST,
+    )
+    daterange_2 = pd.date_range(
+        date_middle + timedelta(days=1),
+        date_end + timedelta(days=1),
+        tz=tz_HST,
+    )
 
-    nights_begin = [
+    logger.debug(
+        f"Observation period is divided into two: {daterange_1} and {daterange_2}"
+    )
+
+    logger.debug(f"{len(daterange_1)} and {len(daterange_2)}")
+
+    dates_begin_1, dates_end_1 = daterange_1[:-1], daterange_1[1:]
+    dates_begin_2, dates_end_2 = daterange_2[:-1], daterange_2[1:]
+
+    nights_begin_1 = [
         parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
-        for d in dates_begin
+        for d in dates_begin_1
     ]
-    nights_end = [
+    nights_end_1 = [
         parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
-        for d in dates_end
+        for d in dates_end_1
     ]
+
+    # reverse order for the second half
+    nights_begin_2 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
+        for d in dates_begin_2[::-1]
+    ]
+    nights_end_2 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
+        for d in dates_end_2[::-1]
+    ]
+
+    n_dates = max(len(dates_begin_1), len(dates_begin_2))
+
+    logger.debug(
+        f"Observation period is divided into two: {nights_begin_1} and {nights_end_1}"
+    )
+    logger.debug(
+        f"Observation period is divided into two: {nights_begin_2} and {nights_end_2}"
+    )
 
     # # one can set start/stop times with sunset/sunrise
     # datetime_sunset = [observer.sunset(d) for d in dates_begin]
@@ -183,25 +221,50 @@ def visibility_checker_vec(
 
     def process_single_target(target: StaticTarget, exptime: float) -> bool:
         t_obs_ok_single = 0
-        for dd in range(len(dates_begin)):
-            observer.set_date(nights_begin[dd])
-            _, t_start, t_stop = observer.observable(
-                target,
-                nights_begin[dd],
-                nights_end[dd],
-                # datetime_sunset[dd],
-                # datetime_sunrise[dd],
-                min_el,  # [deg]
-                max_el,  # [deg]
-                exptime,  # [s] TODO: This has to be a total time including overheads
-                airmass=None,
-                moon_sep=None,
-            )
+        for dd in range(n_dates):
             try:
-                if t_stop > t_start:
-                    t_obs_ok_single += (t_stop - t_start).seconds
-            except TypeError:
-                continue
+                observer.set_date(nights_begin_1[dd])
+                _, t_start, t_stop = observer.observable(
+                    target,
+                    nights_begin_1[dd],
+                    nights_end_1[dd],
+                    # datetime_sunset[dd],
+                    # datetime_sunrise[dd],
+                    min_el,  # [deg]
+                    max_el,  # [deg]
+                    exptime,  # [s] TODO: This has to be a total time including overheads
+                    airmass=None,
+                    moon_sep=None,
+                )
+                try:
+                    if t_stop > t_start:
+                        t_obs_ok_single += (t_stop - t_start).seconds
+                except TypeError:
+                    continue
+            except IndexError:
+                pass
+
+            try:
+                observer.set_date(nights_begin_2[dd])
+                _, t_start, t_stop = observer.observable(
+                    target,
+                    nights_begin_2[dd],
+                    nights_end_2[dd],
+                    # datetime_sunset[dd],
+                    # datetime_sunrise[dd],
+                    min_el,  # [deg]
+                    max_el,  # [deg]
+                    exptime,  # [s] TODO: This has to be a total time including overheads
+                    airmass=None,
+                    moon_sep=None,
+                )
+                try:
+                    if t_stop > t_start:
+                        t_obs_ok_single += (t_stop - t_start).seconds
+                except TypeError:
+                    continue
+            except IndexError:
+                pass
 
             # Once t_obs_ok_single exceeds the required exptime, you can exit the function
             if t_obs_ok_single >= exptime:
@@ -288,7 +351,10 @@ def check_str(
     pattern = r"^[A-Za-z0-9_+\-\.]+$"
 
     def check_pattern(element):
-        return bool(re.match(pattern, element))
+        try:
+            return bool(re.match(pattern, element))
+        except TypeError:
+            return False
 
     vectorized_check = np.vectorize(check_pattern)
 
