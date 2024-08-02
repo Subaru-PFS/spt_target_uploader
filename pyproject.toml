@@ -120,9 +120,9 @@ gen-requirements = { cmd = [
 ], help = "Generate requirements.txt" }
 
 
-[tool.pdm.options]
-add = ["--no-isolation"]
-install = ["--no-isolation"]
+# [tool.pdm.options]
+# add = ["--no-isolation"]
+# install = ["--no-isolation"]
 
 [tool.ruff]
 target-version = "py39"
@@ -149,6 +149,7 @@ ignore = [
 
 [tool.black]
 line-length = 88
+target-version = ["py39", "py310", "py311"]
 
 # [tool.pdm.options]
 # add = ["--no-isolation", "--no-self"]
