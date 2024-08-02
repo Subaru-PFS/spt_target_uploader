@@ -1304,7 +1304,7 @@ def ppp_result(
         )
         #"""
 
-        @pn.io.profile("update_ppp_figures")
+        # @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
             # update the plot of sky distribution of pointings and targets
             p_ppc_polygon = hv.Polygons(df_polygon.iloc[:nppc_fin, :]).opts(
@@ -1415,7 +1415,7 @@ def ppp_result(
                 pn.panel(p_ppc_tot, linked_axes=False, width=600),
             )
 
-        @pn.io.profile("ppp_res_tab1")
+        # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Fhour_tot = (
@@ -1454,7 +1454,7 @@ def ppp_result(
 
             return ppc_summary_fin
 
-        @pn.io.profile("ppp_res_tab2")
+        # @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2():
             obj_alloc = obj_allo1[
                 "ppc_code",
@@ -1547,7 +1547,7 @@ def ppp_result(
         if fig is not None:
             p_result_fig_fin.append(fig)
 
-    @pn.io.profile("p_result_tab_tot")
+    # @pn.io.profile("p_result_tab_tot")
     def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
         ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0)
         loc_total = ppc_sum.index.size
@@ -1559,7 +1559,7 @@ def ppp_result(
                 ppc_sum.drop(columns=[k], inplace=True)
         return ppc_sum
 
-    @pn.io.profile("p_result_ppc_tot")
+    # @pn.io.profile("p_result_ppc_tot")
     def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
         ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0)
         return ppc_lst
@@ -1873,7 +1873,7 @@ def ppp_result_reproduce(
         )
         #"""
 
-        @pn.io.profile("update_ppp_figures")
+        # @pn.io.profile("update_ppp_figures")
         def update_ppp_figures(nppc_fin):
             if nppc_fin > 0:
                 # update the plot of sky distribution of pointings and targets
@@ -2002,7 +2002,7 @@ def ppp_result_reproduce(
                 pn.panel(p_ppc_tot, linked_axes=False, width=500),
             )
 
-        @pn.io.profile("ppp_res_tab1")
+        # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
             Ttot_best = overheads(nppc_fin)
@@ -2052,7 +2052,7 @@ def ppp_result_reproduce(
 
             return ppc_summary_fin
 
-        @pn.io.profile("ppp_res_tab2")
+        # @pn.io.profile("ppp_res_tab2")
         def ppp_res_tab2(nppc_fin):
             obj_alloc = obj_allo1[:nppc_fin]
             return Table.to_pandas(obj_alloc)
@@ -2169,7 +2169,7 @@ def ppp_result_reproduce(
         if fig is not None:
             p_result_fig_fin.append(fig)
 
-    @pn.io.profile("p_result_tab_tot")
+    # @pn.io.profile("p_result_tab_tot")
     def p_result_tab_tot(p_result_tab_l, p_result_tab_m):
         ppc_sum = pd.concat([p_result_tab_l, p_result_tab_m], axis=0, ignore_index=True)
         loc_total = ppc_sum.index.size
@@ -2181,7 +2181,7 @@ def ppp_result_reproduce(
                 ppc_sum.drop(columns=[k], inplace=True)
         return ppc_sum
 
-    @pn.io.profile("p_result_ppc_tot")
+    # @pn.io.profile("p_result_ppc_tot")
     def p_result_ppc_tot(p_result_ppc_l, p_result_ppc_m):
         ppc_lst = pd.concat([p_result_ppc_l, p_result_ppc_m], axis=0, ignore_index=True)
         return ppc_lst
