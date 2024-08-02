@@ -17,7 +17,6 @@ hvplot>=0.8.4
 ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git
 ipython>=8.14.0
 loguru>=0.7.2
-logzero>=1.7.0
 markdown-it-py>=3.0.0
 memray>=1.10.0
 mkdocs>=1.4.3
@@ -27,7 +26,7 @@ mkdocs-video>=1.5.0
 multiprocess>=0.70.15
 myst-parser>=2.0.0
 pandas>=2.0.3
-panel<1.5,>=1.4
+panel==1.4.5
 pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git
 pip>=23.2.1
 pybind11>=2.11.1
