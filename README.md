@@ -7,8 +7,8 @@
 ### Clone the repository
 
 ```sh
-git clone https://github.com/monodera/pfs_target_uploader.git
-cd pfs_target_uploader
+git clone https://github.com/Subaru-PFS/spt_target_uploader.git
+cd spt_target_uploader
 ```
 
 ### Installing dependencies

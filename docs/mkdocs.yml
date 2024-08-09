@@ -5,7 +5,7 @@ site_author: 'Masato Onodera'
 
 copyright: Copyright &copy; <a href="https://subarutelescope.org">Subaru Telescope</a>, <a href="https://www.nao.ac.jp">NAOJ</a>
 
-# repo_url: https://github.com/monodera/pfs_target_uploader
+# repo_url: https://github.com/Subaru-PFS/spt_target_uploader
 # repo_name: PFS Target Uploader
 
 nav:
@@ -82,7 +82,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/monodera/pfs_target_uploader
+      link: https://github.com/Subaru-PFS/spt_target_uploader
       name: PFS Target Uploader on GitHub
 
 extra_css:
