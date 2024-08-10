@@ -119,25 +119,26 @@ Flux columns must conform to the following requirements.
 
 ✅ Good
 
-| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
-|---------|-------|-------------|-------|-------------|-------|-------------|
-| 1       | 10000 | 100         |       |             |       |             |
-| 2       | 20000 | 200         | 20000 |             |       |             |
-| 3       |       |             |       |             | 30000 | 300         |
+| ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
+|---------|-------|-------------|--------|--------------|-------|-------------|
+| 1       | 10000 | 100         |        |              |       |             |
+| 2       | 20000 | 200         | 20000  |              |       |             |
+| 3       |       |             |        |              | 30000 | 300         |
 
 ⚠️ OK
 
 - For the `ob_code 3`, `g_hsc` will be used and `g_ps1` will be ignored.
 
-| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
-|---------|-------|-------------|-------|-------------|-------|-------------|
-| 1       | 10000 | 100         |       |             |       |             |
-| 2       | 20000 | 200         | 20000 |             |       |             |
-| 3       | 35000 | 350         |       |             | 30000 | 300         |
+| ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
+|---------|-------|-------------|--------|--------------|-------|-------------|
+| 1       | 10000 | 100         |        |              |       |             |
+| 2       | 20000 | 200         | 20000  |              |       |             |
+| 3       | 35000 | 350         |        |              | 30000 | 300         |
 
 🚫 Bad
 
 - The `ob_code 1` does not have flux information at all.
+- The `i_hsc` must be either `i_old_hsc` or `i2_hsc`.
 
 | ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
 |---------|-------|-------------|-------|-------------|-------|-------------|

@@ -1,6 +1,16 @@
 # Welcome
 
-The [PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
+The [PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web app to validate and submit the target list
+supplied by users with an observing time estimate by a pointing simulation.
+
+!!! info
+    **August 10, 2024 (HST)**
+
+    In the examples of [input target lists](inputs.md), column names for fluxes are found to be incorrect
+    for the initial version released together with S25A CfP on August 5, 2024 (HST).
+    The `r`- (`i`-) band filters for HSC need to be either `r_old_hsc` or `r2_hsc` (`i_old_hsc` or `i2_hsc`).
+    We have updated the examples with correct information for the correct examples.
+    Please see the [Filters section](inputs.md#filters) for the details.
 
 ## Table of Contents
 
@@ -83,3 +93,9 @@ graph TD
 ## Demo
 
 ![type:video](videos/demo_v2.mp4){: style='width: 100%'}
+
+## Last Update
+
+August 10, 2024 (HST)
+
+See the [Releases on GitHub repository](https://github.com/Subaru-PFS/spt_target_uploader/releases) for the details.
