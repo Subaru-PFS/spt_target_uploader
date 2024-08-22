@@ -1182,6 +1182,7 @@ def ppp_result(
 
         obj_allo1 = obj_allo[obj_allo.argsort(keys="ppc_priority")]
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
+        """
         if len(uPPC) > 0:
             if "ppc_priority" in uPPC.colnames:
                 uPPC.remove_column("ppc_priority")
@@ -1193,6 +1194,12 @@ def ppp_result(
                 "Point_" + RESmode + "_" + str(count)
                 for count in (np.arange(0, len(obj_allo), 1) + 1)
             ]
+        #"""
+        obj_allo1["ppc_code"] = [
+            "Point_" + RESmode + "_" + str(count)
+            for count in (np.arange(0, len(obj_allo), 1) + 1)
+        ]
+        
         obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
