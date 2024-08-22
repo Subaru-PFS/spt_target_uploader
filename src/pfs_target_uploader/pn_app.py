@@ -927,6 +927,7 @@ def list_files_app(use_panel_cli=False):
                 )
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
+        _table_files_tgt_psl.on_click(open_panel_download)
 
         return _table_files_tgt_psl
 
