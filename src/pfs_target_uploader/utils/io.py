@@ -352,6 +352,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     tac_rot_l = np.zeros(n_files, dtype=float)
     tac_rot_m = np.zeros(n_files, dtype=float)
     single_exptime = np.full(n_files, 900, dtype=int)
+    observation_type = np.full(n_files, None, dtype=object)
 
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
@@ -390,6 +391,11 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 upload_ids[i] = tb_target.meta["upload_id"]
             except KeyError:
                 upload_ids[i] = None
+
+            try:
+                observation_type[i] = tb_target.meta["observation_type"]
+            except KeyError:
+                observation_type[i] = None
 
             try:
                 if isinstance(tb_target.meta["upload_at"], str):
@@ -467,6 +473,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "fullpath_tgt": fullpath_target,
             "fullpath_psl": fullpath_psl,
             "single_exptime": single_exptime,
+            "observation_type": observation_type,
         }
     )
 
