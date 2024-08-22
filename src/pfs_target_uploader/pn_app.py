@@ -687,7 +687,7 @@ def list_files_app(use_panel_cli=False):
             frozen_columns=["index"],
             pagination="remote",
             header_filters=True,
-            buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>"},
+            buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>", "download": "<i class='fa-solid fa-download'></i>"},
             layout="fit_data_table",
             hidden_columns=_hidden_columns,
             disabled=True,
@@ -710,6 +710,21 @@ def list_files_app(use_panel_cli=False):
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
         _table_files_tgt_psl.add_filter(slider_rot_l, "Time_tot_L (h)")
         _table_files_tgt_psl.add_filter(slider_rot_m, "Time_tot_M (h)")
+
+        # Open a file by clicking the download buttons
+        # https://discourse.holoviz.org/t/how-to-make-a-dynamic-link-in-panel/2137
+
+        def execute_javascript(script):
+            script = f'<script type="text/javascript">{script}</script>'
+            js_panel.object = script
+            js_panel.object = ""
+
+        def open_panel_download(event):
+            if event.column == "download":
+                href = df_files_tgt_psl["fullpath_tgt"][event.row]
+                # c.f. https://www.w3schools.com/jsref/met_win_open.asp
+                script = f"window.open('{href}', '_blank')"
+                execute_javascript(script)
 
         def open_panel_magnify(event):
             row_target = event.row
@@ -912,6 +927,7 @@ def list_files_app(use_panel_cli=False):
                 )
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
+        _table_files_tgt_psl.on_click(open_panel_download)
 
         return _table_files_tgt_psl
 
@@ -951,6 +967,7 @@ def list_files_app(use_panel_cli=False):
     table_ppc = pn.Column()
 
     # -------------------------------------------------------------------
+    js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
 
     sidebar_column = pn.Column(
         psl_info,
@@ -972,6 +989,7 @@ def list_files_app(use_panel_cli=False):
                 ),
                 column_checkbox,
                 table_files_tgt_psl,
+                js_panel,
             ),
         ),
         ("PPC details", table_ppc),
