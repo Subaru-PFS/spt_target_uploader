@@ -722,8 +722,12 @@ def list_files_app(use_panel_cli=False):
         def open_panel_download(event):
             if event.column == "download":
                 href = df_files_tgt_psl["fullpath_tgt"][event.row]
+                href_mod = href.replace(config["OUTPUT_DIR"], "data", 1)
+                logger.info(f"{href=}")
+                logger.info(f"{href_mod=}")
+
                 # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-                script = f"window.open('{href}', '_blank')"
+                script = f"window.open('{href_mod}', '_blank')"
                 execute_javascript(script)
 
         def open_panel_magnify(event):
