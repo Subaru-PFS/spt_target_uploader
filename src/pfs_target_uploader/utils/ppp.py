@@ -62,7 +62,7 @@ def PPPrunStart(
     ppp_quiet = quiet
 
     if weight_para is None:
-        weight_para = [2.02, 0.01, 0.01]
+        weight_para = [2.0, 0.0, 0.0]
 
     is_exetime = (exetime is not None) and (exetime > 0)
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
@@ -551,7 +551,7 @@ def PPPrunStart(
 
     def cobraMoveCost(dist):
         """optional: penalize assignments where the cobra has to move far out"""
-        return 0.1 * dist
+        return 0.0 * dist
 
     def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
@@ -591,7 +591,7 @@ def PPPrunStart(
             degenmoves=0,
             heuristics=0.8,
             mipfocus=0,
-            mipgap=5.0e-2,
+            mipgap=1.0e-4,
             LogToConsole=0,
         )
 
