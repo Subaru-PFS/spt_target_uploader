@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from .AnnouncementNoteWidgets import AnnouncementNoteWidgets
 from .buttons import RunPppButtonWidgets, SubmitButtonWidgets, ValidateButtonWidgets
 from .DatePickerWidgets import DatePickerWidgets
 from .DocLinkWidgets import DocLinkWidgets
@@ -30,4 +31,5 @@ __all__ = [
     "TargetWidgets",
     "UploadNoteWidgets",
     "ValidationResultWidgets",
+    "AnnouncementNoteWidgets",
 ]
