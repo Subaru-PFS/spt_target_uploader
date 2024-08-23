@@ -129,6 +129,7 @@ def upload_file(
     ppp_fig,
     outdir_prefix=".",
     origname="example.csv",
+    origname_ppc=None,
     origdata=None,
     secret_token=None,
     upload_time=None,
@@ -137,6 +138,7 @@ def upload_file(
     skip_subdirectories=False,
     single_exptime=900,
     observation_type="queue",
+    ppc_status="auto",
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
@@ -238,11 +240,13 @@ def upload_file(
             # add metadata
             obj.meta["original_filename"] = origname
             if not export:
+                obj.meta["original_filename_ppc"] = origname_ppc
                 obj.meta["upload_id"] = secret_token
                 obj.meta["upload_at"] = upload_time
                 obj.meta["ppp_status"] = ppp_status
                 obj.meta["single_exptime"] = single_exptime
                 obj.meta["observation_type"] = observation_type
+                obj.meta["ppc_status"] = ppc_status
             filename = f"{file_prefix}_{secret_token}.ecsv"
         elif type == "figure":
             filename = f"{file_prefix}_{secret_token}.html"
@@ -329,6 +333,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     n_files = len(dirs)
 
     orignames = np.full(n_files, None, dtype=object)
+    orignames_ppc = np.full(n_files, None, dtype=object)
     upload_ids = np.full(n_files, None, dtype=object)
     timestamps = np.full(n_files, None, dtype="datetime64[s]")
     filesizes = np.zeros(n_files, dtype=float)
@@ -353,6 +358,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     tac_rot_m = np.zeros(n_files, dtype=float)
     single_exptime = np.full(n_files, 900, dtype=int)
     observation_type = np.full(n_files, None, dtype=object)
+    ppc_status = np.full(n_files, None, dtype=object)
 
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
@@ -388,14 +394,14 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 orignames[i] = None
 
             try:
+                orignames_ppc[i] = tb_target.meta["original_filename_ppc"]
+            except KeyError:
+                orignames_ppc[i] = None
+
+            try:
                 upload_ids[i] = tb_target.meta["upload_id"]
             except KeyError:
                 upload_ids[i] = None
-
-            try:
-                observation_type[i] = tb_target.meta["observation_type"]
-            except KeyError:
-                observation_type[i] = None
 
             try:
                 if isinstance(tb_target.meta["upload_at"], str):
@@ -409,6 +415,16 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 single_exptime[i] = tb_target.meta["single_exptime"]
             except KeyError:
                 pass
+
+            try:
+                observation_type[i] = tb_target.meta["observation_type"]
+            except KeyError:
+                observation_type[i] = None
+
+            try:
+                ppc_status[i] = tb_target.meta["ppc_status"]
+            except KeyError:
+                ppc_status[i] = None
 
             n_obj[i] = tb_target["ob_code"].size
             t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
@@ -474,6 +490,8 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "fullpath_psl": fullpath_psl,
             "single_exptime": single_exptime,
             "observation_type": observation_type,
+            "pointing_status": ppc_status,
+            "Filename_pointing": orignames_ppc,
         }
     )
 
