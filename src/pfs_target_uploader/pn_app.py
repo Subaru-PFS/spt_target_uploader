@@ -17,6 +17,7 @@ from .utils.io import load_file_properties, load_input
 from .utils.mail import send_email
 from .utils.ppp import ppp_result_reproduce
 from .widgets import (
+    AnnouncementNoteWidgets,
     DatePickerWidgets,
     DocLinkWidgets,
     FileInputWidgets,
@@ -66,6 +67,17 @@ def target_uploader_app(use_panel_cli=False):
         clustering_algorithm = "HDBSCAN"
     else:
         clustering_algorithm = config["CLUSTERING_ALGORITHM"]
+
+    if "ANN_FILE" not in config.keys():
+        ann_file = None
+    elif config["ANN_FILE"] == "":
+        ann_file = None
+    elif not os.path.exists(config["ANN_FILE"]):
+        logger.error(f"{config['ANN_FILE']} not found")
+        ann_file = None
+    else:
+        logger.info(f"{config['ANN_FILE']} found")
+        ann_file = config["ANN_FILE"]
 
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
     logger.info(f"Maximum number of PPCs is set to {max_nppc}.")
@@ -124,6 +136,11 @@ def target_uploader_app(use_panel_cli=False):
     ]
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
+    placeholder_announcement = pn.Column(height=0, width=0)
+
+    if ann_file is not None:
+        panel_annoucement = AnnouncementNoteWidgets(ann_file)
+        placeholder_announcement[:] = [panel_annoucement.floatpanel]
 
     # if no file is uploaded, disable the buttons
     # This would work only at the first time the app is loaded.
@@ -252,6 +269,7 @@ def target_uploader_app(use_panel_cli=False):
 
     main_column = pn.Column(
         placeholder_floatpanel,
+        placeholder_announcement,
         tab_panels,
         margin=(30, 0, 0, 0),
     )
@@ -687,7 +705,10 @@ def list_files_app(use_panel_cli=False):
             frozen_columns=["index"],
             pagination="remote",
             header_filters=True,
-            buttons={"magnify": "<i class='fa-solid fa-magnifying-glass'></i>", "download": "<i class='fa-solid fa-download'></i>"},
+            buttons={
+                "magnify": "<i class='fa-solid fa-magnifying-glass'></i>",
+                "download": "<i class='fa-solid fa-download'></i>",
+            },
             layout="fit_data_table",
             hidden_columns=_hidden_columns,
             disabled=True,
