@@ -32,6 +32,7 @@ class PppResultWidgets:
         self.origname = None
         self.origname_ppc = None
         self.origdata = None
+        self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
         self.exetime: int = exetime
@@ -95,6 +96,7 @@ class PppResultWidgets:
         self.origname = None
         self.origname_ppc = None
         self.origdata = None
+        self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
         self.status_ = 0
@@ -190,6 +192,7 @@ class PppResultWidgets:
                 origname=self.origname,
                 origname_ppc=self.origname_ppc,
                 origdata=self.origdata,
+                origdata_ppc=self.origdata_ppc,
                 export=True,
             )
 
@@ -377,6 +380,7 @@ class PppResultWidgets:
             origname=self.origname,
             origname_ppc=self.origname_ppc,
             origdata=self.origdata,
+            origdata_ppc=self.origdata_ppc,
             secret_token=self.secret_token,
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,

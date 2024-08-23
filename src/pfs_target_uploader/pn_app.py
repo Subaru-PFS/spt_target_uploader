@@ -393,6 +393,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_ppp.origname = panel_input.file_input.filename
             panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
             panel_ppp.origdata = panel_input.file_input.value
+            panel_ppp.origdata_ppc = panel_input.file_input.value
             panel_ppp.df_summary = panel_status.df_summary
 
             if not validation_status["status"]:
@@ -499,6 +500,7 @@ def target_uploader_app(use_panel_cli=False):
         panel_ppp.origname = panel_input.file_input.filename
         panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
         panel_ppp.origdata = panel_input.file_input.value
+        panel_ppp.origdata_ppc = panel_input.file_input.value
         panel_ppp.upload_time = datetime.now(timezone.utc)
         panel_ppp.secret_token = panel_input.secret_token
 
