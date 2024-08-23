@@ -30,11 +30,14 @@ class PppResultWidgets:
         self.df_input = None
         self.df_summary = None
         self.origname = None
+        self.origname_ppc = None
         self.origdata = None
+        self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
         self.exetime: int = exetime
         self.max_nppc = max_nppc
+        self.status_ = 0
 
         self.ppp_title = pn.pane.Markdown(
             """# Results of PFS pointing simulation""",
@@ -91,9 +94,12 @@ class PppResultWidgets:
         self.df_input = None
         self.df_summary = None
         self.origname = None
+        self.origname_ppc = None
         self.origdata = None
+        self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
+        self.status_ = 0
 
     def show_results(self):
         logger.info("showing PPP results")
@@ -184,9 +190,12 @@ class PppResultWidgets:
                 self.df_summary,
                 p_fig,
                 origname=self.origname,
+                origname_ppc=self.origname_ppc,
                 origdata=self.origdata,
+                origdata_ppc=self.origdata_ppc,
                 export=True,
             )
+
             self.export_button.filename = outfile_zip
             return sio
 
@@ -280,7 +289,7 @@ class PppResultWidgets:
         quiet=True,
     ):
         if weights is None:
-            weights = [2.02, 0.01, 0.01]
+            weights = [2.0, 0.0, 0.0]
 
         self.df_input = df
         self.df_input["single_exptime"] = single_exptime
@@ -333,7 +342,6 @@ class PppResultWidgets:
             sub_m,
             obj_allo_M_fin,
             uS_M2,
-            tb_ppc,
             single_exptime=self.single_exptime,
             box_width=self.box_width,
         )
@@ -346,6 +354,7 @@ class PppResultWidgets:
         export=False,
         single_exptime=None,
         observation_type="queue",
+        ppc_status="auto",
     ):
         if single_exptime is None:
             single_exptime = self.single_exptime
@@ -369,12 +378,15 @@ class PppResultWidgets:
             ppp_fig,
             outdir_prefix=outdir_prefix,
             origname=self.origname,
+            origname_ppc=self.origname_ppc,
             origdata=self.origdata,
+            origdata_ppc=self.origdata_ppc,
             secret_token=self.secret_token,
             upload_time=self.upload_time,
             ppp_status=self.ppp_status,
             single_exptime=single_exptime,
             observation_type=observation_type,
+            ppc_status=ppc_status,
         )
 
         return outdir, outfile_zip, None
