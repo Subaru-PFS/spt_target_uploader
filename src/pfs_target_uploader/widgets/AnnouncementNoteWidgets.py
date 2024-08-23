@@ -14,7 +14,7 @@ class AnnouncementNoteWidgets:
 
             self.floatpanel = pn.layout.FloatPanel(
                 message,
-                name="Important Updates for Users",
+                name="Important Announcements for Users",
                 config={
                     "headerLogo": "<i style='margin-left: 0.5em;' class='fa-solid fa-circle-info fa-lg'></i>",
                 },
