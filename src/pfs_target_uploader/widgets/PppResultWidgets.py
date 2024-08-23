@@ -286,7 +286,7 @@ class PppResultWidgets:
         quiet=True,
     ):
         if weights is None:
-            weights = [2.02, 0.01, 0.01]
+            weights = [2.0, 0.0, 0.0]
 
         self.df_input = df
         self.df_input["single_exptime"] = single_exptime
