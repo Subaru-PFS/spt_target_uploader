@@ -1212,7 +1212,7 @@ def ppp_result(
             for count in (np.arange(0, len(obj_allo), 1) + 1)
         ]
 
-        obj_allo1 = obj_allo1.group_by("ppc_code")
+        #obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
