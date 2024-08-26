@@ -409,7 +409,9 @@ def target_uploader_app(use_panel_cli=False):
 
         try:
             panel_ppp.origname = panel_input.file_input.filename
+            panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
             panel_ppp.origdata = panel_input.file_input.value
+            panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
             panel_ppp.df_summary = panel_status.df_summary
 
             if not validation_status["status"]:
@@ -514,14 +516,24 @@ def target_uploader_app(use_panel_cli=False):
         panel_ppp.df_input = df_validated
         panel_ppp.df_summary = panel_status.df_summary
         panel_ppp.origname = panel_input.file_input.filename
+        panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
         panel_ppp.origdata = panel_input.file_input.value
+        panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
         panel_ppp.upload_time = datetime.now(timezone.utc)
         panel_ppp.secret_token = panel_input.secret_token
+
+        if panel_ppp.status_ == 2:
+            ppc_status_ = "user"
+        elif panel_ppp.status_ == 0:
+            ppc_status_ = "skip"
+        else:
+            ppc_status_ = "auto"
 
         outdir, outfile_zip, _ = panel_ppp.upload(
             outdir_prefix=config["OUTPUT_DIR"],
             single_exptime=panel_obs_type.single_exptime.value,
             observation_type=panel_obs_type.obs_type.value,
+            ppc_status=ppc_status_,
         )
 
         try:
@@ -596,6 +608,8 @@ def list_files_app(use_panel_cli=False):
 
     logger.info(f"config params from dotenv: {config}")
 
+    panel_targets = TargetWidgets()
+
     if not os.path.exists(config["OUTPUT_DIR"]):
         logger.error(f"{config['OUTPUT_DIR']} not found")
         raise ValueError
@@ -660,24 +674,7 @@ def list_files_app(use_panel_cli=False):
         step=1,
     )
 
-    # setup panel components
-
     # Target & psl summary table
-
-    """def execute_javascript(script):
-        script = f'<script type="text/javascript">{script}</script>'
-        js_panel.object = script
-        js_panel.object = ""
-
-    def open_panel_download(event):
-        if event.column == "download":
-            p_href = df_files_tgt["fullpath"][event.row].replace(
-                config["OUTPUT_DIR"], "data", 1
-            )
-            # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-            script = f"window.open('{p_href}', '_blank')"
-            execute_javascript(script)#"""
-
     def Table_files_tgt_psl(column_checkbox_):
         if psl_info_input.value is not None:
             df_psl_info = load_input(
@@ -743,8 +740,12 @@ def list_files_app(use_panel_cli=False):
         def open_panel_download(event):
             if event.column == "download":
                 href = df_files_tgt_psl["fullpath_tgt"][event.row]
+                # need to fix the path for the download
+                href_mod = href.replace(config["OUTPUT_DIR"], "data", 1)
+                logger.info(f"{href=}")
+                logger.info(f"{href_mod=}")
                 # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-                script = f"window.open('{href}', '_blank')"
+                script = f"window.open('{href_mod}', '_blank')"
                 execute_javascript(script)
 
         def open_panel_magnify(event):
@@ -753,7 +754,7 @@ def list_files_app(use_panel_cli=False):
                 table_ppc.clear()
 
                 # move to "PPC details" tab
-                tab_panels.active = 1
+                tab_panels.active = 2
 
                 u_id = _df_files_tgt_psl["Upload ID"][row_target]
                 p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"][row_target])[0]
@@ -771,6 +772,8 @@ def list_files_app(use_panel_cli=False):
                     )
                 except FileNotFoundError:
                     table_tac_t = Table()
+
+                panel_targets.show_results(Table.to_pandas(table_tgt_t))
 
                 (
                     nppc_fin,
@@ -793,7 +796,6 @@ def list_files_app(use_panel_cli=False):
                     raise ValueError
 
                 path_t_server = path_t_all[0]
-                tac_ppc_list_file_server = f"{path_t_server}/TAC_ppc_{u_id}.ecsv"
 
                 path_t = path_t_server.replace(config["OUTPUT_DIR"], "data", 1)
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
@@ -962,8 +964,8 @@ def list_files_app(use_panel_cli=False):
             "timestamp",
             "TAC_FH_L",
             "TAC_FH_M",
-            "TAC_nppc_L",
-            "TAC_nppc_M",
+            "observation_type",
+            "pointing_status",
         ],
         options=list(df_files_tgt_psl.columns)
         + ["proposal ID", "PI name", "rank", "grade"],
@@ -1013,6 +1015,7 @@ def list_files_app(use_panel_cli=False):
                 js_panel,
             ),
         ),
+        ("Target list", panel_targets.pane),
         ("PPC details", table_ppc),
     )
 

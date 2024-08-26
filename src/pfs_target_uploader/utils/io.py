@@ -129,7 +129,9 @@ def upload_file(
     ppp_fig,
     outdir_prefix=".",
     origname="example.csv",
+    origname_ppc=None,
     origdata=None,
+    origdata_ppc=None,
     secret_token=None,
     upload_time=None,
     ppp_status=True,
@@ -137,6 +139,7 @@ def upload_file(
     skip_subdirectories=False,
     single_exptime=900,
     observation_type="queue",
+    ppc_status="auto",
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
@@ -221,7 +224,7 @@ def upload_file(
     }
 
     for file_prefix, obj, type in zip(
-        ["target", "target_summary", "psl", "ppc", "ppp_figure", "", ""],
+        ["target", "target_summary", "psl", "ppc", "ppp_figure", "", "", ""],
         [
             tb_target,
             tb_target_summary,
@@ -229,33 +232,53 @@ def upload_file(
             tb_ppc,
             ppp_fig,
             origdata,
+            origdata_ppc,
             generate_readme_text(),
         ],
-        ["table", "table", "table", "table", "figure", "original", "readme"],
+        [
+            "table",
+            "table",
+            "table",
+            "table",
+            "figure",
+            "original",
+            "original_ppc",
+            "readme",
+        ],
     ):
         logger.info(f"Adding metadata to {file_prefix} file")
         if type == "table":
             # add metadata
             obj.meta["original_filename"] = origname
+            obj.meta["original_filename_ppc"] = origname_ppc
+            obj.meta["ppp_status"] = ppp_status
+            obj.meta["single_exptime"] = single_exptime
+            obj.meta["observation_type"] = observation_type
+            obj.meta["ppc_status"] = ppc_status
             if not export:
+                # add upload-related metadata
                 obj.meta["upload_id"] = secret_token
                 obj.meta["upload_at"] = upload_time
-                obj.meta["ppp_status"] = ppp_status
-                obj.meta["single_exptime"] = single_exptime
-                obj.meta["observation_type"] = observation_type
             filename = f"{file_prefix}_{secret_token}.ecsv"
         elif type == "figure":
             filename = f"{file_prefix}_{secret_token}.html"
         elif type == "original":
             filename = origname
+        elif type == "original_ppc":
+            filename = origname_ppc
         elif type == "readme":
             filename = "README.txt"
 
         outfiles_dict["filename"].append(filename)
         outfiles_dict["object"].append(obj)
         outfiles_dict["type"].append(type)
-        outfiles_dict["absname"].append(os.path.join(outdir, filename))
-        outfiles_dict["arcname"].append(os.path.join(outfile_zip_prefix, filename))
+
+        outfiles_dict["absname"].append(
+            os.path.join(outdir, filename) if filename is not None else None
+        )
+        outfiles_dict["arcname"].append(
+            os.path.join(outfile_zip_prefix, filename) if filename is not None else None
+        )
 
     outdir, outfile_zip, sio = upload_write(
         outfiles_dict, outfile_zip_prefix, outdir, export=export
@@ -275,6 +298,8 @@ def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
             if export:
                 dest = StringIO()
             else:
+                if outfiles_dict["filename"][i] is None:
+                    continue
                 dest = os.path.join(outdir, outfiles_dict["filename"][i])
 
             if outfiles_dict["type"][i] == "table":
@@ -304,14 +329,16 @@ def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
             arcname = outfiles_dict["arcname"][i]
 
             if export:
-                if outfiles_dict["type"][i] == "original":
-                    zipfile.writestr(arcname, outfiles_dict["object"][i])
+                if outfiles_dict["type"][i] in ["original", "original_ppc"]:
+                    if outfiles_dict["filename"][i] is not None:
+                        zipfile.writestr(arcname, outfiles_dict["object"][i])
                 else:
                     zipfile.writestr(arcname, dest.getvalue())
             else:
-                if outfiles_dict["type"][i] == "original":
-                    with open(dest, "wb") as f:
-                        f.write(outfiles_dict["object"][i])
+                if outfiles_dict["type"][i] in ["original", "original_ppc"]:
+                    if outfiles_dict["filename"][i] is not None:
+                        with open(dest, "wb") as f:
+                            f.write(outfiles_dict["object"][i])
                 zipfile.write(absname, arcname=outfiles_dict["arcname"][i])
 
             logger.info(f"File {outfiles_dict['filename'][i]} is saved under {outdir}.")
@@ -329,6 +356,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     n_files = len(dirs)
 
     orignames = np.full(n_files, None, dtype=object)
+    orignames_ppc = np.full(n_files, None, dtype=object)
     upload_ids = np.full(n_files, None, dtype=object)
     timestamps = np.full(n_files, None, dtype="datetime64[s]")
     filesizes = np.zeros(n_files, dtype=float)
@@ -353,6 +381,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     tac_rot_m = np.zeros(n_files, dtype=float)
     single_exptime = np.full(n_files, 900, dtype=int)
     observation_type = np.full(n_files, None, dtype=object)
+    ppc_status = np.full(n_files, None, dtype=object)
 
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
@@ -388,14 +417,14 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 orignames[i] = None
 
             try:
+                orignames_ppc[i] = tb_target.meta["original_filename_ppc"]
+            except KeyError:
+                orignames_ppc[i] = None
+
+            try:
                 upload_ids[i] = tb_target.meta["upload_id"]
             except KeyError:
                 upload_ids[i] = None
-
-            try:
-                observation_type[i] = tb_target.meta["observation_type"]
-            except KeyError:
-                observation_type[i] = None
 
             try:
                 if isinstance(tb_target.meta["upload_at"], str):
@@ -409,6 +438,16 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 single_exptime[i] = tb_target.meta["single_exptime"]
             except KeyError:
                 pass
+
+            try:
+                observation_type[i] = tb_target.meta["observation_type"]
+            except KeyError:
+                observation_type[i] = None
+
+            try:
+                ppc_status[i] = tb_target.meta["ppc_status"]
+            except KeyError:
+                ppc_status[i] = None
 
             n_obj[i] = tb_target["ob_code"].size
             t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
@@ -474,6 +513,8 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "fullpath_psl": fullpath_psl,
             "single_exptime": single_exptime,
             "observation_type": observation_type,
+            "pointing_status": ppc_status,
+            "Filename_pointing": orignames_ppc,
         }
     )
 

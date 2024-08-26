@@ -519,7 +519,8 @@ def PPPrunStart(
         int_ = 0
         for tt in sample:
             id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
-            targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
+            #targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
+            targetL.append(nf.ScienceTarget(id_, ra, dec, tm, tt["priority"], "sci"))
             int_ += 1
 
         return targetL
@@ -538,6 +539,7 @@ def PPPrunStart(
 
         classdict = {}
 
+        """
         int_ = 0
         for ii in sample:
             classdict["sci_P" + str(int_)] = {
@@ -546,6 +548,18 @@ def PPPrunStart(
                 "calib": False,
             }
             int_ += 1
+        #"""
+
+        classdict["sci_P0"] = {"nonObservationCost": 100, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P1"] = {"nonObservationCost": 90, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P2"] = {"nonObservationCost": 80, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P3"] = {"nonObservationCost": 70, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P4"] = {"nonObservationCost": 60, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P5"] = {"nonObservationCost": 50, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P6"] = {"nonObservationCost": 40, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P7"] = {"nonObservationCost": 30, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P8"] = {"nonObservationCost": 20, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P9"] = {"nonObservationCost": 10, "partialObservationCost": 200, "calib": False,}
 
         return classdict
 
@@ -895,8 +909,6 @@ def PPPrunStart(
             # if total number of ppc > max_nppc (~5 nights), then directly stop
         """
 
-        status = 999
-
         if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
             # remove ppc with no fiber assignment
             obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
@@ -924,7 +936,9 @@ def PPPrunStart(
                     uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
                 )  # remained exposure time
 
-                uS_t2 = PPP_centers(uS_t1, [], True, weight_para, starttime, exetime)[0]
+                uS_t2, status = PPP_centers(
+                    uS_t1, [], True, weight_para, starttime, exetime
+                )
 
                 obj_allo_t = netflowRun(uS_t2)
 
@@ -1100,7 +1114,6 @@ def ppp_result(
     sub_m,
     obj_allo_m,
     uS_M2,
-    uPPC,
     single_exptime=900,
     d_pfi=1.38,
     box_width=1200.0,
@@ -1130,7 +1143,6 @@ def ppp_result(
         )
 
     def overheads(n_sci_frame):
-
         t_night_hours: float = 10.0  # [h] total observing time per night
 
         # in seconds
@@ -1200,7 +1212,7 @@ def ppp_result(
             for count in (np.arange(0, len(obj_allo), 1) + 1)
         ]
 
-        obj_allo1 = obj_allo1.group_by("ppc_code")
+        #obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
@@ -1750,6 +1762,8 @@ def ppp_result_reproduce(
         else:
             admin_slider_ini_value = nppc_usr.data[0]
 
+        legend_cols = 2 if len(sub) >= 6 else 1
+
         nppc = pn.widgets.EditableFloatSlider(
             name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
             format="1[.]000",
@@ -1913,6 +1927,7 @@ def ppp_result_reproduce(
                     show_grid=True,
                     shared_axes=False,
                     height=int(plot_height * 0.5),
+                    legend_cols=legend_cols,
                 )
             else:
                 p_ppc_tot = (p_tgt).opts(
@@ -1926,6 +1941,7 @@ def ppp_result_reproduce(
                     show_grid=True,
                     shared_axes=False,
                     height=plot_height,
+                    legend_cols=legend_cols,
                 )
 
             # update completion rates as a function of PPC ID
@@ -1949,6 +1965,8 @@ def ppp_result_reproduce(
                 toolbar="left",
                 active_tools=["box_zoom"],
                 height=int(plot_height * 0.5),
+                legend_cols=legend_cols,
+                legend_offset=(10, -30),
             )
 
             p_comp_tot_n = (
@@ -1961,6 +1979,8 @@ def ppp_result_reproduce(
                 toolbar="left",
                 active_tools=["box_zoom"],
                 height=int(plot_height * 0.5),
+                legend_cols=legend_cols,
+                legend_offset=(10, -30),
             )
 
             """
