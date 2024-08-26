@@ -62,7 +62,7 @@ def PPPrunStart(
     ppp_quiet = quiet
 
     if weight_para is None:
-        weight_para = [2.0, 0.0, 0.0]
+        weight_para = [2.02, 0.01, 0.01]
 
     is_exetime = (exetime is not None) and (exetime > 0)
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
@@ -519,7 +519,8 @@ def PPPrunStart(
         int_ = 0
         for tt in sample:
             id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
-            targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
+            #targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
+            targetL.append(nf.ScienceTarget(id_, ra, dec, tm, tt["priority"], "sci"))
             int_ += 1
 
         return targetL
@@ -538,6 +539,7 @@ def PPPrunStart(
 
         classdict = {}
 
+        """
         int_ = 0
         for ii in sample:
             classdict["sci_P" + str(int_)] = {
@@ -546,12 +548,24 @@ def PPPrunStart(
                 "calib": False,
             }
             int_ += 1
+        #"""
+
+        classdict["sci_P0"] = {"nonObservationCost": 100, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P1"] = {"nonObservationCost": 90, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P2"] = {"nonObservationCost": 80, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P3"] = {"nonObservationCost": 70, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P4"] = {"nonObservationCost": 60, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P5"] = {"nonObservationCost": 50, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P6"] = {"nonObservationCost": 40, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P7"] = {"nonObservationCost": 30, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P8"] = {"nonObservationCost": 20, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P9"] = {"nonObservationCost": 10, "partialObservationCost": 200, "calib": False,}
 
         return classdict
 
     def cobraMoveCost(dist):
         """optional: penalize assignments where the cobra has to move far out"""
-        return 0.0 * dist
+        return 0.1 * dist
 
     def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
         """run netflow (without iteration)
@@ -591,7 +605,7 @@ def PPPrunStart(
             degenmoves=0,
             heuristics=0.8,
             mipfocus=0,
-            mipgap=1.0e-4,
+            mipgap=5.0e-2,
             LogToConsole=0,
         )
 
@@ -1198,7 +1212,7 @@ def ppp_result(
             for count in (np.arange(0, len(obj_allo), 1) + 1)
         ]
 
-        obj_allo1 = obj_allo1.group_by("ppc_code")
+        #obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
