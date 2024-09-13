@@ -583,6 +583,7 @@ def target_uploader_app(use_panel_cli=False):
                 ],
                 disabled=True,
             )
+        panel_input.assign_secret_token()
         panel_timer.timer(False)
 
     # set callback to the buttons
