@@ -61,6 +61,11 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.mime_type = None
         self.file_input.value = None
 
+    def assign_secret_token(self, nbytes=8):
+        st = secrets.token_hex(nbytes)
+        self.secret_token = st
+        logger.info(f"Assigning a new secret token as an upload_id: {st}")
+
     def validate(self, date_begin=None, date_end=None, warn_threshold=100000):
         t_start = time.time()
         if date_begin >= date_end:
@@ -75,14 +80,13 @@ class FileInputWidgets(param.Parameterized):
             or (self.file_input.value != self.previous_value)
             or (self.file_input.mime_type != self.previous_mime_type)
         ):
-            st = secrets.token_hex(8)
+
+            self.assign_secret_token()
 
             logger.info("New file detected.")
-            logger.info(f"    Upload ID updated: {st}")
+            logger.info(f"    Upload ID updated: {self.secret_token}")
             logger.info(f"    Filename: {self.file_input.filename}")
             logger.info(f"    MIME Type: {self.file_input.mime_type}")
-
-            self.secret_token = st
 
             self.previous_filename = self.file_input.filename
             self.previous_value = self.file_input.value
