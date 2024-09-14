@@ -216,8 +216,9 @@ def simulate(
         _,  # ppp_status
     ) = PPPrunStart(
         tb_visible,
-        None,
-        max_exec_time,
+        None,  # uPPC
+        None,  # weight_para
+        exetime=max_exec_time,
         max_nppc=max_nppc,
         single_exptime=single_exptime,
     )
