@@ -781,6 +781,13 @@ def list_files_app(use_panel_cli=False):
             if len(row_select) > 0:
                 tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
                 filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
+                filepath_zip_href = os.path.join(
+                    tmpdir.replace(config["OUTPUT_DIR"], "data/", 1),
+                    f"{prefix_}_selected.zip",
+                ).replace("//", "/")
+                # print(f"{tmpdir=}")
+                # print(f"{filepath_zip=}")
+                # print(f"{filepath_zip_href=}")
 
                 if not os.path.exists(tmpdir):
                     logger.info(f"{tmpdir} not found. Creating...")
@@ -798,7 +805,8 @@ def list_files_app(use_panel_cli=False):
                 logger.info(f"Zipfile saved under {filepath_zip}")
             else:
                 filepath_zip = None
-            return filepath_zip
+                filepath_zip_href = None
+            return filepath_zip_href
 
         def download_select(event):
             filepath_zip = zip_select()
