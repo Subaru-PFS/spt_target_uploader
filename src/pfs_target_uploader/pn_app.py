@@ -4,6 +4,7 @@ import glob
 import os
 from datetime import datetime, timezone
 from io import BytesIO
+from zipfile import ZipFile
 
 import gurobipy
 import numpy as np
@@ -12,8 +13,6 @@ import panel as pn
 from astropy.table import Table
 from dotenv import dotenv_values
 from loguru import logger
-
-from zipfile import ZipFile
 
 from .utils.io import load_file_properties, load_input
 from .utils.mail import send_email
@@ -780,7 +779,16 @@ def list_files_app(use_panel_cli=False):
             row_select = _table_files_tgt_psl.selection
 
             if len(row_select) > 0:
-                filepath_zip = f"{config['OUTPUT_DIR']}/temp/{prefix_}_selected.zip"
+                tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
+                filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
+
+                if not os.path.exists(tmpdir):
+                    logger.info(f"{tmpdir} not found. Creating...")
+                    os.makedirs(tmpdir)
+
+                if os.path.exists(filepath_zip):
+                    logger.info(f"{filepath_zip} already exists. Removing...")
+                    os.remove(filepath_zip)
 
                 with ZipFile(filepath_zip, "w") as zipfile:
                     for filepath_ in _table_files_tgt_psl.value[column_][row_select]:
@@ -796,7 +804,7 @@ def list_files_app(use_panel_cli=False):
             filepath_zip = zip_select()
             if filepath_zip is None:
                 pn.state.notifications.error(
-                    f"Can not download due to no selected program.",
+                    "Can not download due to no selected program.",
                     duration=5000,
                 )
             else:
@@ -1041,6 +1049,7 @@ def list_files_app(use_panel_cli=False):
         options=["Target", "PPC", "PPC (after allocation)"],
         inline=True,
         align="center",
+        margin=(0, 0, 0, 25),
     )
 
     # summary of tac allocation
