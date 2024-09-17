@@ -13,9 +13,7 @@ from astropy.table import Table
 from dotenv import dotenv_values
 from loguru import logger
 
-from io import BytesIO
 from zipfile import ZipFile
-import time
 
 from .utils.io import load_file_properties, load_input
 from .utils.mail import send_email
