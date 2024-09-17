@@ -216,8 +216,9 @@ def simulate(
         _,  # ppp_status
     ) = PPPrunStart(
         tb_visible,
-        None,
-        max_exec_time,
+        None,  # uPPC
+        None,  # weight_para
+        exetime=max_exec_time,
         max_nppc=max_nppc,
         single_exptime=single_exptime,
     )
@@ -317,9 +318,9 @@ def start_app(
     # pn.state.notifications.position = "bottom-left"
 
     if app == "uploader":
-        from ..pn_app import target_uploader_app as pn_app
+        from ..pn_app import target_uploader_app as panel_app
     elif app == "admin":
-        from ..pn_app import list_files_app as pn_app
+        from ..pn_admin import list_files_app as panel_app
 
     if allow_websocket_origin is None:
         allow_websocket_origin = ["localhost"]
@@ -363,7 +364,7 @@ def start_app(
 
     # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
     pn.serve(
-        pn_app,
+        panel_app,
         port=port,
         prefix=prefix,
         use_xheaders=use_xheaders,

@@ -365,6 +365,8 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     links = np.full(n_files, None, dtype=object)
 
     fullpath_target = np.full(n_files, None, dtype=object)
+    fullpath_ppc = np.full(n_files, None, dtype=object)
+    fullpath_ppc_tac = np.full(n_files, None, dtype=object)
     fullpath_psl = np.full(n_files, None, dtype=object)
 
     exp_sci_l = np.zeros(n_files, dtype=float)
@@ -373,6 +375,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     exp_sci_fh_m = np.zeros(n_files, dtype=float)
     tot_time_l = np.zeros(n_files, dtype=float)
     tot_time_m = np.zeros(n_files, dtype=float)
+    tac_done = np.full(n_files, False, dtype=bool)
     tac_fh_l = np.zeros(n_files, dtype=float)
     tac_fh_m = np.zeros(n_files, dtype=float)
     tac_nppc_l = np.zeros(n_files, dtype=int)
@@ -387,8 +390,10 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
         uid = d[-n_uid:]
         if ext == "ecsv":
             f_target = os.path.join(d, f"target_{uid}.{ext}")
+            f_ppc = os.path.join(d, f"ppc_{uid}.{ext}")
             f_psl = os.path.join(d, f"psl_{uid}.{ext}")
             f_tac = os.path.join(d, f"TAC_psl_{uid}.{ext}")
+            f_tac_ppc = os.path.join(d, f"TAC_ppc_{uid}.{ext}")
 
             try:
                 tb_target = Table.read(f_target)
@@ -405,10 +410,15 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             except FileNotFoundError:
                 tb_tac = Table()
 
+            if len(tb_tac) > 0:
+                tac_done[i] = True
+                fullpath_ppc_tac[i] = f_tac_ppc
+
             filesizes[i] = (os.path.getsize(f_target) * u.byte).to(u.kbyte).value
             # links[i] = f"<a href='{f_target}'><i class='fa-solid fa-download'></i></a>"
 
             fullpath_target[i] = f_target
+            fullpath_ppc[i] = f_ppc
             fullpath_psl[i] = f_psl
 
             try:
@@ -492,6 +502,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     df_psl_tgt = pd.DataFrame(
         {
             "Upload ID": upload_ids,
+            "TAC_done": tac_done,
             "n_obj": n_obj,
             "Exptime_tgt (FH)": t_exp,
             "Exptime_sci_L (h)": exp_sci_l,
@@ -510,6 +521,8 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "filesize": filesizes,
             "timestamp": timestamps,
             "fullpath_tgt": fullpath_target,
+            "fullpath_ppc": fullpath_ppc,
+            "fullpath_ppc_tac": fullpath_ppc_tac,
             "fullpath_psl": fullpath_psl,
             "single_exptime": single_exptime,
             "observation_type": observation_type,

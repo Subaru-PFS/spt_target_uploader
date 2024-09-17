@@ -519,7 +519,7 @@ def PPPrunStart(
         int_ = 0
         for tt in sample:
             id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
-            #targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
+            # targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
             targetL.append(nf.ScienceTarget(id_, ra, dec, tm, tt["priority"], "sci"))
             int_ += 1
 
@@ -550,16 +550,56 @@ def PPPrunStart(
             int_ += 1
         #"""
 
-        classdict["sci_P0"] = {"nonObservationCost": 100, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P1"] = {"nonObservationCost": 90, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P2"] = {"nonObservationCost": 80, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P3"] = {"nonObservationCost": 70, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P4"] = {"nonObservationCost": 60, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P5"] = {"nonObservationCost": 50, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P6"] = {"nonObservationCost": 40, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P7"] = {"nonObservationCost": 30, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P8"] = {"nonObservationCost": 20, "partialObservationCost": 200, "calib": False,}
-        classdict["sci_P9"] = {"nonObservationCost": 10, "partialObservationCost": 200, "calib": False,}
+        classdict["sci_P0"] = {
+            "nonObservationCost": 100,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P1"] = {
+            "nonObservationCost": 90,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P2"] = {
+            "nonObservationCost": 80,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P3"] = {
+            "nonObservationCost": 70,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P4"] = {
+            "nonObservationCost": 60,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P5"] = {
+            "nonObservationCost": 50,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P6"] = {
+            "nonObservationCost": 40,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P7"] = {
+            "nonObservationCost": 30,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P8"] = {
+            "nonObservationCost": 20,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
+        classdict["sci_P9"] = {
+            "nonObservationCost": 10,
+            "partialObservationCost": 200,
+            "calib": False,
+        }
 
         return classdict
 
@@ -966,7 +1006,7 @@ def PPPrunStart(
 
     uS_L = uS[uS["resolution"] == "L"]
     uS_M = uS[uS["resolution"] == "M"]
-    if len(uPPC) > 0:
+    if (uPPC is not None) and (len(uPPC) > 0):
         uPPC_L = uPPC[uPPC["ppc_resolution"] == "L"]
         uPPC_M = uPPC[uPPC["ppc_resolution"] == "M"]
     else:
@@ -1212,9 +1252,9 @@ def ppp_result(
             for count in (np.arange(0, len(obj_allo), 1) + 1)
         ]
 
-        #obj_allo1 = obj_allo1.group_by("ppc_code")
+        # obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
-        obj_allo2 = Table.to_pandas(obj_allo1)
+        obj_allo2 = Table.to_pandas(obj_allo1)        
         uS_ = Table.to_pandas(uS)
 
         # add a column to indicate the color for the scatter plot
