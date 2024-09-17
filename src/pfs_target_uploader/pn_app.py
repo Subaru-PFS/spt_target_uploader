@@ -4,6 +4,7 @@ import glob
 import os
 from datetime import datetime, timezone
 from io import BytesIO
+from zipfile import ZipFile
 
 import gurobipy
 import numpy as np
@@ -654,25 +655,29 @@ def list_files_app(use_panel_cli=False):
         start=np.floor(df_files_tgt_psl["n_obj"].min() / 10) * 10,
         end=np.ceil(df_files_tgt_psl["n_obj"].max() / 10) * 10,
         step=1,
+        width=350,
     )
     slider_fiberhour = pn.widgets.EditableRangeSlider(
         name="Fiberhour (h)",
         start=np.floor(df_files_tgt_psl["Exptime_tgt (FH)"].min()),
         end=np.ceil(df_files_tgt_psl["Exptime_tgt (FH)"].max()),
         step=1,
+        width=350,
     )
 
     slider_rot_l = pn.widgets.EditableRangeSlider(
-        name="ROT (low, h)",
+        name="ROT_low (h)",
         start=np.floor(df_files_tgt_psl["Time_tot_L (h)"].min()),
         end=np.ceil(df_files_tgt_psl["Time_tot_L (h)"].max()),
         step=1,
+        width=350,
     )
     slider_rot_m = pn.widgets.EditableRangeSlider(
-        name="ROT (medium, h)",
+        name="ROT_med (h)",
         start=np.floor(df_files_tgt_psl["Time_tot_M (h)"].min()),
         end=np.ceil(df_files_tgt_psl["Time_tot_M (h)"].max()),
         step=1,
+        width=350,
     )
 
     # Target & psl summary table
@@ -692,7 +697,7 @@ def list_files_app(use_panel_cli=False):
 
         _hidden_columns = list(
             set(list(_df_files_tgt_psl.columns)) - set(column_checkbox_)
-        )
+        ) + ["index"]
 
         _table_files_tgt_psl = pn.widgets.Tabulator(
             _df_files_tgt_psl,
@@ -712,8 +717,15 @@ def list_files_app(use_panel_cli=False):
             disabled=True,
             selection=[],
             selectable="checkbox",
+            formatters={"TAC_done": {"type": "tickCross"}},
+            text_align={
+                "TAC_done": "center",
+                "observation_type": "center",
+                "pointing_status": "center",
+            },
         )
 
+        """
         dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
         upload_id_tacFin = [
             tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
@@ -724,6 +736,7 @@ def list_files_app(use_panel_cli=False):
             np.in1d(_table_files_tgt_psl.value["Upload ID"], upload_id_tacFin) == True
         )[0]
         _table_files_tgt_psl.selection = [int(tt) for tt in row_tacFin]
+        #"""
 
         _table_files_tgt_psl.add_filter(slider_nobj, "n_obj")
         _table_files_tgt_psl.add_filter(slider_fiberhour, "t_exp")
@@ -740,14 +753,73 @@ def list_files_app(use_panel_cli=False):
 
         def open_panel_download(event):
             if event.column == "download":
-                href = df_files_tgt_psl["fullpath_tgt"][event.row]
+                href_tgt = df_files_tgt_psl["fullpath_tgt"][event.row]
+                href_ppc = df_files_tgt_psl["fullpath_ppc"][event.row]
                 # need to fix the path for the download
-                href_mod = href.replace(config["OUTPUT_DIR"], "data", 1)
-                logger.info(f"{href=}")
-                logger.info(f"{href_mod=}")
+                href_mod_tgt = href_tgt.replace(config["OUTPUT_DIR"], "data", 1)
+                href_mod_ppc = href_ppc.replace(config["OUTPUT_DIR"], "data", 1)
+                logger.info(f"{href_tgt=}")
+                logger.info(f"{href_mod_tgt=}")
                 # c.f. https://www.w3schools.com/jsref/met_win_open.asp
-                script = f"window.open('{href_mod}', '_blank')"
-                execute_javascript(script)
+                script_tgt = f"window.open('{href_mod_tgt}', '_blank')"
+                script_ppc = f"window.open('{href_mod_ppc}', '_blank')"
+                execute_javascript(script_tgt)
+                execute_javascript(script_ppc)
+
+        def zip_select():
+            if download_group.value == "Target":
+                column_ = "fullpath_tgt"
+                prefix_ = "target"
+            elif download_group.value == "PPC":
+                column_ = "fullpath_ppc"
+                prefix_ = "ppc"
+            elif download_group.value == "PPC (after allocation)":
+                column_ = "fullpath_ppc_tac"
+                prefix_ = "ppc_tac"
+
+            row_select = _table_files_tgt_psl.selection
+
+            if len(row_select) > 0:
+                tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
+                filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
+                filepath_zip_href = os.path.join(
+                    tmpdir.replace(config["OUTPUT_DIR"], "data/", 1),
+                    f"{prefix_}_selected.zip",
+                ).replace("//", "/")
+                # print(f"{tmpdir=}")
+                # print(f"{filepath_zip=}")
+                # print(f"{filepath_zip_href=}")
+
+                if not os.path.exists(tmpdir):
+                    logger.info(f"{tmpdir} not found. Creating...")
+                    os.makedirs(tmpdir)
+
+                if os.path.exists(filepath_zip):
+                    logger.info(f"{filepath_zip} already exists. Removing...")
+                    os.remove(filepath_zip)
+
+                with ZipFile(filepath_zip, "w") as zipfile:
+                    for filepath_ in _table_files_tgt_psl.value[column_][row_select]:
+                        if filepath_ is not None:
+                            zipfile.write(filepath_, os.path.basename(filepath_))
+                zipfile.close()
+                logger.info(f"Zipfile saved under {filepath_zip}")
+            else:
+                filepath_zip = None
+                filepath_zip_href = None
+            return filepath_zip_href
+
+        def download_select(event):
+            filepath_zip = zip_select()
+            if filepath_zip is None:
+                pn.state.notifications.error(
+                    "Can not download due to no selected program.",
+                    duration=5000,
+                )
+            else:
+                script_list_select = f"window.open('{filepath_zip}')"
+                execute_javascript(script_list_select)
+                logger.info(f"{filepath_zip} downloaded")
 
         def open_panel_magnify(event):
             row_target = event.row
@@ -801,13 +873,12 @@ def list_files_app(use_panel_cli=False):
                 path_t = path_t_server.replace(config["OUTPUT_DIR"], "data", 1)
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
 
-                logger.info(f"{_table_files_tgt_psl.selection}")
                 logger.info(f"{row_target=}")
-                if row_target in _table_files_tgt_psl.selection:
+                if _df_files_tgt_psl["TAC_done"][row_target]:
                     # make the ppc list downloadable
                     fd_link = pn.pane.Markdown(
-                        f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the PPC list</a>)</font>",
-                        margin=(0, 0, 0, -15),
+                        f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the allocated PPC list</a>)</font>",
+                        margin=(0, 0, 0, -40),
                     )
                     logger.info("TAC PPC list is already available.")
 
@@ -825,9 +896,10 @@ def list_files_app(use_panel_cli=False):
                         f"File TAC_ppc_{u_id}.ecsv is saved under {path_t_server}."
                     )
                     # make the ppc list downloadable
-                    fd_link.object = f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the PPC list</a>)</font>"
+                    fd_link.object = f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the allocated PPC list</a>)</font>"
 
-                    Table.from_pandas(p_result_tab.value).write(
+                    tb_tac_psl_t = Table.from_pandas(p_result_tab.value)
+                    tb_tac_psl_t.write(
                         f"{path_t_server}/TAC_psl_{u_id}.ecsv",
                         format="ascii.ecsv",
                         delimiter=",",
@@ -838,13 +910,8 @@ def list_files_app(use_panel_cli=False):
                     )
 
                     # update tac allocation in program info tab
-                    dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
-                    path_ = [path_t for path_t in dirs if "TAC_psl_" + u_id in path_t][
-                        0
-                    ]
-                    tb_tac_psl_t = Table.read(path_)
-
                     if sum(tb_tac_psl_t["resolution"] == "low") > 0:
+                        _df_files_tgt_psl["TAC_done"][row_target] = True
                         _df_files_tgt_psl["TAC_FH_L"][row_target] = tb_tac_psl_t[
                             "Texp (fiberhour)"
                         ][tb_tac_psl_t["resolution"] == "low"]
@@ -856,6 +923,7 @@ def list_files_app(use_panel_cli=False):
                         ][tb_tac_psl_t["resolution"] == "low"]
 
                     if sum(tb_tac_psl_t["resolution"] == "medium") > 0:
+                        _df_files_tgt_psl["TAC_done"][row_target] = True
                         _df_files_tgt_psl["TAC_FH_M"][row_target] = tb_tac_psl_t[
                             "Texp (fiberhour)"
                         ][tb_tac_psl_t["resolution"] == "medium"]
@@ -868,32 +936,18 @@ def list_files_app(use_panel_cli=False):
 
                     _table_files_tgt_psl.value = _df_files_tgt_psl
 
-                    # select rows which complete the tac allocation
-                    upload_id_tacFin = [
-                        tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
-                        for tt in dirs
-                        if "TAC_psl_" in tt
-                    ]
-
-                    row_tacFin = np.where(
-                        np.in1d(
-                            _table_files_tgt_psl.value["Upload ID"], upload_id_tacFin
-                        )
-                        == True
-                    )[0]
-                    _table_files_tgt_psl.selection = [int(tt) for tt in row_tacFin]
-
                     # update tac allocation summary
                     tac_summary.object = (
-                        "<font size=5>Summary of Tac allocation:</font>\n"
+                        "<font size=5>Summary of TAC allocation:</font>\n"
+                        f"<font size=4> - N (allocated programs): <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_done']):.0f}**</span></font>\n"
                         "<font size=4> - Low-res mode: </font>\n"
-                        f"<font size=4> **FH** allocated= <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
-                        f"<font size=4> **Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
-                        f"<font size=4> **ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
+                        f"<font size=4>&emsp;**FH** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
+                        f"<font size=4>&emsp;**Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
+                        f"<font size=4>&emsp;**ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
                         "<font size=4> - Medium-res mode: </font>\n"
-                        f"<font size=4> **FH** allocated= <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
-                        f"<font size=4> **Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
-                        f"<font size=4> **ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
+                        f"<font size=4>&emsp;**FH** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
+                        f"<font size=4>&emsp;**Nppc** allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
+                        f"<font size=4>&emsp;**ROT** (h) allocated = <span style='color:tomato'>**{sum(_df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
                     )
                     pn.state.notifications.info(
                         "TAC allocation is made for the program and a new PPC list is saved.",
@@ -920,10 +974,10 @@ def list_files_app(use_panel_cli=False):
                         margin=(20, 0, 0, 0),
                     )
 
-                    if row_target not in _table_files_tgt_psl.selection:
+                    if not _df_files_tgt_psl["TAC_done"][row_target]:
                         fd_link = pn.pane.Markdown(
-                            "<font size=4>(Download the PPC list)</font>",
-                            margin=(0, 0, 0, -15),
+                            "<font size=4>(Download the allocated PPC list)</font>",
+                            margin=(0, 0, 0, -40),
                         )
 
                     fd_success.on_click(tab_ppc_save)
@@ -952,6 +1006,7 @@ def list_files_app(use_panel_cli=False):
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
         _table_files_tgt_psl.on_click(open_panel_download)
+        download_selection.on_click(download_select)
 
         return _table_files_tgt_psl
 
@@ -959,6 +1014,7 @@ def list_files_app(use_panel_cli=False):
         name=" ",
         value=[
             "Upload ID",
+            "TAC_done",
             "n_obj",
             "Time_tot_L (h)",
             "Time_tot_M (h)",
@@ -974,17 +1030,49 @@ def list_files_app(use_panel_cli=False):
 
     table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
 
+    # download buttons
+    download_selection = pn.widgets.Button(
+        name="Download all the selected programs",
+        icon="download",
+        button_type="primary",
+        stylesheets=[
+            """
+            .bk-btn {
+                color: var(--success-text-color) !important;
+                background-color: #C7E2D6 !important;
+                border-color: var(--success-border-subtle) !important;
+                border-width: 1px;
+                font-weight: bold !important;
+                font-size: 140% !important;
+                // color: #145B33;
+                // background-color: #eaf4fc;
+                // background-color: var(--success-bg-color);
+                // border-color: #008899;
+            }
+        """
+        ],
+        width=300,
+    )
+    download_group = pn.widgets.RadioBoxGroup(
+        value="Target",
+        options=["Target", "PPC", "PPC (after allocation)"],
+        inline=True,
+        align="center",
+        margin=(0, 0, 0, 25),
+    )
+
     # summary of tac allocation
     tac_summary = pn.pane.Markdown(
-        "<font size=5>Summary of Tac allocation:</font>\n"
+        "<font size=5>Summary of TAC allocation:</font>\n"
+        f"<font size=4> - N (allocated programs): <span style='color:tomato'>**{sum((df_files_tgt_psl['TAC_nppc_L']>0) | (df_files_tgt_psl['TAC_nppc_M']>0)):.0f}**</span></font>\n"
         "<font size=4> - Low-res mode: </font>\n"
-        f"<font size=4> FH allocated= <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
-        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
-        f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
+        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
+        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
+        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
         "<font size=4> - Medium-res mode: </font>\n"
-        f"<font size=4> FH allocated= <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
-        f"<font size=4> Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
-        f"<font size=4> ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
+        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
+        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
+        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
     )
 
     # Details of PPC
@@ -995,11 +1083,6 @@ def list_files_app(use_panel_cli=False):
 
     sidebar_column = pn.Column(
         psl_info,
-        pn.pane.Markdown("<font size=4> Select the proposals to show:</font>"),
-        slider_nobj,
-        slider_fiberhour,
-        slider_rot_l,
-        slider_rot_m,
         tac_summary,
     )
 
@@ -1012,6 +1095,18 @@ def list_files_app(use_panel_cli=False):
                     height=20,
                 ),
                 column_checkbox,
+                pn.pane.Markdown(
+                    "<font size=4> Select the proposals to show:</font>",
+                    height=35,
+                ),
+                pn.Row(
+                    slider_nobj,
+                    slider_fiberhour,
+                    slider_rot_l,
+                    slider_rot_m,
+                    height=60,
+                ),
+                pn.Row(download_selection, download_group),
                 table_files_tgt_psl,
                 js_panel,
             ),
