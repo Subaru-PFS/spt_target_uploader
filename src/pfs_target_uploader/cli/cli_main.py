@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import date
 from enum import Enum
+from pathlib import Path
 from typing import Annotated, List
 
 import pandas as pd
@@ -13,7 +14,7 @@ from astropy.table import Table
 from loguru import logger
 
 from ..utils.checker import validate_input
-from ..utils.db import bulk_insert_uid_db, create_uid_db
+from ..utils.db import bulk_insert_uid_db, create_uid_db, remove_duplicate_uid_db
 from ..utils.io import load_input, upload_file
 from ..utils.ppp import PPPrunStart, ppp_result
 from ..widgets import StatusWidgets
@@ -410,12 +411,21 @@ def uid2sqlite(
             help="Directory to scan for the upload_id. Default is None (use input file)",
         ),
     ] = None,
+    remove_duplicates: Annotated[
+        bool,
+        typer.Option(
+            "--clean",
+            help="Remove duplicates from the database. Default is False.",
+        ),
+    ] = False,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
     logger.remove(0)
     logger.add(sys.stderr, level=log_level.value)
+
+    db_path = os.path.join(output_dir, dbfile)
 
     if input_list is not None:
         df_input = pd.read_csv(input_list)
@@ -432,9 +442,45 @@ def uid2sqlite(
     if not os.path.exists(output_dir):
         raise FileNotFoundError(f"Output directory not found: {output_dir}")
 
-    if not os.path.exists(os.path.join(output_dir, dbfile)):
+    if not os.path.exists(db_path):
         logger.info(f"Creating a new SQLite database: {dbfile}")
-        create_uid_db(os.path.join(output_dir, dbfile))
+        create_uid_db(db_path)
 
     if not df_input.empty:
-        bulk_insert_uid_db(df_input, os.path.join(output_dir, dbfile))
+        bulk_insert_uid_db(df_input, db_path)
+
+    if remove_duplicates:
+        remove_duplicate_uid_db(db_path)
+
+
+@app.command(help="Remove duplicates from a SQLite database of upload_id")
+def clean_uid(
+    dbfile: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            help="Full path to the SQLite database file.",
+        ),
+    ],
+    backup: Annotated[
+        bool,
+        typer.Option(
+            help="Create a backup of the database before cleaning. Default is True."
+        ),
+    ] = True,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            help="Do not remove duplicates; just check the duplicates. Default is False."
+        ),
+    ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
+):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level.value)
+
+    remove_duplicate_uid_db(dbfile, backup=backup, dry_run=dry_run)
