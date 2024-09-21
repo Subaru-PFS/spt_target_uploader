@@ -8,7 +8,9 @@ import panel as pn
 from dotenv import dotenv_values
 from loguru import logger
 
+from .utils.db import single_insert_uid_db
 from .utils.mail import send_email
+from .utils.session import assign_secret_token
 from .widgets import (
     AnnouncementNoteWidgets,
     DatePickerWidgets,
@@ -72,6 +74,19 @@ def target_uploader_app(use_panel_cli=False):
         logger.info(f"{config['ANN_FILE']} found")
         ann_file = config["ANN_FILE"]
 
+    uid_db = config["UPLOADID_DB"] if "UPLOADID_DB" in config.keys() else None
+    use_uid_db = True if uid_db is not None else False
+
+    db_path = os.path.join(config["OUTPUT_DIR"], uid_db) if use_uid_db else None
+    if use_uid_db:
+        if os.path.exists(db_path):
+            logger.info(f"{db_path} found")
+        else:
+            logger.error(f"{db_path} not found")
+            raise FileNotFoundError(f"{db_path} not found")
+    else:
+        logger.info("No upload ID database is used. Scan output directories directly.")
+
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
     logger.info(f"Maximum number of PPCs is set to {max_nppc}.")
 
@@ -114,6 +129,9 @@ def target_uploader_app(use_panel_cli=False):
     panel_ppp = PppResultWidgets(exetime=max_exetime, max_nppc=max_nppc)
 
     panel_input.reset()
+    panel_input.db_path = db_path
+    panel_input.output_dir = config["OUTPUT_DIR"]
+    panel_input.use_db = use_uid_db
 
     button_set = [
         panel_input.file_input,
@@ -576,7 +594,14 @@ def target_uploader_app(use_panel_cli=False):
                 ],
                 disabled=True,
             )
-        panel_input.assign_secret_token()
+
+        if use_uid_db:
+            single_insert_uid_db(panel_ppp.secret_token, db_path)
+
+        panel_input.secret_token = assign_secret_token(
+            db_path=db_path, output_dir=config["OUTPUT_DIR"], use_db=use_uid_db
+        )
+
         panel_timer.timer(False)
 
     # set callback to the buttons
