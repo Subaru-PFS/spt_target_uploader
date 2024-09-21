@@ -470,6 +470,12 @@ def clean_uid(
             help="Create a backup of the database before cleaning. Default is True."
         ),
     ] = True,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            help="Do not remove duplicates; just check the duplicates. Default is False."
+        ),
+    ] = False,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -477,4 +483,4 @@ def clean_uid(
     logger.remove(0)
     logger.add(sys.stderr, level=log_level.value)
 
-    remove_duplicate_uid_db(dbfile, backup=backup)
+    remove_duplicate_uid_db(dbfile, backup=backup, dry_run=dry_run)
