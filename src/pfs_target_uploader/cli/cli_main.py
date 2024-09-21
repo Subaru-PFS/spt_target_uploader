@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
+import glob
 import os
 import sys
 from datetime import date
 from enum import Enum
 from typing import Annotated, List
 
+import pandas as pd
 import panel as pn
 import typer
 from astropy.table import Table
 from loguru import logger
 
 from ..utils.checker import validate_input
+from ..utils.db import bulk_insert_uid_db, create_uid_db
 from ..utils.io import load_input, upload_file
 from ..utils.ppp import PPPrunStart, ppp_result
 from ..widgets import StatusWidgets
@@ -383,3 +386,55 @@ def start_app(
         },
         **kwargs,
     )
+
+
+@app.command(help="Generate a SQLite database of upload_id")
+def uid2sqlite(
+    input_list: Annotated[
+        str, typer.Argument(show_default=False, help="Input CSV file.")
+    ] = None,
+    output_dir: Annotated[
+        str, typer.Option("-d", "--dir", help="Output directory to save the results.")
+    ] = ".",
+    dbfile: Annotated[
+        str,
+        typer.Option(
+            "--db",
+            help="Filename of the SQLite database to save the upload_id.",
+        ),
+    ] = "upload_id.sqlite",
+    scan_dir: Annotated[
+        str,
+        typer.Option(
+            "--scan-dir",
+            help="Directory to scan for the upload_id. Default is None (use input file)",
+        ),
+    ] = None,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
+):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level.value)
+
+    if input_list is not None:
+        df_input = pd.read_csv(input_list)
+    elif scan_dir is not None:
+        d = glob.glob(f"{scan_dir}/????/??/????????-??????-????????????????")
+        upload_ids = [s.split("-")[-1] for s in d]
+        df_input = pd.DataFrame({"upload_id": upload_ids})
+    else:
+        logger.warning("No input specified. Just try to create an empty database.")
+        df_input = pd.DataFrame({"upload_id": []})
+
+    print(df_input)
+
+    if not os.path.exists(output_dir):
+        raise FileNotFoundError(f"Output directory not found: {output_dir}")
+
+    if not os.path.exists(os.path.join(output_dir, dbfile)):
+        logger.info(f"Creating a new SQLite database: {dbfile}")
+        create_uid_db(os.path.join(output_dir, dbfile))
+
+    if not df_input.empty:
+        bulk_insert_uid_db(df_input, os.path.join(output_dir, dbfile))
