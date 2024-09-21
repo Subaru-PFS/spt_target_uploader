@@ -51,11 +51,20 @@ def upload_id_exists(upload_id, db_path):
     return upload_id in df["upload_id"].values
 
 
-def remove_duplicate_uid_db(db_path, backup=True):
+def remove_duplicate_uid_db(db_path, backup=True, dry_run=False):
     with closing(sqlite3.connect(db_path)) as conn:
         df = pd.read_sql_query("SELECT upload_id FROM upload_id", conn)
 
     if df["upload_id"].duplicated().any():
+        logger.info(f"{df['upload_id'].duplicated().sum()} duplicates found.")
+        logger.info(
+            f"Duplicate upload IDs: {df.loc[df['upload_id'].duplicated(), 'upload_id'].values}"
+        )
+        if dry_run:
+            logger.info(
+                "Dry run mode enabled. No changes will be made to the database."
+            )
+            return
         if backup:
             logger.info("Creating a backup of the database.")
             timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
