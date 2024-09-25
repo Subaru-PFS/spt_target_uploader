@@ -85,4 +85,20 @@ OUTPUT_DIR="data"
 # EMAIL_FROM=
 # EMAIL_TO=
 # SMTP_SERVER=
+
+# Supress output of netflow
+# 0: verbose
+# 1: quiet
+PPP_QUIET=1
+
+# Target clustering algorithm
+# HDBSCAN or DBSCAN
+CLUSTERING_ALGORITHM=HDBSCAN
+
+# Text to be announce at the beginning (Markdown)
+ANN_FILE="user_announcement.md"
+
+# SQLite database file to be used for the duplication check of upload_id
+# The file will be created under $OUTPUT_DIR
+UPLOADID_DB="upload_id.sqlite"
 ```
