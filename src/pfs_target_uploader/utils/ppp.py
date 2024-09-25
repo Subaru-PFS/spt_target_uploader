@@ -924,7 +924,7 @@ def PPPrunStart(
             sub_l,
         )
 
-    def netflow_iter(uS, obj_allo, weight_para, starttime, exetime):
+    def netflow_iter(uS, obj_allo, weight_para, starttime, exetime, status):
         """iterate the total procedure to re-assign fibers to targets which have not been assigned
             in the previous/first iteration
 
@@ -1033,7 +1033,7 @@ def PPPrunStart(
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1060,7 +1060,7 @@ def PPPrunStart(
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin
@@ -1085,7 +1085,7 @@ def PPPrunStart(
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1104,7 +1104,7 @@ def PPPrunStart(
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin
