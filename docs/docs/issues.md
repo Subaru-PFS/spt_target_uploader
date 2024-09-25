@@ -28,13 +28,19 @@ Because the fiber assignment is a non-linear problem, there is some randomness i
 
 ### Pointing simulation does not seem to finish
 
-It is a known issue that the plotting library (`hvplot`) cannot render more than 4000 polygons.
-If your target list is large and/or exposure time is long, please consider reducing them.
+There are some cases for which the pointing simulation seems to stuck.
+This includes the cases such as plotting more than 4000 polygons (apparently `hvplot` issue),
+using Firefox with many pointings, using the excessive use of memory, web server's timeout, etc.
 
-In general, the computational time is long, but sometimes it freezes due to the excessive use of memory, the web server's timeout, etc.
-You can try to reload and start the simulation again.  If you are not sure what's going on, please contact us.
+For troubleshoot, consider the following:
 
-Note that the computation will be terminated once the running time reaches 15 minutes.
+- Please reload and re-start the simulation.
+- If your target list is large and/or exposure time is long, consider reducing them.
+- If you are using Firefox, try with different browsers using other than the Gecko engine.
+
+Note that the computation may be terminated once the running time reaches 15 minutes or the number of pointings exceeds 200 in a given resolution mode.
+
+If you are not sure what's going on, please contact us.
 
 ### Tables are not displayed correctly
 

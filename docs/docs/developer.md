@@ -1,6 +1,14 @@
 # PFS Target Uploader
 
+
+!!! danger
+
+    The locally launched web app should only be used for a testing purpose and **is NOT intended to submit** the target list to the observatory.
+    Please use [the official web app](https://pfs-etc.naoj.hawaii.edu/uploader/) to submit target list.
+    If you have any issues for submission via the web app, please [contact us](./about.md).
+
 [The PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
+
 
 ## Install
 
@@ -18,7 +26,7 @@ pip install -r requirements.txt  # perhaps optional
 pip install -e .
 
 mkdir -p data/
-mkdir -p data/tmp/
+mkdir -p data/temp/
 ```
 
 ### Build documentation
@@ -86,8 +94,19 @@ OUTPUT_DIR="data"
 # EMAIL_TO=
 # SMTP_SERVER=
 
-# suppress netflow print messages
-# 1: quiet
+# Supress output of netflow
 # 0: verbose
+# 1: quiet
 PPP_QUIET=1
+
+# Target clustering algorithm
+# HDBSCAN or DBSCAN
+CLUSTERING_ALGORITHM=HDBSCAN
+
+# Text to be announce at the beginning (Markdown)
+ANN_FILE="user_announcement.md"
+
+# SQLite database file to be used for the duplication check of upload_id
+# The file will be created under $OUTPUT_DIR
+UPLOADID_DB="upload_id.sqlite"
 ```
