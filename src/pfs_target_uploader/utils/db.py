@@ -46,9 +46,11 @@ def single_insert_uid_db(upload_id, db_path):
 
 def upload_id_exists(upload_id, db_path):
     with closing(sqlite3.connect(db_path)) as conn:
-        df = pd.read_sql_query("SELECT upload_id FROM upload_id", conn)
-
-    return upload_id in df["upload_id"].values
+        df = pd.read_sql_query(
+            f"SELECT upload_id FROM upload_id WHERE upload_id = '{upload_id}'",
+            conn,
+        )
+    return not df.empty  # True if the upload ID exists in the database
 
 
 def remove_duplicate_uid_db(db_path, backup=True, dry_run=False):
