@@ -1,11 +1,5 @@
 # PFS Target Uploader
 
-!!! danger
-
-    The locally launched web app should only be used for a testing purpose and **is NOT intended to submit** the target list to the observatory.
-    Please use [the official web app](https://pfs-etc.naoj.hawaii.edu/uploader/) to submit target list.
-    If you have any issues for submission via the web app, please [contact us](./about.md).
-
 [The PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web app to validate and submit the target list supplied by users with an observing time estimate by a pointing simulation.
 
 ## Install
