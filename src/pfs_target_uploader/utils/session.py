@@ -23,6 +23,7 @@ def assign_secret_token(db_path=None, output_dir=None, use_db=True, nbytes=8):
                 )
                 st = secrets.token_hex(nbytes)
             else:
+                logger.info(f"Upload ID {st} seems to be unique in the database.")
                 break
         else:
             d = glob.glob(os.path.join(output_dir, f"????/??/????????-??????-{st}"))
@@ -32,6 +33,7 @@ def assign_secret_token(db_path=None, output_dir=None, use_db=True, nbytes=8):
                 )
                 st = secrets.token_hex(nbytes)
             else:
+                logger.info(f"Upload ID {st} seems to be unique in the directory.")
                 break
     logger.info(f"Assigning a new secret token as an upload_id: {st}")
 

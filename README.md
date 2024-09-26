@@ -102,3 +102,43 @@ ANN_FILE="user_announcement.md"
 # The file will be created under $OUTPUT_DIR
 UPLOADID_DB="upload_id.sqlite"
 ```
+
+## Preparing database
+
+When `UPLOADID_DB` is set, the uploader looks up `$OUTPUT_DIR/$UPLOADID_DB` file for the duplication check of `upload_id`.
+The following command can be used to generate the database file.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB
+```
+
+If you have a list of `upload_id`s to be inserted into the database (`upload_id.csv`), you can run the command as follows.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB upload_id.csv
+```
+
+The example content of `upload_id.csv` is as follows.
+
+```csv
+upload_id
+c748124208176c40
+4cd4bc355c092ad7
+1b8d0c4f808972bb
+2e07c75691e5ba26
+c695c6b755930209
+```
+
+If you want to scan a directory (e.g., `$OUTPUT_DIR`) containing submitted uploads, you can run the command as follows.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB --scan-dir $OUTPUT_DIR
+```
+
+You can remove duplicates by the following command.
+
+```sh
+pfs-uploader-cli clean-uid $OUTPUT_DIR/$UPLOADID_DB
+```
+
+See [the manual](./cli.md) for more options.
