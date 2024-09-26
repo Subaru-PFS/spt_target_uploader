@@ -56,6 +56,7 @@ def PPPrunStart(
     d_pfi=1.38,
     quiet=True,
     clustering_algorithm="HDBSCAN",
+    queue=None,
 ):
     r_pfi = d_pfi / 2.0
 
@@ -68,7 +69,7 @@ def PPPrunStart(
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
 
     if is_exetime:
-        logger.info(f"PPP calculation will be terminated after {exetime} seconds")
+        logger.info(f"PPP iteration will be terminated after {exetime} seconds")
     else:
         logger.info("PPP calculation will be run until completion")
 
@@ -1130,6 +1131,22 @@ def PPPrunStart(
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
     logger.info(f"PPP running status: {status_:.0f}")
 
+    queue.put(
+        [
+            out_uS_L2,
+            out_cR_L,
+            out_cR_L_,
+            out_sub_l,
+            out_obj_allo_L_fin,
+            out_uS_M2,
+            out_cR_M,
+            out_cR_M_,
+            out_sub_m,
+            out_obj_allo_M_fin,
+            status_,
+        ]
+    )
+
     return (
         out_uS_L2,
         out_cR_L,
@@ -1254,7 +1271,7 @@ def ppp_result(
 
         # obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
-        obj_allo2 = Table.to_pandas(obj_allo1)        
+        obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
 
         # add a column to indicate the color for the scatter plot

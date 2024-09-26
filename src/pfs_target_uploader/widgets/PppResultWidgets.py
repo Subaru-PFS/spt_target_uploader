@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 import panel as pn
+import multiprocessing as mp
 from astropy import units as u
 from astropy.table import Table
 from loguru import logger
@@ -287,6 +288,7 @@ class PppResultWidgets:
         weights=None,
         clustering_algorithm="HDBSCAN",
         quiet=True,
+        max_exetime=900,
     ):
         if weights is None:
             weights = [2.02, 0.01, 0.01]
@@ -305,6 +307,71 @@ class PppResultWidgets:
         else:
             tb_ppc = []
 
+        ppp_run_results = mp.Manager().Queue()
+        ppp_run = mp.Process(
+            target=PPPrunStart,
+            name="PPP",
+            args=(
+                tb_visible,
+                tb_ppc,
+                weights,
+                self.exetime,
+                self.single_exptime,
+                self.max_nppc,
+                1.38,
+                quiet,
+                clustering_algorithm,
+                ppp_run_results,
+            ),
+        )
+
+        ppp_run.start()
+
+        # Wait max_exetime for PPP
+        ppp_run.join(max_exetime)
+
+        if ppp_run.is_alive():
+            logger.error("Pointing simulation failed (runout time)")
+            pn.state.notifications.error(
+                f"Pointing simulation stops because time ({int(max_exetime):d} sec) is running out.",
+                duration=0,  # ever
+            )
+
+            # Terminate PPP
+            ppp_run.terminate()
+
+            # Cleanup
+            ppp_run.join()
+
+            (
+                uS_L2,
+                cR_L,
+                cR_L_,
+                sub_l,
+                obj_allo_L_fin,
+                uS_M2,
+                cR_M,
+                cR_M_,
+                sub_m,
+                obj_allo_M_fin,
+                self.status_,
+            ) = (Table(), [], [], [], Table(), Table(), [], [], [], Table(), False)
+        else:
+            (
+                uS_L2,
+                cR_L,
+                cR_L_,
+                sub_l,
+                obj_allo_L_fin,
+                uS_M2,
+                cR_M,
+                cR_M_,
+                sub_m,
+                obj_allo_M_fin,
+                self.status_,
+            ) = ppp_run_results.get()
+
+        """
         (
             uS_L2,
             cR_L,
@@ -327,6 +394,7 @@ class PppResultWidgets:
             quiet=quiet,
             clustering_algorithm=clustering_algorithm,
         )
+        #"""
 
         (
             self.nppc,

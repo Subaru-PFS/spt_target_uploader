@@ -439,7 +439,9 @@ def target_uploader_app(use_panel_cli=False):
                 single_exptime=panel_obs_type.single_exptime.value,
                 clustering_algorithm=clustering_algorithm,
                 quiet=ppp_quiet,
+                max_exetime=max_exetime,
             )
+
             panel_ppp.show_results()
 
             tab_panels.active = 2
