@@ -6,6 +6,7 @@ import math
 import os
 import secrets
 import sys
+import time
 import warnings
 from datetime import datetime, timezone
 from io import BytesIO, StringIO
@@ -352,6 +353,11 @@ def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
+
+    t1 = time.time()
+
+    logger.info("Start loading file properties")
+
     dirs = glob.glob(f"{datadir}/????/??/*")
     n_files = len(dirs)
 
@@ -389,6 +395,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     for i, d in enumerate(dirs):
         uid = d[-n_uid:]
         if ext == "ecsv":
+            f_summary = os.path.join(d, f"target_summary_{uid}.{ext}")
             f_target = os.path.join(d, f"target_{uid}.{ext}")
             f_ppc = os.path.join(d, f"ppc_{uid}.{ext}")
             f_psl = os.path.join(d, f"psl_{uid}.{ext}")
@@ -396,12 +403,28 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             f_tac_ppc = os.path.join(d, f"TAC_ppc_{uid}.{ext}")
 
             try:
-                tb_target = Table.read(f_target)
+                if os.path.exists(f_summary):
+                    tb_summary = Table.read(f_summary)
+                    metainfo = tb_summary.meta
+                    n_obj[i] = int(
+                        tb_summary[tb_summary["Priority"] == "Total"]["N (L)"][0]
+                        + tb_summary[tb_summary["Priority"] == "Total"]["N (M)"][0]
+                    )
+                    t_exp[i] = (
+                        tb_summary[tb_summary["Priority"] == "Total"]["Texp (L)"][0]
+                        + tb_summary[tb_summary["Priority"] == "Total"]["Texp (M)"][0]
+                    )
+                else:
+                    logger.warning(f"{f_summary} is not found. Read {f_target} instead")
+                    tb_target = Table.read(f_target)
+                    metainfo = tb_target.meta
+                    n_obj[i] = tb_target["ob_code"].size
+                    t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
                 tb_psl = Table.read(f_psl)
                 # logger.info(f"{f_target} and {f_psl} are found")
             except FileNotFoundError as e:
                 logger.warning(
-                    f"{e}: {f_target} and/or {f_psl} are not found. Skip them"
+                    f"{e}: One or more of {f_summary}, {f_target}, and {f_psl} are not found. Skip them."
                 )
                 continue
 
@@ -422,45 +445,42 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             fullpath_psl[i] = f_psl
 
             try:
-                orignames[i] = tb_target.meta["original_filename"]
+                orignames[i] = metainfo["original_filename"]
             except KeyError:
                 orignames[i] = None
 
             try:
-                orignames_ppc[i] = tb_target.meta["original_filename_ppc"]
+                orignames_ppc[i] = metainfo["original_filename_ppc"]
             except KeyError:
                 orignames_ppc[i] = None
 
             try:
-                upload_ids[i] = tb_target.meta["upload_id"]
+                upload_ids[i] = metainfo["upload_id"]
             except KeyError:
                 upload_ids[i] = None
 
             try:
-                if isinstance(tb_target.meta["upload_at"], str):
-                    timestamps[i] = datetime.fromisoformat(tb_target.meta["upload_at"])
-                elif isinstance(tb_target.meta["upload_at"], datetime):
-                    timestamps[i] = tb_target.meta["upload_at"]
+                if isinstance(metainfo["upload_at"], str):
+                    timestamps[i] = datetime.fromisoformat(metainfo["upload_at"])
+                elif isinstance(metainfo["upload_at"], datetime):
+                    timestamps[i] = metainfo["upload_at"]
             except KeyError:
                 timestamps[i] = None
 
             try:
-                single_exptime[i] = tb_target.meta["single_exptime"]
+                single_exptime[i] = metainfo["single_exptime"]
             except KeyError:
                 pass
 
             try:
-                observation_type[i] = tb_target.meta["observation_type"]
+                observation_type[i] = metainfo["observation_type"]
             except KeyError:
                 observation_type[i] = None
 
             try:
-                ppc_status[i] = tb_target.meta["ppc_status"]
+                ppc_status[i] = metainfo["ppc_status"]
             except KeyError:
                 ppc_status[i] = None
-
-            n_obj[i] = tb_target["ob_code"].size
-            t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
 
             tb_l = tb_psl[tb_psl["resolution"] == "low"]
             tb_m = tb_psl[tb_psl["resolution"] == "medium"]
@@ -530,6 +550,9 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "Filename_pointing": orignames_ppc,
         }
     )
+
+    t2 = time.time()
+    logger.info(f"Loading file properties finished in {t2-t1:.2f} s")
 
     if len(df_psl_tgt) == 0:
         logger.warning(f"There are no ecsv files in the designated folder ({datadir}).")
