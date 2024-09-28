@@ -6,6 +6,7 @@ import math
 import os
 import secrets
 import sys
+import time
 import warnings
 from datetime import datetime, timezone
 from io import BytesIO, StringIO
@@ -352,6 +353,11 @@ def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
+
+    t1 = time.time()
+
+    logger.info("Start loading file properties")
+
     dirs = glob.glob(f"{datadir}/????/??/*")
     n_files = len(dirs)
 
@@ -544,6 +550,9 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "Filename_pointing": orignames_ppc,
         }
     )
+
+    t2 = time.time()
+    logger.info(f"Loading file properties finished in {t2-t1} s")
 
     if len(df_psl_tgt) == 0:
         logger.warning(f"There are no ecsv files in the designated folder ({datadir}).")
