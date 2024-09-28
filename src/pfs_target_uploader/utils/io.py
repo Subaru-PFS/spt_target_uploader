@@ -552,7 +552,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     )
 
     t2 = time.time()
-    logger.info(f"Loading file properties finished in {t2-t1} s")
+    logger.info(f"Loading file properties finished in {t2-t1:.2f} s")
 
     if len(df_psl_tgt) == 0:
         logger.warning(f"There are no ecsv files in the designated folder ({datadir}).")
