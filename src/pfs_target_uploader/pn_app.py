@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 from datetime import datetime, timezone
 
 import gurobipy
@@ -38,10 +39,16 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
+    config = dotenv_values(".env.shared")
+
+    # configure logger to be multiprocessing-safe
+    log_level = config["LOG_LEVEL"] if "LOG_LEVEL" in config.keys() else "INFO"
+    logger.info(f"Log level is set to {log_level}")
+    logger.remove()
+    logger.add(sys.stderr, level=log_level, enqueue=True)
+
     logger.info(f"{pn.state.headers=}")
     logger.info(f"{pn.state.location.href=}")
-
-    config = dotenv_values(".env.shared")
 
     if "MAX_EXETIME" not in config.keys():
         max_exetime: int = 900
@@ -434,6 +441,7 @@ def target_uploader_app(use_panel_cli=False):
                 clustering_algorithm=clustering_algorithm,
                 quiet=ppp_quiet,
                 max_exetime=max_exetime,
+                logger=logger,
             )
 
             panel_ppp.show_results()
