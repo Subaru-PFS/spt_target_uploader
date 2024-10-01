@@ -50,7 +50,6 @@ def PPPrunStart(
     uS,
     uPPC,
     weight_para,
-    exetime: int,
     single_exptime: int = 900,
     max_nppc: int = 200,
     d_pfi=1.38,
@@ -65,13 +64,7 @@ def PPPrunStart(
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
 
-    is_exetime = (exetime is not None) and (exetime > 0)
     is_nppc = (max_nppc is not None) and (max_nppc > 0)
-
-    if is_exetime:
-        logger.info(f"PPP iteration will be terminated after {exetime} seconds")
-    else:
-        logger.info("PPP calculation will be run until completion")
 
     def count_N(sample):
         """calculate local count of targets
@@ -366,7 +359,7 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, starttime, exetime: int):
+    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, starttime):
         """determine pointing centers
 
         Parameters
@@ -402,36 +395,16 @@ def PPPrunStart(
             logger.info("PPC determined from the user input [PPP_centers s1]")
             return sample_f, status
 
-        if is_exetime and ((time.time() - starttime) > exetime):
-            sample_f.meta["PPC"] = []
-            status = 1
-            logger.info("PPP stopped since the time is running out [PPP_centers s1]")
-            return sample_f, status
-
         peak = []
 
         for sample in target_clustering(
             sample_f, d_pfi, algorithm=clustering_algorithm
         ):
-            if is_exetime and ((time.time() - starttime) > exetime):
-                status = 1
-                logger.info(
-                    "PPP stopped since the time is running out [PPP_centers s2]"
-                )
-                break
-
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
             while any(sample_s["exptime_PPP"] > 0):
                 # NOTE: need a crors-check with He-san, probably.
                 if is_nppc and (len(peak) > max_nppc):
-                    break
-
-                if is_exetime and ((time.time() - starttime) > exetime):
-                    status = 1
-                    logger.info(
-                        "PPP stopped since the time is running out [PPP_centers s2_1]"
-                    )
                     break
 
                 # -------------------------------
@@ -925,7 +898,7 @@ def PPPrunStart(
             sub_l,
         )
 
-    def netflow_iter(uS, obj_allo, weight_para, starttime, exetime, status):
+    def netflow_iter(uS, obj_allo, weight_para, starttime, status):
         """iterate the total procedure to re-assign fibers to targets which have not been assigned
             in the previous/first iteration
 
@@ -955,31 +928,17 @@ def PPPrunStart(
             obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
             return obj_allo, status
 
-        elif is_exetime and ((time.time() - starttime) > exetime):
-            status = 1
-            logger.info("PPP stopped since the time is running out [netflow_iter s1]")
-            return obj_allo, status
-
         else:
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
             while any(uS["exptime_assign"] < uS["exptime_PPP"]) and iter_m2 < 10:
-                if is_exetime and ((time.time() - starttime) > exetime):
-                    status = 1
-                    logger.info(
-                        "PPP stopped since the time is running out [netflow_iter s2]"
-                    )
-                    break
-
                 uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
                 uS_t1["exptime_PPP"] = (
                     uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
                 )  # remained exposure time
 
-                uS_t2, status = PPP_centers(
-                    uS_t1, [], True, weight_para, starttime, exetime
-                )
+                uS_t2, status = PPP_centers(uS_t1, [], True, weight_para, starttime)
 
                 obj_allo_t = netflowRun(uS_t2)
 
@@ -1026,15 +985,13 @@ def PPPrunStart(
     out_obj_allo_M_fin = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
-        uS_L_s2, status_ = PPP_centers(
-            uS_L, uPPC_L, True, weight_para, t_ppp_start, exetime
-        )
+        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para, t_ppp_start)
         obj_allo_L = netflowRun(uS_L_s2)
 
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime, status_
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1053,15 +1010,13 @@ def PPPrunStart(
         out_sub_l = sub_l
 
     if len(uS_M) > 0 and len(uS_L) == 0:
-        uS_M_s2, status_ = PPP_centers(
-            uS_M, uPPC_M, True, weight_para, t_ppp_start, exetime
-        )
+        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para, t_ppp_start)
         obj_allo_M = netflowRun(uS_M_s2)
 
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime, status_
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin
@@ -1079,14 +1034,12 @@ def PPPrunStart(
         out_sub_m = sub_m
 
     if len(uS_L) > 0 and len(uS_M) > 0:
-        uS_L_s2, status_ = PPP_centers(
-            uS_L, uPPC_L, True, weight_para, t_ppp_start, exetime
-        )
+        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para, t_ppp_start)
         obj_allo_L = netflowRun(uS_L_s2)
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, exetime, status_
+                uS_L2, obj_allo_L, weight_para, t_ppp_start, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1098,14 +1051,12 @@ def PPPrunStart(
             )
             out_obj_allo_L_fin = obj_allo_L
 
-        uS_M_s2, status_ = PPP_centers(
-            uS_M, uPPC_M, True, weight_para, t_ppp_start, exetime
-        )
+        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para, t_ppp_start)
         obj_allo_M = netflowRun(uS_M_s2)
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, exetime, status_
+                uS_M2, obj_allo_M, weight_para, t_ppp_start, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin

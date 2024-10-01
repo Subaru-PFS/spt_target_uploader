@@ -126,7 +126,7 @@ def target_uploader_app(use_panel_cli=False):
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PppResultWidgets(exetime=max_exetime, max_nppc=max_nppc)
+    panel_ppp = PppResultWidgets(max_nppc=max_nppc)
 
     panel_input.reset()
     panel_input.db_path = db_path
