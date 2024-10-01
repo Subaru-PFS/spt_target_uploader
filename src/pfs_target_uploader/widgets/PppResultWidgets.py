@@ -2,9 +2,9 @@
 
 import sys
 
+import multiprocessing as mp
 import numpy as np
 import panel as pn
-import multiprocessing as mp
 from astropy import units as u
 from astropy.table import Table
 from loguru import logger
@@ -21,7 +21,6 @@ class PppResultWidgets:
 
     def __init__(
         self,
-        exetime: int = 15 * 60,  # [s] tentatively set to 15 min
         max_nppc: int = 200,  # max number of PPCs
     ):
         # PPP status
@@ -36,7 +35,6 @@ class PppResultWidgets:
         self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
-        self.exetime: int = exetime
         self.max_nppc = max_nppc
         self.status_ = 0
 
@@ -52,24 +50,15 @@ class PppResultWidgets:
             "Note that targets observable in the input observing period are considered.</font>"
         )
 
-        self.ppp_warning_text_2 = (
-            "<font size=5>⚠️ **Warnings**</font>\n\n"
-            f"<font size=3>Calculation stops because time ({int(self.exetime/60):d} min) is running out. "
-            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
-        )
-
-        self.ppp_warning_text_3 = (
-            "<font size=5>⚠️ **Warnings**</font>\n\n"
-            f"<font size=3>1. The total requested time exceeds {int(self.max_reqtime_normal)} hours (maximum for a normal program). "
-            "Please make sure to adjust it to your requirement before proceeding to the submission. "
-            "Note that targets observable in the input observing period are considered."
-            f"\n 2. Calculation stops because time ({int(self.exetime/60):d} min) is running out."
-            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
-        )
-
         self.ppp_error_text_1 = (
             "<font size=5>⚠️ **Error**</font>\n\n"
             "<font size=3>No fiber can be assigned. Please check the input pointing list, or the single exposure time.</font>"
+        )
+
+        self.ppp_error_text_2 = (
+            "<font size=5>⚠️ **Error**</font>\n\n"
+            f"<font size=3>Calculation stops because time is running out. "
+            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
         self.ppp_success_text = (
@@ -117,12 +106,9 @@ class PppResultWidgets:
             if self.status_ == 999 and rot > self.max_reqtime_normal:
                 text = self.ppp_warning_text_1
                 type = "warning"
-            elif self.status_ == 1 and rot > self.max_reqtime_normal:
-                text = self.ppp_warning_text_3
-                type = "warning"
-            elif self.status_ == 1 and rot <= self.max_reqtime_normal:
-                text = self.ppp_warning_text_2
-                type = "warning"
+            elif self.status_ == 1:
+                text = self.ppp_error_text_2
+                type = "danger"
             elif self.status_ == 2 and df is None:
                 text = self.ppp_error_text_1
                 type = "danger"
@@ -315,7 +301,6 @@ class PppResultWidgets:
                 tb_visible,
                 tb_ppc,
                 weights,
-                self.exetime,
                 self.single_exptime,
                 self.max_nppc,
                 1.38,
@@ -331,9 +316,10 @@ class PppResultWidgets:
         ppp_run.join(max_exetime)
 
         if ppp_run.is_alive():
+            # if ppp is still running after max_exetime, kill it
             logger.error("Pointing simulation failed (runout time)")
             pn.state.notifications.error(
-                f"Pointing simulation stops because time ({int(max_exetime):d} sec) is running out.",
+                f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
                 duration=0,  # ever
             )
 
@@ -355,7 +341,19 @@ class PppResultWidgets:
                 sub_m,
                 obj_allo_M_fin,
                 self.status_,
-            ) = (Table(), [], [], [], Table(), Table(), [], [], [], Table(), False)
+            ) = (
+                Table(),
+                [],
+                [],
+                [],
+                Table(),
+                Table(),
+                [],
+                [],
+                [],
+                Table(),
+                1,
+            )  # ppc_status=1 in case of runout time
         else:
             (
                 uS_L2,
@@ -370,31 +368,6 @@ class PppResultWidgets:
                 obj_allo_M_fin,
                 self.status_,
             ) = ppp_run_results.get()
-
-        """
-        (
-            uS_L2,
-            cR_L,
-            cR_L_,
-            sub_l,
-            obj_allo_L_fin,
-            uS_M2,
-            cR_M,
-            cR_M_,
-            sub_m,
-            obj_allo_M_fin,
-            self.status_,
-        ) = PPPrunStart(
-            tb_visible,
-            tb_ppc,
-            weights,
-            self.exetime,
-            single_exptime=self.single_exptime,
-            max_nppc=self.max_nppc,
-            quiet=quiet,
-            clustering_algorithm=clustering_algorithm,
-        )
-        #"""
 
         (
             self.nppc,
