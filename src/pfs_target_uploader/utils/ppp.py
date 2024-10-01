@@ -950,6 +950,17 @@ def PPPrunStart(
     logger.info("PPP run started")
     t_ppp_start = time.time()
 
+    out_uS_L2 = []
+    out_cR_L = []
+    out_cR_L_ = []
+    out_sub_l = []
+    out_obj_allo_L_fin = []
+    out_uS_M2 = []
+    out_cR_M = []
+    out_cR_M_ = []
+    out_sub_m = []
+    out_obj_allo_M_fin = []
+
     exptime_ppp = np.ceil(uS["exptime"] / single_exptime) * single_exptime
     uS.add_column(exptime_ppp, name="exptime_PPP")
 
@@ -961,17 +972,6 @@ def PPPrunStart(
     else:
         uPPC_L = []
         uPPC_M = []
-
-    out_uS_L2 = []
-    out_cR_L = []
-    out_cR_L_ = []
-    out_sub_l = []
-    out_obj_allo_L_fin = []
-    out_uS_M2 = []
-    out_cR_M = []
-    out_cR_M_ = []
-    out_sub_m = []
-    out_obj_allo_M_fin = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
         uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para, t_ppp_start)
