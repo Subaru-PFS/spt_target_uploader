@@ -371,6 +371,8 @@ class PppResultWidgets:
                 obj_allo_M_fin,
                 self.status_,
             ) = ppp_run_results.get()
+        
+        ppp_run_results.close()
 
         (
             self.nppc,
