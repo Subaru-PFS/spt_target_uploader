@@ -330,7 +330,7 @@ class PppResultWidgets:
             ppp_run.terminate()
 
             # Cleanup
-            ppp_run.join()
+            # ppp_run.join()
 
             (
                 uS_L2,
