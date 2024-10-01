@@ -372,8 +372,6 @@ class PppResultWidgets:
                 self.status_,
             ) = ppp_run_results.get()
         
-        ppp_run_results.close()
-
         (
             self.nppc,
             self.p_result_fig,

@@ -55,9 +55,9 @@ def PPPrunStart(
     quiet=True,
     clustering_algorithm="HDBSCAN",
     queue=None,
-    logger=None,
+    logger_=None,
 ):
-    if logger is None:
+    if logger_ is None:
         logger.remove()
         logger.add(sys.stderr, level="INFO", enqueue=True)
 
@@ -1071,21 +1071,24 @@ def PPPrunStart(
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
     logger.info(f"PPP running status: {status_:.0f}")
 
-    queue.put(
-        [
-            out_uS_L2,
-            out_cR_L,
-            out_cR_L_,
-            out_sub_l,
-            out_obj_allo_L_fin,
-            out_uS_M2,
-            out_cR_M,
-            out_cR_M_,
-            out_sub_m,
-            out_obj_allo_M_fin,
-            status_,
-        ]
-    )
+    try:
+        queue.put(
+            [
+                out_uS_L2,
+                out_cR_L,
+                out_cR_L_,
+                out_sub_l,
+                out_obj_allo_L_fin,
+                out_uS_M2,
+                out_cR_M,
+                out_cR_M_,
+                out_sub_m,
+                out_obj_allo_M_fin,
+                status_,
+            ]
+        )
+    except BrokenPipeError:
+        logger.warning("The process has been terminated due to runout time, nothing can be put to queue. [PPPrunStart]")
 
     return (
         out_uS_L2,
