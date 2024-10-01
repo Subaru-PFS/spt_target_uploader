@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import multiprocessing as mp
 import sys
 
-import multiprocessing as mp
 import numpy as np
 import panel as pn
 from astropy import units as u
@@ -55,7 +55,7 @@ class PppResultWidgets:
 
         self.ppp_error_text_2 = (
             "<font size=5>⚠️ **Error**</font>\n\n"
-            f"<font size=3>Calculation stops because time is running out. "
+            "<font size=3>Calculation stops because time is running out. "
             "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
@@ -273,7 +273,12 @@ class PppResultWidgets:
         clustering_algorithm="HDBSCAN",
         quiet=True,
         max_exetime=900,
+        logger=None,
     ):
+        if logger is None:
+            logger.remove()
+            logger.add(sys.stderr, level="INFO", enqueue=True)
+
         if weights is None:
             weights = [2.02, 0.01, 0.01]
 
@@ -304,6 +309,7 @@ class PppResultWidgets:
                 quiet,
                 clustering_algorithm,
                 ppp_run_results,
+                logger,
             ),
         )
 

@@ -55,7 +55,12 @@ def PPPrunStart(
     quiet=True,
     clustering_algorithm="HDBSCAN",
     queue=None,
+    logger=None,
 ):
+    if logger is None:
+        logger.remove()
+        logger.add(sys.stderr, level="INFO", enqueue=True)
+
     r_pfi = d_pfi / 2.0
 
     ppp_quiet = quiet
