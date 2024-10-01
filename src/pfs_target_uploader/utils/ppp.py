@@ -1720,6 +1720,8 @@ def ppp_result_reproduce(
                 sample,
                 np.array([[0] * (n_sub + 1)]),
                 np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
                 sub_l,
             )
 
