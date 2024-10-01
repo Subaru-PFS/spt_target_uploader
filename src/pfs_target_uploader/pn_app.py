@@ -48,11 +48,6 @@ def target_uploader_app(use_panel_cli=False):
     else:
         max_exetime = int(config["MAX_EXETIME"])
 
-    if "MAX_NPPC" not in config.keys():
-        max_nppc: int = 200
-    else:
-        max_nppc = int(config["MAX_NPPC"])
-
     if "PPP_QUIET" not in config.keys():
         ppp_quiet: bool = True
     else:
@@ -88,7 +83,6 @@ def target_uploader_app(use_panel_cli=False):
         logger.info("No upload ID database is used. Scan output directories directly.")
 
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
-    logger.info(f"Maximum number of PPCs is set to {max_nppc}.")
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -126,7 +120,7 @@ def target_uploader_app(use_panel_cli=False):
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
-    panel_ppp = PppResultWidgets(max_nppc=max_nppc)
+    panel_ppp = PppResultWidgets()
 
     panel_input.reset()
     panel_input.db_path = db_path

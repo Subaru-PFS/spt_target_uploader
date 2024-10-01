@@ -21,7 +21,6 @@ class PppResultWidgets:
 
     def __init__(
         self,
-        max_nppc: int = 200,  # max number of PPCs
     ):
         # PPP status
         # True if PPP has been run
@@ -35,7 +34,6 @@ class PppResultWidgets:
         self.origdata_ppc = None
         self.upload_time = None
         self.secret_token = None
-        self.max_nppc = max_nppc
         self.status_ = 0
 
         self.ppp_title = pn.pane.Markdown(
@@ -302,7 +300,6 @@ class PppResultWidgets:
                 tb_ppc,
                 weights,
                 self.single_exptime,
-                self.max_nppc,
                 1.38,
                 quiet,
                 clustering_algorithm,
