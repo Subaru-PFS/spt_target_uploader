@@ -51,7 +51,6 @@ def PPPrunStart(
     uPPC,
     weight_para,
     single_exptime: int = 900,
-    max_nppc: int = 200,
     d_pfi=1.38,
     quiet=True,
     clustering_algorithm="HDBSCAN",
@@ -63,8 +62,6 @@ def PPPrunStart(
 
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
-
-    is_nppc = (max_nppc is not None) and (max_nppc > 0)
 
     def count_N(sample):
         """calculate local count of targets
@@ -403,10 +400,6 @@ def PPPrunStart(
             sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
 
             while any(sample_s["exptime_PPP"] > 0):
-                # NOTE: need a crors-check with He-san, probably.
-                if is_nppc and (len(peak) > max_nppc):
-                    break
-
                 # -------------------------------
                 # ### peak_xy from KDE peak with weights
                 X_, Y_, obj_dis_sig_, peak_x, peak_y = KDE(sample_s, mutiPro)
@@ -920,7 +913,6 @@ def PPPrunStart(
         table of ppc information after all targets are assigned
             # note that some targets in the dense region may need very long time to be assigned with fibers
             # if targets can not be successfully assigned with fibers in >5 iterations, then directly stop
-            # if total number of ppc > max_nppc (~5 nights), then directly stop
         """
 
         if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
@@ -942,18 +934,10 @@ def PPPrunStart(
 
                 obj_allo_t = netflowRun(uS_t2)
 
-                if is_nppc and (len(obj_allo) > max_nppc):
-                    logger.info(
-                        f"PPP stopped since Nppc > {max_nppc} [netflow_iter s2]"
-                    )
-                    break
-                else:
-                    obj_allo = vstack([obj_allo, obj_allo_t])
-                    obj_allo.remove_rows(
-                        np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0]
-                    )
-                    uS = complete_ppc(uS_t2, obj_allo)[0]
-                    iter_m2 += 1
+                obj_allo = vstack([obj_allo, obj_allo_t])
+                obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
+                uS = complete_ppc(uS_t2, obj_allo)[0]
+                iter_m2 += 1
 
             return obj_allo, status
 
