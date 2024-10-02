@@ -1088,7 +1088,7 @@ def PPPrunStart(
             ]
         )
     except BrokenPipeError:
-        logger.warning("The process has been terminated due to runout time, nothing can be put to queue. [PPPrunStart]")
+        logger.warning("BrokenPipeError: mp.manager.queue.put")
 
     return (
         out_uS_L2,

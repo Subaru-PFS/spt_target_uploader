@@ -296,7 +296,11 @@ class PppResultWidgets:
         else:
             tb_ppc = []
 
-        ppp_run_results = mp.Manager().Queue()
+        try:
+            ppp_run_results = mp.Manager().Queue()
+        except BrokenPipeError:
+            logger.warning("BrokenPipeError: mp.manager.queue")
+
         ppp_run = mp.Process(
             target=PPPrunStart,
             name="PPP",
@@ -313,6 +317,7 @@ class PppResultWidgets:
             ),
         )
 
+        # start run PPP
         ppp_run.start()
 
         # Wait max_exetime for PPP
@@ -327,10 +332,13 @@ class PppResultWidgets:
             )
 
             # Terminate PPP
-            ppp_run.terminate()
+            try:
+                ppp_run.terminate()
+            except BrokenPipeError:
+                logger.warning("BrokenPipeError: mp.process.terminate")
 
             # Cleanup
-            # ppp_run.join()
+            ppp_run.join()
 
             (
                 uS_L2,
