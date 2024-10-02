@@ -296,10 +296,7 @@ class PppResultWidgets:
         else:
             tb_ppc = []
 
-        try:
-            ppp_run_results = mp.Manager().Queue()
-        except BrokenPipeError:
-            logger.warning("BrokenPipeError: mp.manager.queue")
+        ppp_run_results = mp.Manager().Queue()
 
         ppp_run = mp.Process(
             target=PPPrunStart,
@@ -379,7 +376,7 @@ class PppResultWidgets:
                 obj_allo_M_fin,
                 self.status_,
             ) = ppp_run_results.get()
-        
+
         (
             self.nppc,
             self.p_result_fig,
