@@ -12,7 +12,7 @@ from itertools import chain
 import colorcet as cc
 import holoviews as hv
 import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
-import multiprocess
+import multiprocess as mp
 import numpy as np
 import pandas as pd
 import panel as pn
@@ -335,15 +335,16 @@ def PPPrunStart(
             positions1 = np.vstack([Y_.ravel(), X_.ravel()])
 
             if multiProcesing:
-                threads_count = round(multiprocess.cpu_count() / 2)
+                threads_count = round(mp.cpu_count() / 2)
                 thread_n = min(
                     threads_count, round(len(sample) * 0.5)
                 )  # threads_count=10 in this machine
 
-                with multiprocess.Pool(thread_n) as p:
+                with mp.Pool(thread_n) as p:
                     dMap_ = p.map(
                         partial(KDE_xy, X=X_, Y=Y_), np.array_split(sample, thread_n)
                     )
+                time.sleep(0.01)
 
                 Z = sum(dMap_)
 
@@ -1071,24 +1072,21 @@ def PPPrunStart(
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
     logger.info(f"PPP running status: {status_:.0f}")
 
-    try:
-        queue.put(
-            [
-                out_uS_L2,
-                out_cR_L,
-                out_cR_L_,
-                out_sub_l,
-                out_obj_allo_L_fin,
-                out_uS_M2,
-                out_cR_M,
-                out_cR_M_,
-                out_sub_m,
-                out_obj_allo_M_fin,
-                status_,
-            ]
-        )
-    except BrokenPipeError:
-        logger.warning("BrokenPipeError: mp.manager.queue.put")
+    queue.put(
+        [
+            out_uS_L2,
+            out_cR_L,
+            out_cR_L_,
+            out_sub_l,
+            out_obj_allo_L_fin,
+            out_uS_M2,
+            out_cR_M,
+            out_cR_M_,
+            out_sub_m,
+            out_obj_allo_M_fin,
+            status_,
+        ]
+    )
 
     return (
         out_uS_L2,
