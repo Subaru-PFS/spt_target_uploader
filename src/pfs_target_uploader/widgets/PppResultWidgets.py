@@ -309,6 +309,7 @@ class PppResultWidgets:
                 1.38,
                 quiet,
                 clustering_algorithm,
+                max_exetime,
                 ppp_run_results,
                 logger,
             ),
@@ -329,10 +330,7 @@ class PppResultWidgets:
             )
 
             # Terminate PPP
-            try:
-                ppp_run.terminate()
-            except BrokenPipeError:
-                logger.warning("BrokenPipeError: mp.process.terminate")
+            ppp_run.terminate()
 
             # Cleanup
             ppp_run.join()
