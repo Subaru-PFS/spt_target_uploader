@@ -54,6 +54,7 @@ def PPPrunStart(
     d_pfi=1.38,
     quiet=True,
     clustering_algorithm="HDBSCAN",
+    max_exetime=900,
     queue=None,
     logger=None,
 ):
@@ -67,6 +68,8 @@ def PPPrunStart(
 
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
+
+    t_start_ppp = time.time()
 
     def count_N(sample):
         """calculate local count of targets
@@ -290,7 +293,7 @@ def PPPrunStart(
 
         return Z
 
-    def KDE(sample, multiProcesing):
+    def KDE(sample, multiProcesing, sleep_time=0.01, max_sleep_time=2.5):
         """define binning and calculate KDE
 
         Parameters
@@ -304,6 +307,17 @@ def PPPrunStart(
         =======
         ra_bin, dec_bin, significance of KDE over the field, ra of peak in KDE, dec of peak in KDE
         """
+
+        t_start_kde = time.time()
+
+        logger.debug(f"time elapsed in ppp: {t_start_kde-t_start_ppp:.2f}s")
+
+        if t_start_kde - t_start_ppp > max_exetime - max_sleep_time * 1.5:
+            logger.warning(
+                f"running out of time in KDE calculation soon. Change sleep time to {max_sleep_time:.1f}s"
+            )
+            sleep_time = max_sleep_time
+
         if len(sample) == 1:
             # if only one target, set it as the peak
             return (
@@ -344,7 +358,7 @@ def PPPrunStart(
                     dMap_ = p.map(
                         partial(KDE_xy, X=X_, Y=Y_), np.array_split(sample, thread_n)
                     )
-                time.sleep(0.01)
+                time.sleep(sleep_time)
 
                 Z = sum(dMap_)
 
