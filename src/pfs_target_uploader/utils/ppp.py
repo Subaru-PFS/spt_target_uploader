@@ -312,7 +312,9 @@ def PPPrunStart(
 
         logger.debug(f"time elapsed in ppp: {t_start_kde-t_start_ppp:.2f}s")
 
-        if t_start_kde - t_start_ppp > max_exetime - max_sleep_time * 1.5:
+        if (max_exetime > 0) and (
+            t_start_kde - t_start_ppp > max_exetime - max_sleep_time * 1.5
+        ):
             logger.warning(
                 f"running out of time in KDE calculation soon. Change sleep time to {max_sleep_time:.1f}s"
             )
