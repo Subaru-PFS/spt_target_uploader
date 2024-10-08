@@ -155,7 +155,7 @@ def simulate(
     max_exec_time: Annotated[
         int,
         typer.Option(
-            "--max-exec-time", help="Max execution time (s). Default is 0 (no limit)."
+            "--max-exec-time", help="Max execution time (s). 0 means no limit."
         ),
     ] = 0,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
