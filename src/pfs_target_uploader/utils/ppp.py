@@ -54,7 +54,6 @@ def PPPrunStart(
     d_pfi=1.38,
     quiet=True,
     clustering_algorithm="HDBSCAN",
-    max_exetime=900,
     queue=None,
     logger=None,
 ):
@@ -68,8 +67,6 @@ def PPPrunStart(
 
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
-
-    t_start_ppp = time.time()
 
     def count_N(sample):
         """calculate local count of targets
@@ -293,7 +290,7 @@ def PPPrunStart(
 
         return Z
 
-    def KDE(sample, multiProcesing, sleep_time=0.01, max_sleep_time=2.5):
+    def KDE(sample, multiProcesing):
         """define binning and calculate KDE
 
         Parameters
@@ -307,19 +304,6 @@ def PPPrunStart(
         =======
         ra_bin, dec_bin, significance of KDE over the field, ra of peak in KDE, dec of peak in KDE
         """
-
-        t_start_kde = time.time()
-
-        logger.debug(f"time elapsed in ppp: {t_start_kde-t_start_ppp:.2f}s")
-
-        if (max_exetime > 0) and (
-            t_start_kde - t_start_ppp > max_exetime - max_sleep_time * 1.5
-        ):
-            logger.warning(
-                f"running out of time in KDE calculation soon. Change sleep time to {max_sleep_time:.1f}s"
-            )
-            sleep_time = max_sleep_time
-
         if len(sample) == 1:
             # if only one target, set it as the peak
             return (
@@ -356,11 +340,16 @@ def PPPrunStart(
                     threads_count, round(len(sample) * 0.5)
                 )  # threads_count=10 in this machine
 
-                with mp.Pool(thread_n) as p:
-                    dMap_ = p.map(
-                        partial(KDE_xy, X=X_, Y=Y_), np.array_split(sample, thread_n)
-                    )
-                time.sleep(sleep_time)
+                kde_p = mp.Pool(thread_n)
+                dMap_ = kde_p.map_async(
+                    partial(KDE_xy, X=X_, Y=Y_),
+                    np.array_split(sample, thread_n),
+                )
+
+                kde_p.close()
+                kde_p.join()
+
+                dMap_ = dMap_.get()
 
                 Z = sum(dMap_)
 
@@ -378,7 +367,7 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, starttime):
+    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para):
         """determine pointing centers
 
         Parameters
@@ -913,7 +902,7 @@ def PPPrunStart(
             sub_l,
         )
 
-    def netflow_iter(uS, obj_allo, weight_para, starttime, status):
+    def netflow_iter(uS, obj_allo, weight_para, status):
         """iterate the total procedure to re-assign fibers to targets which have not been assigned
             in the previous/first iteration
 
@@ -952,7 +941,7 @@ def PPPrunStart(
                     uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
                 )  # remained exposure time
 
-                uS_t2, status = PPP_centers(uS_t1, [], True, weight_para, starttime)
+                uS_t2, status = PPP_centers(uS_t1, [], True, weight_para)
 
                 obj_allo_t = netflowRun(uS_t2)
 
@@ -991,13 +980,13 @@ def PPPrunStart(
         uPPC_M = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
-        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para, t_ppp_start)
+        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para)
         obj_allo_L = netflowRun(uS_L_s2)
 
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, status_
+                uS_L2, obj_allo_L, weight_para, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1016,13 +1005,13 @@ def PPPrunStart(
         out_sub_l = sub_l
 
     if len(uS_M) > 0 and len(uS_L) == 0:
-        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para, t_ppp_start)
+        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para)
         obj_allo_M = netflowRun(uS_M_s2)
 
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, status_
+                uS_M2, obj_allo_M, weight_para, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin
@@ -1040,12 +1029,12 @@ def PPPrunStart(
         out_sub_m = sub_m
 
     if len(uS_L) > 0 and len(uS_M) > 0:
-        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para, t_ppp_start)
+        uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para)
         obj_allo_L = netflowRun(uS_L_s2)
         if len(uPPC_L) == 0:
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
             obj_allo_L_fin, status_ = netflow_iter(
-                uS_L2, obj_allo_L, weight_para, t_ppp_start, status_
+                uS_L2, obj_allo_L, weight_para, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
@@ -1057,12 +1046,12 @@ def PPPrunStart(
             )
             out_obj_allo_L_fin = obj_allo_L
 
-        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para, t_ppp_start)
+        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para)
         obj_allo_M = netflowRun(uS_M_s2)
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
             obj_allo_M_fin, status_ = netflow_iter(
-                uS_M2, obj_allo_M, weight_para, t_ppp_start, status_
+                uS_M2, obj_allo_M, weight_para, status_
             )
             uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
                 uS_M_s2, obj_allo_M_fin
