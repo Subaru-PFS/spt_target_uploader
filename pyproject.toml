@@ -37,6 +37,7 @@ dependencies = [
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    "psutil>=6.0.0",
 ]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"

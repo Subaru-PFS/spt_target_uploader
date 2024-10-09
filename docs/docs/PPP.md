@@ -66,19 +66,20 @@ The online PPP will give a status report of the pointing simulation.
 
     - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with an individual exposure time of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying individual exposure time can solve the problem.
     - No fibers can be assigned due to no available fibers. Slightly shifting the pointing by ~0.2-0.5 degree can solve the problem in most cases.
+    - The running time exceeds 15 minutes.
+
 
 !!! warning "Warnings are raised in the following cases:"
 
     - The total requested time exceeds the 5-night upper limit for the normal program (35 hours).
-    - The running time exceeds 15 minutes.
 
 #### Examples of status
 
 <figure markdown>
   ![Status indicators](images/ppp_warning_35h.png){ width="1000" }
-  ![Status indicators](images/ppp_warning_exetime.png){ width="995" }
+  ![Status indicators](images/ppp_error_exetime.png){ width="995" }
   <figcaption>(Top) A warning to indicate that the total time to complete all targets in the list is estimated to exceed 5 nights</figcaption>
-  <figcaption>(Bottom) A warning to indicate that the running time exceeds 15 minutes.</figcaption>
+  <figcaption>(Bottom) An error to indicate that the running time exceeds 15 minutes.</figcaption>
 </figure>
 
 <figure markdown>
