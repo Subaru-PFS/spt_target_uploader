@@ -2,6 +2,7 @@
 
 import multiprocessing as mp
 import sys
+import psutil
 
 import numpy as np
 import panel as pn
@@ -309,7 +310,6 @@ class PppResultWidgets:
                 1.38,
                 quiet,
                 clustering_algorithm,
-                max_exetime,
                 ppp_run_results,
                 logger,
             ),
@@ -328,6 +328,16 @@ class PppResultWidgets:
                 f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
                 duration=0,  # ever
             )
+
+            # Terminate child processes related to ppp_run (otherwise ppp_run.terminate will report BrokenPipeError)
+            for ps in mp.active_children():
+                current_process = psutil.Process(ps.pid)
+                children_process = current_process.children(recursive=True)
+
+                if len(children_process) > 0:
+                    # only kill ppp_run, not ppp_run_results (or kill it as well?? need FIX)
+                    for child_ in children_process:
+                        psutil.Process(child_.pid).terminate()
 
             # Terminate PPP
             ppp_run.terminate()
