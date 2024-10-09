@@ -78,9 +78,6 @@ OUTPUT_DIR="data"
 # maximum execution time (s) to terminate the calculation (default: 900s = 15min, 0 = no limit)
 # MAX_EXETIME=0
 
-# maximum number of pointings to be considered (default: 200, 0 = no limit)
-# MAX_NPPC=100
-
 # email setting (email will be sent at each submission)
 # EMAIL_FROM=
 # EMAIL_TO=
@@ -101,4 +98,8 @@ ANN_FILE="user_announcement.md"
 # SQLite database file to be used for the duplication check of upload_id
 # The file will be created under $OUTPUT_DIR
 UPLOADID_DB="upload_id.sqlite"
+
+# loggging level
+# DEBUG, INFO (default), WARNING, ERROR, or CRITICAL
+LOG_LEVEL="INFO"
 ```
