@@ -63,6 +63,20 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
         except (ValueError, TypeError):
             raise ValueError(f"Non integer value detected {value}")
 
+    def check_integer_none(value):
+        try:
+            if value == "None":
+                return None
+
+            int_value = int(value)
+
+            if math.isclose(int_value, float(value)):
+                return int_value
+            else:
+                raise ValueError(f"Non integer value detected: {value}")
+        except (ValueError, TypeError):
+            raise ValueError(f"Non integer value detected {value}")
+
     if format in ["csv", "ecsv"]:
         try:
             if format == "csv":
@@ -76,8 +90,8 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                         "obj_id": check_integer,
                         "priority": check_integer,
                         "resolution": str,
-                        "tract": check_integer,
-                        "patch": check_integer,
+                        "tract": check_integer_none,
+                        "patch": check_integer_none,
                         "equinox": str,
                         "comment": str,
                     },

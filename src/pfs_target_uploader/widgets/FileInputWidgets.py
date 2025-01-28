@@ -11,6 +11,7 @@ from loguru import logger
 
 from ..utils.checker import validate_input
 from ..utils.io import load_input
+from ..utils.session import assign_secret_token
 
 
 class FileInputWidgets(param.Parameterized):
@@ -30,6 +31,9 @@ class FileInputWidgets(param.Parameterized):
 
         # hex string to be used as an upload ID
         self.secret_token = None
+        self.db_path = None
+        self.output_dir = None
+        self.use_db = True
 
         self.pane = pn.Column(
             pn.Row(
@@ -61,11 +65,6 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.mime_type = None
         self.file_input.value = None
 
-    def assign_secret_token(self, nbytes=8):
-        st = secrets.token_hex(nbytes)
-        self.secret_token = st
-        logger.info(f"Assigning a new secret token as an upload_id: {st}")
-
     def validate(self, date_begin=None, date_end=None, warn_threshold=100000):
         t_start = time.time()
         if date_begin >= date_end:
@@ -81,7 +80,9 @@ class FileInputWidgets(param.Parameterized):
             or (self.file_input.mime_type != self.previous_mime_type)
         ):
 
-            self.assign_secret_token()
+            self.secret_token = assign_secret_token(
+                db_path=self.db_path, output_dir=self.output_dir, use_db=self.use_db
+            )
 
             logger.info("New file detected.")
             logger.info(f"    Upload ID updated: {self.secret_token}")

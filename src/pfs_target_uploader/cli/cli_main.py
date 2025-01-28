@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
+import glob
+import multiprocessing as mp
 import os
 import sys
 from datetime import date
 from enum import Enum
+from pathlib import Path
 from typing import Annotated, List
 
+import pandas as pd
 import panel as pn
 import typer
 from astropy.table import Table
 from loguru import logger
 
 from ..utils.checker import validate_input
+from ..utils.db import bulk_insert_uid_db, create_uid_db, remove_duplicate_uid_db
 from ..utils.io import load_input, upload_file
 from ..utils.ppp import PPPrunStart, ppp_result
 from ..widgets import StatusWidgets
@@ -150,23 +155,16 @@ def simulate(
     max_exec_time: Annotated[
         int,
         typer.Option(
-            "--max-exec-time", help="Max execution time (s). Default is 0 (no limit)."
+            "--max-exec-time", help="Max execution time (s). 0 means no limit."
         ),
-    ] = None,
-    max_nppc: Annotated[
-        int,
-        typer.Option(
-            "--max-nppc",
-            help="Max number of pointings to consider. Default is 0 (no limit).",
-        ),
-    ] = None,
+    ] = 0,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
     logger.remove(0)
-    logger.add(sys.stderr, level=log_level.value)
+    logger.add(sys.stderr, level=log_level.value, enqueue=True)
 
     if obs_type != "classical":
         logger.warning(
@@ -185,11 +183,6 @@ def simulate(
         date_begin = None if date_begin is None else date.fromisoformat(date_begin)
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
-        if max_exec_time is None:
-            max_exec_time = 0
-        if max_nppc is None:
-            max_nppc = 0
-
         validation_status, df_validated = validate_input(
             df_input, date_begin=date_begin, date_end=date_end
         )
@@ -202,6 +195,45 @@ def simulate(
     tb_visible = tb_input[validation_status["visibility"]["success"]]
 
     logger.info("Running the online PPP to simulate pointings")
+
+    ppp_run_results = mp.Manager().Queue()
+
+    ppp_run = mp.Process(
+        target=PPPrunStart,
+        name="PPP",
+        args=(
+            tb_visible,
+            None,  # uPPC
+            None,  # weight_para
+            single_exptime,  # single_exptime
+            1.38,  # d_pfi
+            True,  # quiet
+            "HDBSCAN",  # clustering_algorithm
+            max_exec_time,  # max_exetime
+            ppp_run_results,  # queue
+            logger,  # logger
+        ),
+    )
+
+    # start run PPP
+    ppp_run.start()
+
+    # Wait max_exetime for PPP
+    ppp_run.join(max_exec_time if max_exec_time > 0 else None)
+
+    if ppp_run.is_alive():
+        # if ppp is still running after max_exetime, kill it
+        logger.error("Pointing simulation failed (runout time)")
+
+        # Terminate PPP
+        ppp_run.terminate()
+
+        # Cleanup
+        ppp_run.join()
+
+        # exit
+        sys.exit(1)
+
     (
         uS_L2,
         _,
@@ -214,16 +246,10 @@ def simulate(
         sub_m,
         obj_allo_M_fin,
         _,  # ppp_status
-    ) = PPPrunStart(
-        tb_visible,
-        None,  # uPPC
-        None,  # weight_para
-        exetime=max_exec_time,
-        max_nppc=max_nppc,
-        single_exptime=single_exptime,
-    )
+    ) = ppp_run_results.get()
 
     logger.info("Summarizing the results")
+
     _, p_result_fig, p_result_ppc, p_result_tab = ppp_result(
         cR_L_,
         sub_l,
@@ -383,3 +409,100 @@ def start_app(
         },
         **kwargs,
     )
+
+
+@app.command(help="Generate a SQLite database of upload_id")
+def uid2sqlite(
+    input_list: Annotated[
+        str, typer.Argument(show_default=False, help="Input CSV file.")
+    ] = None,
+    output_dir: Annotated[
+        str, typer.Option("-d", "--dir", help="Output directory to save the results.")
+    ] = ".",
+    dbfile: Annotated[
+        str,
+        typer.Option(
+            "--db",
+            help="Filename of the SQLite database to save the upload_id.",
+        ),
+    ] = "upload_id.sqlite",
+    scan_dir: Annotated[
+        str,
+        typer.Option(
+            "--scan-dir",
+            help="Directory to scan for the upload_id. Default is None (use input file)",
+        ),
+    ] = None,
+    remove_duplicates: Annotated[
+        bool,
+        typer.Option(
+            "--clean",
+            help="Remove duplicates from the database. Default is False.",
+        ),
+    ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
+):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level.value)
+
+    db_path = os.path.join(output_dir, dbfile)
+
+    if input_list is not None:
+        df_input = pd.read_csv(input_list)
+    elif scan_dir is not None:
+        d = glob.glob(f"{scan_dir}/????/??/????????-??????-????????????????")
+        upload_ids = [s.split("-")[-1] for s in d]
+        df_input = pd.DataFrame({"upload_id": upload_ids})
+    else:
+        logger.warning("No input specified. Just try to create an empty database.")
+        df_input = pd.DataFrame({"upload_id": []})
+
+    print(df_input)
+
+    if not os.path.exists(output_dir):
+        raise FileNotFoundError(f"Output directory not found: {output_dir}")
+
+    if not os.path.exists(db_path):
+        logger.info(f"Creating a new SQLite database: {dbfile}")
+        create_uid_db(db_path)
+
+    if not df_input.empty:
+        bulk_insert_uid_db(df_input, db_path)
+
+    if remove_duplicates:
+        remove_duplicate_uid_db(db_path)
+
+
+@app.command(help="Remove duplicates from a SQLite database of upload_id")
+def clean_uid(
+    dbfile: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            help="Full path to the SQLite database file.",
+        ),
+    ],
+    backup: Annotated[
+        bool,
+        typer.Option(
+            help="Create a backup of the database before cleaning. Default is True."
+        ),
+    ] = True,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            help="Do not remove duplicates; just check the duplicates. Default is False."
+        ),
+    ] = False,
+    log_level: Annotated[
+        LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
+    ] = LogLevel.INFO,
+):
+    logger.remove(0)
+    logger.add(sys.stderr, level=log_level.value)
+
+    remove_duplicate_uid_db(dbfile, backup=backup, dry_run=dry_run)

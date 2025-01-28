@@ -78,11 +78,68 @@ OUTPUT_DIR="data"
 # maximum execution time (s) to terminate the calculation (default: 900s = 15min, 0 = no limit)
 # MAX_EXETIME=0
 
-# maximum number of pointings to be considered (default: 200, 0 = no limit)
-# MAX_NPPC=100
-
 # email setting (email will be sent at each submission)
 # EMAIL_FROM=
 # EMAIL_TO=
 # SMTP_SERVER=
+
+# Supress output of netflow
+# 0: verbose
+# 1: quiet
+PPP_QUIET=1
+
+# Target clustering algorithm
+# HDBSCAN or DBSCAN
+CLUSTERING_ALGORITHM=HDBSCAN
+
+# Text to be announce at the beginning (Markdown)
+ANN_FILE="user_announcement.md"
+
+# SQLite database file to be used for the duplication check of upload_id
+# The file will be created under $OUTPUT_DIR
+UPLOADID_DB="upload_id.sqlite"
+
+# loggging level
+# DEBUG, INFO (default), WARNING, ERROR, or CRITICAL
+LOG_LEVEL="INFO"
 ```
+
+## Preparing database
+
+When `UPLOADID_DB` is set, the uploader looks up `$OUTPUT_DIR/$UPLOADID_DB` file for the duplication check of `upload_id`.
+The following command can be used to generate the database file.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB
+```
+
+If you have a list of `upload_id`s to be inserted into the database (`upload_id.csv`), you can run the command as follows.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB upload_id.csv
+```
+
+The example content of `upload_id.csv` is as follows.
+
+```csv
+upload_id
+c748124208176c40
+4cd4bc355c092ad7
+1b8d0c4f808972bb
+2e07c75691e5ba26
+c695c6b755930209
+```
+
+If you want to scan a directory (e.g., `$OUTPUT_DIR`) containing submitted uploads, you can run the command as follows.
+
+```sh
+pfs-uploader-cli uid2sqlite -d $OUTPUT_DIR --db $UPLOADID_DB --scan-dir $OUTPUT_DIR
+```
+
+You can remove duplicates by the following command.
+
+```sh
+pfs-uploader-cli clean-uid $OUTPUT_DIR/$UPLOADID_DB
+```
+
+See [the manual](./cli.md) for more options.
