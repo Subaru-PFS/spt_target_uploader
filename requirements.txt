@@ -25,10 +25,12 @@ mkdocs-material[imaging]>=9.5.4
 mkdocs-video>=1.5.0
 multiprocess>=0.70.15
 myst-parser>=2.0.0
+numpy<2.0.0
 pandas>=2.0.3
-panel==1.4.5
+panel<1.7,>=1.6.0
 pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git
 pip>=23.2.1
+psutil>=6.0.0
 pybind11>=2.11.1
 pyinstrument>=4.6.0
 python-dotenv>=1.0.0
