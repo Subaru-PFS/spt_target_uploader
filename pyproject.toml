@@ -10,7 +10,7 @@ dependencies = [
     "astroplan>=0.9",
     "colorcet>=3.0.1",
     "datashader>=0.16.0",
-    "dask>=2023.10.1",
+    "dask>=2023.10.1,<2025.1.0",
     "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
     "gurobipy>=10,<11",
     "holoviews>=1.17.1",
@@ -39,7 +39,7 @@ dependencies = [
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
     "psutil>=6.0.0",
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 readme = "README.md"
 license = { text = "MIT" }
 
