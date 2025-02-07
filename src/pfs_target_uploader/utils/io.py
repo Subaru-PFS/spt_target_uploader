@@ -60,22 +60,44 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                 return int_value
             else:
                 raise ValueError(f"Non integer value detected: {value}")
-        except (ValueError, TypeError):
-            raise ValueError(f"Non integer value detected {value}")
+        except ValueError as e:
+            raise ValueError(f"{e}")
+        except TypeError as e:
+            raise TypeError(f"{e}")
+
+    def check_bigint(value):
+        try:
+            int_value = int(value)
+            if math.isclose(int_value, float(value)):
+                if (
+                    int_value >= -9223372036854775808
+                    and int_value <= 9223372036854775807
+                ):
+                    return int_value
+                else:
+                    raise ValueError(
+                        f"Out of range value detected (-9223372036854775808, 9223372036854775807): {value}"
+                    )
+            else:
+                raise ValueError(f"Non integer value detected: {value}")
+        except ValueError as e:
+            raise ValueError(f"{e}")
+        except TypeError as e:
+            raise TypeError(f"{e}")
 
     def check_integer_none(value):
         try:
             if value == "None":
                 return None
-
             int_value = int(value)
-
             if math.isclose(int_value, float(value)):
                 return int_value
             else:
                 raise ValueError(f"Non integer value detected: {value}")
-        except (ValueError, TypeError):
-            raise ValueError(f"Non integer value detected {value}")
+        except ValueError as e:
+            raise ValueError(f"{e}")
+        except TypeError as e:
+            raise TypeError(f"{e}")
 
     if format in ["csv", "ecsv"]:
         try:
@@ -87,7 +109,7 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                     dtype=dtype,
                     converters={
                         "ob_code": str,
-                        "obj_id": check_integer,
+                        "obj_id": check_bigint,
                         "priority": check_integer,
                         "resolution": str,
                         "tract": check_integer_none,
