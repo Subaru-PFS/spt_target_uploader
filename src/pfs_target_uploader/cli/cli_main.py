@@ -10,6 +10,7 @@ from typing import Annotated, List
 
 import pandas as pd
 import panel as pn
+import psutil
 import typer
 from astropy.table import Table
 from loguru import logger
@@ -196,6 +197,8 @@ def simulate(
 
     logger.info("Running the online PPP to simulate pointings")
 
+    #########################################################################
+
     ppp_run_results = mp.Manager().Queue()
 
     ppp_run = mp.Process(
@@ -209,9 +212,8 @@ def simulate(
             1.38,  # d_pfi
             True,  # quiet
             "HDBSCAN",  # clustering_algorithm
-            max_exec_time,  # max_exetime
-            ppp_run_results,  # queue
-            logger,  # logger
+            ppp_run_results,
+            logger,
         ),
     )
 
@@ -223,7 +225,19 @@ def simulate(
 
     if ppp_run.is_alive():
         # if ppp is still running after max_exetime, kill it
-        logger.error("Pointing simulation failed (runout time)")
+        logger.error(
+            f"Pointing simulation failed (exceed the max_exec_time of {max_exec_time} s)"
+        )
+
+        # Terminate child processes related to ppp_run (otherwise ppp_run.terminate will report BrokenPipeError)
+        for ps in mp.active_children():
+            current_process = psutil.Process(ps.pid)
+            children_process = current_process.children(recursive=True)
+
+            if len(children_process) > 0:
+                # only kill ppp_run, not ppp_run_results (or kill it as well?? need FIX)
+                for child_ in children_process:
+                    psutil.Process(child_.pid).terminate()
 
         # Terminate PPP
         ppp_run.terminate()
@@ -231,22 +245,22 @@ def simulate(
         # Cleanup
         ppp_run.join()
 
-        # exit
-        sys.exit(1)
-
-    (
-        uS_L2,
-        _,
-        cR_L_,
-        sub_l,
-        obj_allo_L_fin,
-        uS_M2,
-        _,
-        cR_M_,
-        sub_m,
-        obj_allo_M_fin,
-        _,  # ppp_status
-    ) = ppp_run_results.get()
+        # return
+        return
+    else:
+        (
+            uS_L2,
+            _,
+            cR_L_,
+            sub_l,
+            obj_allo_L_fin,
+            uS_M2,
+            _,
+            cR_M_,
+            sub_m,
+            obj_allo_M_fin,
+            _,  # ppc_status
+        ) = ppp_run_results.get()
 
     logger.info("Summarizing the results")
 

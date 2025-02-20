@@ -2,10 +2,10 @@
 
 import multiprocessing as mp
 import sys
-import psutil
 
 import numpy as np
 import panel as pn
+import psutil
 from astropy import units as u
 from astropy.table import Table
 from loguru import logger
@@ -319,7 +319,7 @@ class PppResultWidgets:
         ppp_run.start()
 
         # Wait max_exetime for PPP
-        ppp_run.join(max_exetime)
+        ppp_run.join(max_exetime if max_exetime > 0 else None)
 
         if ppp_run.is_alive():
             # if ppp is still running after max_exetime, kill it
