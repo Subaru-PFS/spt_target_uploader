@@ -424,14 +424,16 @@ def PPPrunStart(
                 logger.debug(
                     "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
                 )
-                prob_sample_s = 1.0 / (sample[is_active]["priority"] + 1.0)
-                prob_sample_s /= prob_sample_s.sum()
-                sample_s = rng.choice(
-                    sample[is_active],
+                prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
+                prob_active_sample /= prob_sample_s.sum()
+                index_active_samples = np.arange(len(sample[is_active]))
+                index_s = rng.choice(
+                    index_active_samples,
                     size=int(Nfiber * 2.5),
-                    p=prob_sample_s,
+                    p=prob_active_sample,
                     replace=False,
                 )
+                sample_s = sample[is_active][index_s]
                 logger.debug(f"{len(sample[is_active])} -> {len(sample_s)}")
 
             while any(sample_s["exptime_PPP"] > 0):
