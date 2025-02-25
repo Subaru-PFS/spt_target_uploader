@@ -425,7 +425,7 @@ def PPPrunStart(
                     "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
                 )
                 prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
-                prob_active_sample /= prob_sample_s.sum()
+                prob_active_sample /= prob_active_sample.sum()
                 index_active_samples = np.arange(len(sample[is_active]))
                 index_s = rng.choice(
                     index_active_samples,
