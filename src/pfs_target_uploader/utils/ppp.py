@@ -62,6 +62,8 @@ def PPPrunStart(
         logger.remove()
         logger.add(sys.stderr, level="INFO", enqueue=True)
 
+    rng = np.random.default_rng(seed=2394)
+
     r_pfi = d_pfi / 2.0
 
     ppp_quiet = quiet
@@ -141,8 +143,8 @@ def PPPrunStart(
         =======
         list of pointing centers in different group
         """
-        logger.debug(f"{sample['ra']=}")
-        logger.debug(f"{sample['dec']=}")
+        logger.debug(f"{sample['ra'][:5]=}")
+        logger.debug(f"{sample['dec'][:5]=}")
 
         # haversine uses (dec,ra) in radian
         # HDBSCAN needs more than 1 data point to work, so use DBSCAN for single target clustering.
@@ -368,7 +370,7 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para):
+    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, sampling_factor=4.0):
         """determine pointing centers
 
         Parameters
@@ -385,8 +387,6 @@ def PPPrunStart(
         =======
         sample with list of pointing centers in meta
         """
-
-        rng = np.random.default_rng()
 
         conta, contb, contc = weight_para
         status = 999
@@ -415,26 +415,30 @@ def PPPrunStart(
             is_active = sample["exptime_PPP"] > 0
 
             # NOTE (MO):
-            # if the number of the remaining sample in the cluster exceeds 2.5 times of the number of fibers,
-            # randomly select 2.5 times of the number of fibers to reduce the computational time
-            if sum(is_active) < Nfiber * 2.5:
+            # if the number of the remaining sample in the cluster exceeds <sampling_factor> times of the number of fibers,
+            # randomly select <sampling_factor> times of the number of fibers to reduce the computational time
+            if sum(is_active) < Nfiber * sampling_factor:
                 sample_s = sample[is_active]  # targets not finished
                 logger.debug(f"{len(sample_s)}")
             else:
                 logger.debug(
                     "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
                 )
-                prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
+                # prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
+                prob_active_sample = 10.0 - sample[is_active]["priority"]
+                prob_active_sample[prob_active_sample < 0] = 0.5
                 prob_active_sample /= prob_active_sample.sum()
                 index_active_samples = np.arange(len(sample[is_active]))
                 index_s = rng.choice(
                     index_active_samples,
-                    size=int(Nfiber * 2.5),
+                    size=int(Nfiber * sampling_factor),
                     p=prob_active_sample,
                     replace=False,
                 )
                 sample_s = sample[is_active][index_s]
-                logger.debug(f"{len(sample[is_active])} -> {len(sample_s)}")
+                logger.debug(
+                    f"Ramdomly sampled: {len(sample[is_active])} -> {len(sample_s)}"
+                )
 
             while any(sample_s["exptime_PPP"] > 0):
                 # -------------------------------
