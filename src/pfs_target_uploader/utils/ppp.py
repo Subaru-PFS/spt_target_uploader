@@ -8,6 +8,7 @@ import warnings
 from contextlib import redirect_stdout
 from functools import partial
 from itertools import chain
+from tkinter import N
 
 import colorcet as cc
 import holoviews as hv
@@ -385,6 +386,8 @@ def PPPrunStart(
         sample with list of pointing centers in meta
         """
 
+        rng = np.random.default_rng()
+
         conta, contb, contc = weight_para
         status = 999
         Nfiber = int(2394 - 200)  # 200 for calibrators
@@ -408,7 +411,28 @@ def PPPrunStart(
         for sample in target_clustering(
             sample_f, d_pfi, algorithm=clustering_algorithm
         ):
-            sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
+
+            is_active = sample["exptime_PPP"] > 0
+
+            # NOTE (MO):
+            # if the number of the remaining sample in the cluster exceeds 2.5 times of the number of fibers,
+            # randomly select 2.5 times of the number of fibers to reduce the computational time
+            if sum(is_active) < Nfiber * 2.5:
+                sample_s = sample[is_active]  # targets not finished
+                logger.debug(f"{len(sample_s)}")
+            else:
+                logger.debug(
+                    "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
+                )
+                prob_sample_s = 1.0 / (sample[is_active]["priority"] + 1.0)
+                prob_sample_s /= prob_sample_s.sum()
+                sample_s = rng.choice(
+                    sample[is_active],
+                    size=int(Nfiber * 2.5),
+                    p=prob_sample_s,
+                    replace=False,
+                )
+                logger.debug(f"{len(sample[is_active])} -> {len(sample_s)}")
 
             while any(sample_s["exptime_PPP"] > 0):
                 # -------------------------------
