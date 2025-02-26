@@ -370,7 +370,7 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, sampling_factor=4.0):
+    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para, sampling_factor=2.5):
         """determine pointing centers
 
         Parameters
@@ -411,34 +411,33 @@ def PPPrunStart(
         for sample in target_clustering(
             sample_f, d_pfi, algorithm=clustering_algorithm
         ):
-
             is_active = sample["exptime_PPP"] > 0
+            sample_s = sample[is_active]  # targets not finished
 
-            # NOTE (MO):
-            # if the number of the remaining sample in the cluster exceeds <sampling_factor> times of the number of fibers,
-            # randomly select <sampling_factor> times of the number of fibers to reduce the computational time
-            if sum(is_active) < Nfiber * sampling_factor:
-                sample_s = sample[is_active]  # targets not finished
-                logger.debug(f"{len(sample_s)}")
-            else:
-                logger.debug(
-                    "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
-                )
-                # prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
-                prob_active_sample = 10.0 - sample[is_active]["priority"]
-                prob_active_sample[prob_active_sample < 0] = 0.5
-                prob_active_sample /= prob_active_sample.sum()
-                index_active_samples = np.arange(len(sample[is_active]))
-                index_s = rng.choice(
-                    index_active_samples,
-                    size=int(Nfiber * sampling_factor),
-                    p=prob_active_sample,
-                    replace=False,
-                )
-                sample_s = sample[is_active][index_s]
-                logger.debug(
-                    f"Ramdomly sampled: {len(sample[is_active])} -> {len(sample_s)}"
-                )
+            # # NOTE
+            # # MO: if the number of the remaining sample in the cluster exceeds <sampling_factor> times of the number of fibers,
+            # # randomly select <sampling_factor> times of the number of fibers to reduce the computational time
+            # if sum(is_active) < Nfiber * sampling_factor:
+            #     sample_s = sample[is_active]  # targets not finished
+            #     logger.debug(f"{len(sample_s)}")
+            # else:
+            #     logger.debug(
+            #         "Too many targets per fiber, limit to 2.5 objects per fiber by random sampling"
+            #     )
+            #     # prob_active_sample = 1.0 / (sample[is_active]["priority"] + 1.0)
+            #     prob_active_sample = sample["weight"]
+            #     prob_active_sample /= prob_active_sample.sum()
+            #     index_active_samples = np.arange(len(sample[is_active]))
+            #     index_s = rng.choice(
+            #         index_active_samples,
+            #         size=int(Nfiber * sampling_factor),
+            #         p=prob_active_sample,
+            #         replace=False,
+            #     )
+            #     sample_s = sample[is_active][index_s]
+            #     logger.debug(
+            #         f"Ramdomly sampled: {len(sample[is_active])} -> {len(sample_s)}"
+            #     )
 
             while any(sample_s["exptime_PPP"] > 0):
                 # -------------------------------
@@ -1010,14 +1009,25 @@ def PPPrunStart(
         uPPC_M = []
 
     if len(uS_L) > 0 and len(uS_M) == 0:
+        logger.info("First iteration")
+        logger.info("    Determining PPC centers")
         uS_L_s2, status_ = PPP_centers(uS_L, uPPC_L, True, weight_para)
+        logger.info("    PPC centers determined")
+        logger.info("    Running netflow")
         obj_allo_L = netflowRun(uS_L_s2)
+        logger.info("    Netflow finished")
 
+        logger.info("Further iterations")
         if len(uPPC_L) == 0:
+            logger.info("    No user-defined PPCs")
+            logger.info("    Computing completed PPCs")
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
+            logger.info("    Running netflow")
             obj_allo_L_fin, status_ = netflow_iter(
                 uS_L2, obj_allo_L, weight_para, status_
             )
+            logger.info("    Netflow finished")
+            logger.info("    Computing completed PPCs")
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
             )
@@ -1028,6 +1038,7 @@ def PPPrunStart(
                 uS_L_s2, obj_allo_L
             )
             out_obj_allo_L_fin = obj_allo_L
+        logger.info("    iteration finished")
 
         out_uS_L2 = uS_L2
         out_cR_L = [cR_L_fh, cR_L_n]
