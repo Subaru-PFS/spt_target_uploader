@@ -10,6 +10,7 @@ from functools import partial
 from itertools import chain
 
 import colorcet as cc
+import hdbscan
 import holoviews as hv
 import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
 import multiprocess as mp
@@ -157,9 +158,19 @@ def PPPrunStart(
                 np.radians([sample["dec"], sample["ra"]]).T
             )
             labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
+        elif algorithm.upper() == "FAST_HDBSCAN":
+            logger.info("algorithm for target clustering: FAST_HDBSCAN")
+            db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
         else:
-            logger.error("algorithm should be either DBSCAN or HDBSCAN")
-            raise ValueError("algorithm should be either DBSCAN or HDBSCAN")
+            logger.error("algorithm should be one of DBSCAN, HDBSCAN, and FAST_HDBSCAN")
+            raise ValueError(
+                "algorithm should be one of DBSCAN, HDBSCAN, and FAST_HDBSCAN"
+            )
+
+        logger.info("Clustering finished")
 
         unique_labels = set(labels)
         n_clusters = len(unique_labels)
