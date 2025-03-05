@@ -2,7 +2,7 @@
 
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import gurobipy
 import panel as pn
@@ -433,6 +433,11 @@ def target_uploader_app(use_panel_cli=False):
                 panel_timer.timer(False)
                 return
 
+            dt_now = datetime.now()
+            pn.state.notifications.info(
+                f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')} and last up for about 15 minutes",
+                duration=0,
+            )
             panel_ppp.run_ppp(
                 df_validated,
                 df_ppc,
