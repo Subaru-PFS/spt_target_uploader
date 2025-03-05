@@ -434,10 +434,17 @@ def target_uploader_app(use_panel_cli=False):
                 return
 
             dt_now = datetime.now()
-            pn.state.notifications.info(
-                f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')} and last up for about 15 minutes",
-                duration=0,
-            )
+            if max_exetime > 0:
+                pn.state.notifications.info(
+                    f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')} and last up for about {int(max_exetime/60)} minutes",
+                    duration=0,
+                )
+            else:
+                pn.state.notifications.info(
+                    f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')}",
+                    duration=0,
+                )
+
             panel_ppp.run_ppp(
                 df_validated,
                 df_ppc,
