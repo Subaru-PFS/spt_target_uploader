@@ -55,9 +55,7 @@ Upload URL: {url}
     logger.info(f"Seinding an email:\n{message_text}")
 
     msg = EmailMessage()
-    msg["Subject"] = (
-        f"[pfs-target-uploader] New submission {upload_id} on the PFS Target Uploader"
-    )
+    msg["Subject"] = f"New submission {upload_id} on the PFS Target Uploader"
     msg["From"] = config["EMAIL_FROM"]
     msg["To"] = config["EMAIL_TO"]
     msg.set_content(message_text)
