@@ -10,6 +10,7 @@ from functools import partial
 from itertools import chain
 
 import colorcet as cc
+import hdbscan
 import holoviews as hv
 import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
 import multiprocess as mp
@@ -44,6 +45,64 @@ if parse_version(bokeh.__version__) < parse_version("3.3"):
 warnings.filterwarnings("ignore")
 
 pn.extension(notifications=True)
+
+
+def calc_overheads(
+    n_sci_frame: int,
+    single_exptime: float,
+    t_night_hours: float = 10.0,
+    t_overhead_misc: float = 120.0,
+    t_overhead_fiber: float = 180.0,
+    t_overhead_shared_hours: float = 1.2,
+) -> float:
+    """
+    Calculate the total overheads for the given number of science frames and single exposure time.
+
+    Parameters
+    ----------
+    n_sci_frame : int
+        Number of scientific frames (pointings) to be observed.
+    single_exptime : float
+        Exposure time for a single scientific frame in seconds.
+    t_night_hours : float, optional
+        Total observing time per night in hours. Default is 10.0 hours.
+    t_overhead_misc : float, optional
+        Miscellaneous overheads in seconds. Default is 120.0 seconds.
+    t_overhead_fiber : float, optional
+        Fiber reconfiguration overheads in seconds. Default is 180.0 seconds.
+    t_overhead_shared_hours : float, optional
+        Shared calibration overheads in hours. Default is 1.2 hours.
+    Returns
+    -------
+    float
+        Total overheads in hours.
+
+    Notes
+    -----
+    Overhead time is 1.2 h per night. A night is defined as 10 h. So, 1.2 h is charged
+    to the program for every 8.8 h of observing time.
+    In addition to that, 5 min (3 min for fiber configuration and 2 min for misc. processes)
+    are charged per pointing.
+    """
+
+    # in seconds
+    t_exp_sci: float = single_exptime  # [s]
+
+    # [s] total time for all pointings
+    t_total_pointings = (t_exp_sci + t_overhead_misc + t_overhead_fiber) * n_sci_frame
+
+    # [s] overheads for the program
+    t_overhead_program = (
+        t_total_pointings
+        / (t_night_hours - t_overhead_shared_hours)
+        * t_overhead_shared_hours
+    )
+
+    # [s] total request observing time (ROT)
+    Toverheads_tot_best = t_total_pointings + t_overhead_program
+
+    # return the total overheads in hours
+    return Toverheads_tot_best / 3600.0
 
 
 def PPPrunStart(
@@ -157,9 +216,19 @@ def PPPrunStart(
                 np.radians([sample["dec"], sample["ra"]]).T
             )
             labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
+        elif algorithm.upper() == "FAST_HDBSCAN":
+            logger.info("algorithm for target clustering: FAST_HDBSCAN")
+            db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
+                np.radians([sample["dec"], sample["ra"]]).T
+            )
+            labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
         else:
-            logger.error("algorithm should be either DBSCAN or HDBSCAN")
-            raise ValueError("algorithm should be either DBSCAN or HDBSCAN")
+            logger.error("algorithm should be one of DBSCAN, HDBSCAN, and FAST_HDBSCAN")
+            raise ValueError(
+                "algorithm should be one of DBSCAN, HDBSCAN, and FAST_HDBSCAN"
+            )
+
+        logger.info("Clustering finished")
 
         unique_labels = set(labels)
         n_clusters = len(unique_labels)
@@ -1145,35 +1214,6 @@ def ppp_result(
             format="0.0", text_align="right"
         )
 
-    def overheads(n_sci_frame):
-        t_night_hours: float = 10.0  # [h] total observing time per night
-
-        # in seconds
-        # t_exp_sci: float = 900.0
-        t_exp_sci: float = single_exptime  # [s]
-
-        t_overhead_misc: float = 120.0  # [s] miscellanous overheads
-        t_overhead_fiber: float = 180.0  # [s] fiber reconfiguration overheads
-
-        t_overhead_shared_hours: float = 1.2  # [h] calibrations per night
-
-        # [s] total time for all pointings
-        t_total_pointings = (
-            t_exp_sci + t_overhead_misc + t_overhead_fiber
-        ) * n_sci_frame
-
-        # [s] overheads for the program
-        t_overhead_program = (
-            t_total_pointings
-            / (t_night_hours - t_overhead_shared_hours)
-            * t_overhead_shared_hours
-        )
-
-        # [s] total request observing time (ROT)
-        Toverheads_tot_best = t_total_pointings + t_overhead_program
-
-        return Toverheads_tot_best / 3600.0
-
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
         nppc = pn.widgets.EditableIntSlider(
             name=(f"{RESmode.capitalize()}-resolution mode"),
@@ -1445,7 +1485,7 @@ def ppp_result(
                 * single_exptime
                 / 3600.0
             )  # fiber_count*hour
-            Ttot_best = overheads(nppc_fin)
+            Ttot_best = calc_overheads(nppc_fin, single_exptime)
             fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
             fib_eff_small = (
                 sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
@@ -1726,18 +1766,6 @@ def ppp_result_reproduce(
             np.array(completeR_n_),
             sub_l,
         )
-
-    def overheads(n_sci_frame):
-        # in seconds
-        t_exp_sci: float = single_exptime
-        t_overhead_misc: float = 60.0
-        t_overhead_fiber: float = 180.0
-
-        Toverheads_tot_best = (
-            t_exp_sci + t_overhead_misc + t_overhead_fiber
-        ) * n_sci_frame
-
-        return Toverheads_tot_best / 3600.0
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr, nppc_tac=0):
         def nppc2rot(nppc_):
@@ -2037,7 +2065,7 @@ def ppp_result_reproduce(
         # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
-            Ttot_best = overheads(nppc_fin)
+            Ttot_best = calc_overheads(nppc_fin, single_exptime)
 
             if nppc_fin > 0:
                 Fhour_tot = (

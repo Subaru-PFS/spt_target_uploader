@@ -353,6 +353,7 @@ def start_app(
             # "https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext",
         ],
         layout_compatibility="error",
+        disconnect_notification="Connection lost, try reloading the page.",
     )
 
     # pn.state.notifications.position = "bottom-left"
