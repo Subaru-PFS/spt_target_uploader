@@ -47,7 +47,7 @@ warnings.filterwarnings("ignore")
 pn.extension(notifications=True)
 
 
-def calc_overheads(
+def calc_total_obstime(
     n_sci_frame: int,
     single_exptime: float,
     t_night_hours: float = 10.0,
@@ -56,7 +56,7 @@ def calc_overheads(
     t_overhead_shared_hours: float = 1.2,
 ) -> float:
     """
-    Calculate the total overheads for the given number of science frames and single exposure time.
+    Calculate the total observing time including overheads for the given number of science frames and single exposure time.
 
     Parameters
     ----------
@@ -72,10 +72,11 @@ def calc_overheads(
         Fiber reconfiguration overheads in seconds. Default is 180.0 seconds.
     t_overhead_shared_hours : float, optional
         Shared calibration overheads in hours. Default is 1.2 hours.
+
     Returns
     -------
     float
-        Total overheads in hours.
+        Total observing time in hours.
 
     Notes
     -----
@@ -101,8 +102,58 @@ def calc_overheads(
     # [s] total request observing time (ROT)
     Toverheads_tot_best = t_total_pointings + t_overhead_program
 
-    # return the total overheads in hours
+    # return the total observing time in hours
     return Toverheads_tot_best / 3600.0
+
+
+def calc_nppc_from_obstime(
+    total_obstime: float,
+    single_exptime: float,
+    t_night_hours: float = 10.0,
+    t_overhead_misc: float = 120.0,
+    t_overhead_fiber: float = 180.0,
+    t_overhead_shared_hours: float = 1.2,
+) -> int:
+    """
+    Calculate the number of pointings (N_PPCs) that can be observed within the given total observing time.
+
+    Parameters
+    ----------
+    total_obstime : float
+        Total observing time in hours.
+    single_exptime : float
+        Exposure time for a single scientific frame in seconds.
+    t_night_hours : float, optional
+        Total observing time per night in hours. Default is 10.0 hours.
+    t_overhead_misc : float, optional
+        Miscellaneous overheads in seconds. Default is 120.0 seconds.
+    t_overhead_fiber : float, optional
+        Fiber reconfiguration overheads in seconds. Default is 180.0 seconds.
+    t_overhead_shared_hours : float, optional
+        Shared calibration overheads in hours. Default is 1.2 hours.
+
+    Returns
+    -------
+    int
+        Number of pointings (N_PPCs) that can be observed within the given total observing time.
+    """
+
+    # science exposure time in seconds
+    t_exp_sci: float = single_exptime
+
+    # total time for single pointing in seconds
+    t_total_per_pointings = t_exp_sci + t_overhead_misc + t_overhead_fiber
+
+    # effective night length in hours
+    t_night_eff = t_night_hours / (t_night_hours - t_overhead_shared_hours)
+
+    # time used for exposure + per-exposure overheads in seconds
+    t_exp_eff = total_obstime / t_night_eff * 3600.0
+
+    # number of pointings
+    n_pointings = int(round(t_exp_eff / t_total_per_pointings, 0))
+
+    return n_pointings
 
 
 def PPPrunStart(
@@ -1485,7 +1536,7 @@ def ppp_result(
                 * single_exptime
                 / 3600.0
             )  # fiber_count*hour
-            Ttot_best = calc_overheads(nppc_fin, single_exptime)
+            Ttot_best = calc_total_obstime(nppc_fin, single_exptime)
             fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
             fib_eff_small = (
                 sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
@@ -1769,26 +1820,10 @@ def ppp_result_reproduce(
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS, nppc_usr, nppc_tac=0):
         def nppc2rot(nppc_):
-            # in seconds
-            t_exp_sci: float = single_exptime
-            t_overhead_misc: float = 60.0
-            t_overhead_fiber: float = 180.0
-
-            Toverheads_tot_best = (
-                t_exp_sci + t_overhead_misc + t_overhead_fiber
-            ) * nppc_
-
-            return Toverheads_tot_best / 3600.0
+            return calc_total_obstime(nppc_, single_exptime)
 
         def rot2nppc(rot):
-            # in seconds
-            t_exp_sci: float = single_exptime
-            t_overhead_misc: float = 60.0
-            t_overhead_fiber: float = 180.0
-
-            nppc_ = rot * 3600.0 / (t_exp_sci + t_overhead_misc + t_overhead_fiber)
-
-            return int(round(nppc_, 0))
+            return calc_nppc_from_obstime(rot, single_exptime)
 
         if nppc_tac > 0:
             admin_slider_ini_value = nppc_tac.data[0]
@@ -2065,7 +2100,7 @@ def ppp_result_reproduce(
         # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
-            Ttot_best = calc_overheads(nppc_fin, single_exptime)
+            Ttot_best = calc_total_obstime(nppc_fin, single_exptime)
 
             if nppc_fin > 0:
                 Fhour_tot = (
