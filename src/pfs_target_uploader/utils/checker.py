@@ -13,6 +13,7 @@ from loguru import logger
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
+from qplan.util.eph_cache import EphemerisCache
 from qplan.util.site import site_subaru as observer
 
 from . import (
@@ -68,6 +69,8 @@ def visibility_checker(uS, date_begin=None, date_end=None):
 
     tz_HST = tz.gettz("US/Hawaii")
 
+    eph_cache = EphemerisCache(logger, precision_minutes=5)
+
     # set next semester if there is no range is defined.
     tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
 
@@ -103,17 +106,20 @@ def visibility_checker(uS, date_begin=None, date_end=None):
             night_end = parser.parse(
                 daterange[dd + 1].strftime("%Y-%m-%d") + " 05:30:00"
             ).replace(tzinfo=tz_HST)
-            observer.set_date(night_begin)
 
-            obs_ok, t_start, t_stop = observer.observable(
+            # observer.set_date(night_begin)
+
+            eph_key = target
+
+            obs_ok, t_start, t_stop = eph_cache.observable(
+                eph_key,
                 target,
+                observer,
                 night_begin,
                 night_end,
                 min_el,
                 max_el,
                 total_time,
-                airmass=None,
-                moon_sep=None,
             )
 
             if t_start is None or t_stop is None:
@@ -135,8 +141,8 @@ def visibility_checker(uS, date_begin=None, date_end=None):
 
 def visibility_checker_vec(
     df: pd.DataFrame,
-    date_begin: datetime = None,
-    date_end: datetime = None,
+    date_begin: datetime | None = None,
+    date_end: datetime | None = None,
     min_el: float = 30.0,
     max_el: float = 85.0,
 ) -> np.ndarray:
@@ -219,13 +225,19 @@ def visibility_checker_vec(
         for i in range(df.index.size)
     ]
 
+    # create ephemeris cache
+    eph_cache = EphemerisCache(logger, precision_minutes=5)
+
     def process_single_target(target: StaticTarget, exptime: float) -> bool:
         t_obs_ok_single = 0
         for dd in range(n_dates):
             try:
-                observer.set_date(nights_begin_1[dd])
-                _, t_start, t_stop = observer.observable(
+                # observer.set_date(nights_begin_1[dd])
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
                     target,
+                    observer,
                     nights_begin_1[dd],
                     nights_end_1[dd],
                     # datetime_sunset[dd],
@@ -233,8 +245,8 @@ def visibility_checker_vec(
                     min_el,  # [deg]
                     max_el,  # [deg]
                     exptime,  # [s] TODO: This has to be a total time including overheads
-                    airmass=None,
-                    moon_sep=None,
+                    # airmass=None,
+                    # moon_sep=None,
                 )
                 try:
                     if t_stop > t_start:
@@ -245,9 +257,12 @@ def visibility_checker_vec(
                 pass
 
             try:
-                observer.set_date(nights_begin_2[dd])
-                _, t_start, t_stop = observer.observable(
+                # observer.set_date(nights_begin_2[dd])
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
                     target,
+                    observer,
                     nights_begin_2[dd],
                     nights_end_2[dd],
                     # datetime_sunset[dd],
@@ -255,8 +270,8 @@ def visibility_checker_vec(
                     min_el,  # [deg]
                     max_el,  # [deg]
                     exptime,  # [s] TODO: This has to be a total time including overheads
-                    airmass=None,
-                    moon_sep=None,
+                    # airmass=None,
+                    # moon_sep=None,
                 )
                 try:
                     if t_stop > t_start:
@@ -276,6 +291,10 @@ def visibility_checker_vec(
     vec_func = np.vectorize(process_single_target, otypes=["bool"])
     # TODO: Exposure time should be the total time required to make an exposure (i.e., incl. overheads)
     is_observable = vec_func(targets, df["exptime"])
+
+    # clear the ephemeris cache
+    logger.debug("Clearing the ephemeris cache")
+    eph_cache.clear_all()
 
     return is_observable
 
@@ -558,7 +577,7 @@ def check_visibility(
         )
     else:
         is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
-        print(is_visible)
+        # print(is_visible)
 
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")

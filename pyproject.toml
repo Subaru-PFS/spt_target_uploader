@@ -33,12 +33,13 @@ dependencies = [
     "pybind11>=2.11.1",
     "setuptools>=68.2.2",
     "wheel>=0.41.2",
-    "qplan @ git+https://github.com/naojsoft/qplan.git",
+    "qplan @ git+https://github.com/naojsoft/qplan.git@check-elevation",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
     "psutil>=6.0.0",
     "hdbscan>=0.8.40",
+    "skyfield>=1.53",
 ]
 requires-python = ">=3.11,<3.13"
 readme = "README.md"
