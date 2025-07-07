@@ -3,6 +3,7 @@
 import os
 import sys
 from datetime import datetime, timedelta, timezone
+import asyncio
 
 import gurobipy
 import panel as pn
@@ -294,7 +295,7 @@ def target_uploader_app(use_panel_cli=False):
     tab_panels.visible = False
 
     # define on_click callback for the "validate" button
-    def cb_validate(event):
+    async def cb_validate(event):
         # disable the buttons and input file widget while validation
         _toggle_widgets(button_set, disabled=True)
         _toggle_widgets([panel_submit_button.submit], disabled=True)
@@ -312,7 +313,8 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(True)
 
-        validation_status, df_input, df_validated = panel_input.validate(
+        validation_status, df_input, df_validated = await asyncio.to_thread(
+            panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -335,8 +337,6 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
-        panel_timer.timer(False)
-
         if validation_status is None:
             return
 
@@ -354,6 +354,8 @@ def target_uploader_app(use_panel_cli=False):
         tab_panels.active = 1
         tab_panels.visible = True
 
+        panel_timer.timer(False)
+
         if validation_status["status"]:
             ready_to_submit = (
                 panel_ppp.ppp_status
@@ -364,7 +366,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_submit_button.enable_button(ready_to_submit)
 
     # define on_click callback for the "PPP start" button
-    def cb_PPP(event):
+    async def cb_PPP(event):
         _toggle_widgets(button_set, disabled=True)
         _toggle_widgets([panel_submit_button.submit], disabled=True)
         _toggle_widgets(widget_set, disabled=True)
@@ -379,11 +381,12 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(True)
 
-        validation_status, df_input_, df_validated = panel_input.validate(
+        validation_status, df_input_, df_validated = await asyncio.to_thread(
+            panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
-        df_ppc = panel_ppcinput.validate()
+        df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
         if df_ppc is None:
             _toggle_widgets(button_set, disabled=False)
@@ -445,7 +448,8 @@ def target_uploader_app(use_panel_cli=False):
                     duration=0,
                 )
 
-            panel_ppp.run_ppp(
+            await asyncio.to_thread(
+                panel_ppp.run_ppp,
                 df_validated,
                 df_ppc,
                 validation_status,
@@ -456,7 +460,7 @@ def target_uploader_app(use_panel_cli=False):
                 logger=logger,
             )
 
-            panel_ppp.show_results()
+            await asyncio.to_thread(panel_ppp.show_results)
 
             tab_panels.active = 2
 
@@ -496,7 +500,7 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(False)
 
-    def cb_submit(event):
+    async def cb_submit(event):
         _toggle_widgets(button_set, disabled=True)
         _toggle_widgets([panel_submit_button.submit], disabled=True)
         _toggle_widgets(widget_set, disabled=True)
@@ -511,7 +515,8 @@ def target_uploader_app(use_panel_cli=False):
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
         # from callback to another function (sorry)
-        validation_status, df_input, df_validated = panel_input.validate(
+        validation_status, df_input, df_validated = await asyncio.to_thread(
+            panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
         )
@@ -556,7 +561,8 @@ def target_uploader_app(use_panel_cli=False):
         else:
             ppc_status_ = "auto"
 
-        outdir, outfile_zip, _ = panel_ppp.upload(
+        outdir, outfile_zip, _ = await asyncio.to_thread(
+            panel_ppp.upload,
             outdir_prefix=config["OUTPUT_DIR"],
             single_exptime=panel_obs_type.single_exptime.value,
             observation_type=panel_obs_type.obs_type.value,
@@ -573,7 +579,8 @@ def target_uploader_app(use_panel_cli=False):
                     "Email configuration is not found. No email will be sent."
                 )
             else:
-                send_email(
+                await asyncio.to_thread(
+                    send_email,
                     config,
                     outdir=outdir,
                     outfile=outfile_zip,
@@ -612,10 +619,15 @@ def target_uploader_app(use_panel_cli=False):
             )
 
         if use_uid_db:
-            single_insert_uid_db(panel_ppp.secret_token, db_path)
+            await asyncio.to_thread(
+                single_insert_uid_db, panel_ppp.secret_token, db_path
+            )
 
-        panel_input.secret_token = assign_secret_token(
-            db_path=db_path, output_dir=config["OUTPUT_DIR"], use_db=use_uid_db
+        panel_input.secret_token = await asyncio.to_thread(
+            assign_secret_token,
+            db_path=db_path,
+            output_dir=config["OUTPUT_DIR"],
+            use_db=use_uid_db,
         )
 
         panel_timer.timer(False)
