@@ -93,8 +93,6 @@ class PppResultWidgets:
     def show_results(self):
         logger.info("showing PPP results")
 
-        # print(self.df_summary)
-
         # @pn.io.profile("update_alert")
         def update_alert(df):
             if df is None:
@@ -298,6 +296,7 @@ class PppResultWidgets:
             tb_ppc = []
 
         ppp_run_results = mp.Manager().Queue()
+        Empty = mp.queues.Empty
 
         ppp_run = mp.Process(
             target=PPPrunStart,
@@ -323,7 +322,7 @@ class PppResultWidgets:
 
         if ppp_run.is_alive():
             # if ppp is still running after max_exetime, kill it
-            logger.error("Pointing simulation failed (runout time)")
+            logger.warning("Pointing simulation failed (runout time)")
             pn.state.notifications.error(
                 f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
                 duration=0,  # ever
@@ -345,6 +344,13 @@ class PppResultWidgets:
             # Cleanup
             ppp_run.join()
 
+            latest = None
+            while True:
+                try:
+                    latest = ppp_run_results.get_nowait()
+                except Empty:
+                    break
+
             (
                 uS_L2,
                 cR_L,
@@ -357,20 +363,17 @@ class PppResultWidgets:
                 sub_m,
                 obj_allo_M_fin,
                 self.status_,
-            ) = (
-                Table(),
-                [],
-                [],
-                [],
-                Table(),
-                Table(),
-                [],
-                [],
-                [],
-                Table(),
-                1,
-            )  # ppc_status=1 in case of runout time
+            ) = latest
+
+            self.status_ = 1  # ppc_status=1 in case of runout time
         else:
+            latest = None
+            while True:
+                try:
+                    latest = ppp_run_results.get_nowait()
+                except Empty:
+                    break
+
             (
                 uS_L2,
                 cR_L,
@@ -383,7 +386,7 @@ class PppResultWidgets:
                 sub_m,
                 obj_allo_M_fin,
                 self.status_,
-            ) = ppp_run_results.get()
+            ) = latest
 
         (
             self.nppc,
