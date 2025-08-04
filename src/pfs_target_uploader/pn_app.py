@@ -124,7 +124,7 @@ def target_uploader_app(use_panel_cli=False):
     panel_dates = DatePickerWidgets()
     panel_ppcinput = PPCInputWidgets()
 
-    panel_timer = TimerWidgets()
+    panel_timer = TimerWidgets(total_seconds=max_exetime)
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()

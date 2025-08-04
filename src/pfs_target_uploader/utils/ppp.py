@@ -626,7 +626,7 @@ def PPPrunStart(
                 )
 
                 # flush every 1 peaks if queue provided
-                if queue:  # and len(peaks) % 1 == 0:
+                if queue:
                     res_ = sample_f["resolution"][0]
                     sample_f.meta["PPC"] = np.array([p[:4] for p in peaks])
                     obj_table = _make_obj_allo_table(peaks, res_)
@@ -1461,7 +1461,7 @@ def ppp_result(
 
         # obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
-        simple_cols = [col for col in obj_allo1.colnames if obj_allo1[col].ndim == 1]
+        simple_cols = [col for col in obj_allo1.colnames if obj_allo1[col].ndim == 1 or obj_allo1[col].shape == ()]
         obj_allo2 = obj_allo1[simple_cols].to_pandas()
         # obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)

@@ -322,7 +322,7 @@ class PppResultWidgets:
 
         if ppp_run.is_alive():
             # if ppp is still running after max_exetime, kill it
-            logger.warning("Pointing simulation failed (runout time)")
+            logger.warning("Pointing simulation failed (run out of time)")
             pn.state.notifications.error(
                 f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
                 duration=0,  # ever

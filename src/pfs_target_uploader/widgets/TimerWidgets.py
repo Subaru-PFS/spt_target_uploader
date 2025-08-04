@@ -40,7 +40,7 @@ class TimerWidgets:
             # Stop any previous task
             if self._timer_task is not None and not self._timer_task.done():
                 self._stop_flag.set()
-            self._stop_flag = asyncio.Event()  # Reset Event (new instance)
+            self._stop_flag.clear()  # Reset Event (clear existing)
             self.countdown_text.object = f"**00:00**"  # Reset display
             self._timer_task = asyncio.create_task(self._run_countdown())
         else:
