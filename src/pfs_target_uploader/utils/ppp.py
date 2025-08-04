@@ -625,7 +625,7 @@ def PPPrunStart(
                     ]
                 )
 
-                # flush every 10 peaks if queue provided
+                # flush every 1 peaks if queue provided
                 if queue:  # and len(peaks) % 1 == 0:
                     res_ = sample_f["resolution"][0]
                     sample_f.meta["PPC"] = np.array([p[:4] for p in peaks])
