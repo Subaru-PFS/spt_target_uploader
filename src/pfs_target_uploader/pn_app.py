@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+import asyncio
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-import asyncio
 
 import gurobipy
 import panel as pn
@@ -322,6 +322,10 @@ def target_uploader_app(use_panel_cli=False):
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
 
+        if validation_status is None:
+            panel_timer.timer(on=False, time_limit=False)
+            return
+
         if panel_obs_type.obs_type.value == "queue":
             _toggle_widgets(
                 [panel_obs_type.single_exptime, panel_ppcinput.file_input],
@@ -336,9 +340,6 @@ def target_uploader_app(use_panel_cli=False):
                 ],
                 disabled=True,
             )
-
-        if validation_status is None:
-            return
 
         panel_status.show_results(df_validated, validation_status)
         panel_targets.show_results(df_validated)
