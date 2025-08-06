@@ -364,6 +364,7 @@ class PppResultWidgets:
                 obj_allo_M_fin,
                 self.status_,
             ) = latest
+            logger.warning(f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs determined (run out of time)")
 
             self.status_ = 1  # ppc_status=1 in case of runout time
         else:

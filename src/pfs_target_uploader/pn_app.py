@@ -311,7 +311,7 @@ def target_uploader_app(use_panel_cli=False):
 
         pn.state.notifications.clear()
 
-        panel_timer.timer(True)
+        panel_timer.timer(on=True, time_limit=False)
 
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
@@ -354,7 +354,7 @@ def target_uploader_app(use_panel_cli=False):
         tab_panels.active = 1
         tab_panels.visible = True
 
-        panel_timer.timer(False)
+        panel_timer.timer(on=False, time_limit=False)
 
         if validation_status["status"]:
             ready_to_submit = (
@@ -379,7 +379,7 @@ def target_uploader_app(use_panel_cli=False):
 
         pn.state.notifications.clear()
 
-        panel_timer.timer(True)
+        panel_timer.timer(on=True, time_limit=False)
 
         validation_status, df_input_, df_validated = await asyncio.to_thread(
             panel_input.validate,
@@ -390,7 +390,7 @@ def target_uploader_app(use_panel_cli=False):
 
         if df_ppc is None:
             _toggle_widgets(button_set, disabled=False)
-            panel_timer.timer(False)
+            panel_timer.timer(on=False, time_limit=False)
             return
         elif not df_ppc.empty:
             pn.state.notifications.info(
@@ -401,7 +401,7 @@ def target_uploader_app(use_panel_cli=False):
         if validation_status is None:
             _toggle_widgets(button_set, disabled=False)
             _toggle_widgets(widget_set, disabled=False)
-            panel_timer.timer(False)
+            panel_timer.timer(on=False, time_limit=False)
             return
 
         if not validation_status["visibility"]["status"]:
@@ -412,17 +412,21 @@ def target_uploader_app(use_panel_cli=False):
             )
             _toggle_widgets(button_set, disabled=False)
             _toggle_widgets(widget_set, disabled=False)
-            panel_timer.timer(False)
+            panel_timer.timer(on=False, time_limit=False)
             return
 
         panel_status.show_results(df_validated, validation_status)
         panel_results.show_results(df_validated, validation_status)
         panel_targets.show_results(df_validated)
 
+        panel_timer.timer(on=False, time_limit=False)
+
         tab_panels.active = 1
         tab_panels.visible = True
 
         try:
+            panel_timer.timer(on=True, time_limit=True)
+
             panel_ppp.origname = panel_input.file_input.filename
             panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
             panel_ppp.origdata = panel_input.file_input.value
@@ -433,7 +437,7 @@ def target_uploader_app(use_panel_cli=False):
                 logger.error("Validation failed")
                 _toggle_widgets(button_set, disabled=False)
                 _toggle_widgets(widget_set, disabled=False)
-                panel_timer.timer(False)
+                panel_timer.timer(on=False, time_limit=True)
                 return
 
             dt_now = datetime.now()
@@ -474,7 +478,7 @@ def target_uploader_app(use_panel_cli=False):
                 _toggle_widgets(button_set, disabled=False)
                 _toggle_widgets(widget_set, disabled=False)
                 _toggle_widgets([panel_submit_button.submit], disabled=True)
-                panel_timer.timer(False)
+                panel_timer.timer(on=False, time_limit=True)
                 return
 
         except gurobipy.GurobiError as e:
@@ -498,7 +502,7 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
-        panel_timer.timer(False)
+        panel_timer.timer(on=False, time_limit=True)
 
     async def cb_submit(event):
         _toggle_widgets(button_set, disabled=True)
@@ -510,7 +514,7 @@ def target_uploader_app(use_panel_cli=False):
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
 
-        panel_timer.timer(True)
+        panel_timer.timer(on=True, time_limit=False)
 
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
@@ -535,14 +539,14 @@ def target_uploader_app(use_panel_cli=False):
             _toggle_widgets(button_set, disabled=False)
 
             if validation_status is None:
-                panel_timer.timer(False)
+                panel_timer.timer(on=False, time_limit=False)
                 return
             else:
                 panel_status.show_results(df_validated, validation_status)
                 panel_results.show_results(df_validated, validation_status)
                 panel_targets.show_results(df_validated)
                 tab_panels.visible = True
-                panel_timer.timer(False)
+                panel_timer.timer(on=False, time_limit=False)
                 return
 
         panel_ppp.df_input = df_validated
@@ -630,7 +634,7 @@ def target_uploader_app(use_panel_cli=False):
             use_db=use_uid_db,
         )
 
-        panel_timer.timer(False)
+        panel_timer.timer(on=False, time_limit=False)
 
     # set callback to the buttons
     panel_validate_button.validate.on_click(cb_validate)
