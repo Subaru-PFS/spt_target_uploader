@@ -587,6 +587,42 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
         }
     )
 
+    def get_subaru_semester(row):
+        """
+        Returns Subaru semester as 'YYYYA' or 'YYYYB' given a pandas Timestamp.
+        """
+        ts = row["timestamp"]
+
+        if pd.isnull(ts):
+            return None  # return None if timestamp is None
+
+        year = ts.year
+        # Define cut-off dates for the year of this timestamp
+        A_start = pd.Timestamp(year=year, month=8, day=1)
+        A_stop = pd.Timestamp(year=year, month=9, day=15)
+
+        B_start = pd.Timestamp(year=year, month=2, day=1)
+        B_stop = pd.Timestamp(year=year, month=3, day=15)
+
+        if ts >= A_start and ts <= A_stop:
+            # duration of psl submission of sem A
+            return f"S{(year+1)%100:02d}A"
+        elif ts >= B_start and ts <= B_stop:
+            # duration of psl submission of sem B
+            return f"S{(year)%100:02d}B"
+        elif ts < B_start:
+            # Jan -> updates in sem B last year
+            return f"S{(year-1)%100:02d}B"
+        elif ts > B_stop and ts < A_start:
+            # mar 15 ~ aug 1  -> updates in sem A this year
+            return f"S{(year)%100:02d}A"
+        elif ts > A_stop:
+            # sep 15 ~  -> updates in sem B this year
+            return f"S{(year)%100:02d}B"
+
+    # Add the semester column
+    df_psl_tgt["semester"] = df_psl_tgt.apply(get_subaru_semester, axis=1)
+
     t2 = time.time()
     logger.info(f"Loading file properties finished in {t2-t1:.2f} s")
 

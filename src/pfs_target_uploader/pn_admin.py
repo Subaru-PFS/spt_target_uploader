@@ -97,8 +97,17 @@ def list_files_app(use_panel_cli=False):
         width=350,
     )
 
+    # add a select box of semester
+    semesters = df_files_tgt_psl["semester"].dropna().unique().tolist()
+    semesters = sorted([s for s in semesters if s is not None])
+    semesters = ["None"] + semesters
+
+    select_box_semester = pn.widgets.Select(
+        name="Semester", options=semesters, value=None, width=200
+    )
+
     # Target & psl summary table
-    def Table_files_tgt_psl(column_checkbox_):
+    def Table_files_tgt_psl(column_checkbox_, semester_):
         if psl_info_input.value is not None:
             df_psl_info = load_input(
                 BytesIO(psl_info_input.value),
@@ -115,6 +124,13 @@ def list_files_app(use_panel_cli=False):
         _hidden_columns = list(
             set(list(_df_files_tgt_psl.columns)) - set(column_checkbox_)
         ) + ["index"]
+
+        if semester_ == "None":
+            _df_files_tgt_psl = _df_files_tgt_psl
+        else:
+            _df_files_tgt_psl = _df_files_tgt_psl[
+                _df_files_tgt_psl["semester"] == semester_
+            ]
 
         _table_files_tgt_psl = pn.widgets.Tabulator(
             _df_files_tgt_psl,
@@ -445,7 +461,9 @@ def list_files_app(use_panel_cli=False):
         + ["proposal ID", "PI name", "rank", "grade"],
     )
 
-    table_files_tgt_psl = pn.bind(Table_files_tgt_psl, column_checkbox)
+    table_files_tgt_psl = pn.bind(
+        Table_files_tgt_psl, column_checkbox, select_box_semester
+    )
 
     # download buttons
     download_selection = pn.widgets.Button(
@@ -480,16 +498,16 @@ def list_files_app(use_panel_cli=False):
 
     # summary of tac allocation
     tac_summary = pn.pane.Markdown(
-        "<font size=5>Summary of TAC allocation:</font>\n"
-        f"<font size=4> - N (allocated programs): <span style='color:tomato'>**{sum((df_files_tgt_psl['TAC_nppc_L']>0) | (df_files_tgt_psl['TAC_nppc_M']>0)):.0f}**</span></font>\n"
-        "<font size=4> - Low-res mode: </font>\n"
-        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font>\n"
-        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font>\n"
-        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font>\n"
-        "<font size=4> - Medium-res mode: </font>\n"
-        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font>\n"
-        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font>\n"
-        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font>\n"
+        "<font size=5>Summary of TAC allocation:</font><br>"
+        f"<font size=4> - N (allocated programs): <span style='color:tomato'>**{sum((df_files_tgt_psl['TAC_nppc_L']>0) | (df_files_tgt_psl['TAC_nppc_M']>0)):.0f}**</span></font><br>"
+        "<font size=4> - Low-res mode: </font><br>"
+        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_L']):.2f}**</span></font><br>"
+        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_L']):.0f}**</span> </font><br>"
+        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_L']):.2f}**</span> </font><br>"
+        "<font size=4> - Medium-res mode: </font><br>"
+        f"<font size=4>&emsp;FH allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_FH_M']):.2f}**</span></font><br>"
+        f"<font size=4>&emsp;Nppc allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_nppc_M']):.0f}**</span> </font><br>"
+        f"<font size=4>&emsp;ROT (h) allocated = <span style='color:tomato'>**{sum(df_files_tgt_psl['TAC_ROT_M']):.2f}**</span> </font><br>"
     )
 
     # Details of PPC
@@ -521,6 +539,10 @@ def list_files_app(use_panel_cli=False):
                     slider_fiberhour,
                     slider_rot_l,
                     slider_rot_m,
+                    height=60,
+                ),
+                pn.Row(
+                    select_box_semester,
                     height=60,
                 ),
                 pn.Row(download_selection, download_group),

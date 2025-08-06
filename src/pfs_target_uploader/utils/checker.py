@@ -7,12 +7,16 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy_healpix import HEALPix
 from dateutil import parser, tz
 from loguru import logger
 
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
+from qplan.util.eph_cache import EphemerisCache
 from qplan.util.site import site_subaru as observer
 
 from . import (
@@ -68,6 +72,8 @@ def visibility_checker(uS, date_begin=None, date_end=None):
 
     tz_HST = tz.gettz("US/Hawaii")
 
+    eph_cache = EphemerisCache(logger, precision_minutes=15)
+
     # set next semester if there is no range is defined.
     tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
 
@@ -103,17 +109,20 @@ def visibility_checker(uS, date_begin=None, date_end=None):
             night_end = parser.parse(
                 daterange[dd + 1].strftime("%Y-%m-%d") + " 05:30:00"
             ).replace(tzinfo=tz_HST)
-            observer.set_date(night_begin)
 
-            obs_ok, t_start, t_stop = observer.observable(
+            # observer.set_date(night_begin)
+
+            eph_key = target
+
+            obs_ok, t_start, t_stop = eph_cache.observable(
+                eph_key,
                 target,
+                observer,
                 night_begin,
                 night_end,
                 min_el,
                 max_el,
                 total_time,
-                airmass=None,
-                moon_sep=None,
             )
 
             if t_start is None or t_stop is None:
@@ -135,8 +144,8 @@ def visibility_checker(uS, date_begin=None, date_end=None):
 
 def visibility_checker_vec(
     df: pd.DataFrame,
-    date_begin: datetime = None,
-    date_end: datetime = None,
+    date_begin: datetime | None = None,
+    date_end: datetime | None = None,
     min_el: float = 30.0,
     max_el: float = 85.0,
 ) -> np.ndarray:
@@ -219,13 +228,19 @@ def visibility_checker_vec(
         for i in range(df.index.size)
     ]
 
+    # create ephemeris cache
+    eph_cache = EphemerisCache(logger, precision_minutes=15)
+
     def process_single_target(target: StaticTarget, exptime: float) -> bool:
         t_obs_ok_single = 0
         for dd in range(n_dates):
             try:
-                observer.set_date(nights_begin_1[dd])
-                _, t_start, t_stop = observer.observable(
+                # observer.set_date(nights_begin_1[dd])
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
                     target,
+                    observer,
                     nights_begin_1[dd],
                     nights_end_1[dd],
                     # datetime_sunset[dd],
@@ -233,8 +248,8 @@ def visibility_checker_vec(
                     min_el,  # [deg]
                     max_el,  # [deg]
                     exptime,  # [s] TODO: This has to be a total time including overheads
-                    airmass=None,
-                    moon_sep=None,
+                    # airmass=None,
+                    # moon_sep=None,
                 )
                 try:
                     if t_stop > t_start:
@@ -245,9 +260,12 @@ def visibility_checker_vec(
                 pass
 
             try:
-                observer.set_date(nights_begin_2[dd])
-                _, t_start, t_stop = observer.observable(
+                # observer.set_date(nights_begin_2[dd])
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
                     target,
+                    observer,
                     nights_begin_2[dd],
                     nights_end_2[dd],
                     # datetime_sunset[dd],
@@ -255,8 +273,8 @@ def visibility_checker_vec(
                     min_el,  # [deg]
                     max_el,  # [deg]
                     exptime,  # [s] TODO: This has to be a total time including overheads
-                    airmass=None,
-                    moon_sep=None,
+                    # airmass=None,
+                    # moon_sep=None,
                 )
                 try:
                     if t_stop > t_start:
@@ -276,6 +294,219 @@ def visibility_checker_vec(
     vec_func = np.vectorize(process_single_target, otypes=["bool"])
     # TODO: Exposure time should be the total time required to make an exposure (i.e., incl. overheads)
     is_observable = vec_func(targets, df["exptime"])
+
+    # clear the ephemeris cache
+    logger.debug("Clearing the ephemeris cache")
+    eph_cache.clear_all()
+
+    return is_observable
+
+
+def visibility_checker_healpix(
+    df: pd.DataFrame,
+    date_begin: datetime | None = None,
+    date_end: datetime | None = None,
+    min_el: float = 30.0,
+    max_el: float = 85.0,
+    nside: int = 32,
+    precision_minutes: int = 15,
+) -> np.ndarray:
+    """
+    HEALPix-based visibility checker optimized for clustered targets.
+
+    Groups targets by HEALPix pixels and uses the maximum exptime in each pixel
+    for visibility calculations, significantly reducing computation time for
+    spatially clustered target lists.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target dataframe with 'ra', 'dec', 'exptime', 'ob_code' columns
+    date_begin : datetime, optional
+        Observation period start date
+    date_end : datetime, optional
+        Observation period end date
+    min_el : float, default 30.0
+        Minimum elevation constraint [degrees]
+    max_el : float, default 85.0
+        Maximum elevation constraint [degrees]
+    nside : int, default 32
+        HEALPix nside parameter (higher = smaller pixels)
+        nside=32 gives ~110 arcmin pixel size, good for PFS field clustering
+    precision_minutes : int, default 15
+        Ephemeris cache time resolution in minutes
+        Larger values = coarser time grid = faster computation but less precision
+
+    Returns
+    -------
+    np.ndarray
+        Boolean array indicating visibility for each target
+    """
+    if df.index.size == 0:
+        return np.array([], dtype=bool)
+
+    # Set timezone to HST
+    tz_HST = tz.gettz("US/Hawaii")
+
+    # Set next semester if no range is defined
+    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
+
+    if date_begin is None:
+        date_begin = tmp_begin
+    if date_end is None:
+        date_end = tmp_end
+
+    logger.info(
+        f"HEALPix visibility check: Observation period {date_begin:%Y-%m-%d} to {date_end:%Y-%m-%d}"
+    )
+
+    # Create HEALPix object
+    hp = HEALPix(nside=nside, order="ring")
+    pixel_res_arcmin = hp.pixel_resolution.to(u.arcmin).value
+    logger.info(
+        f"Using HEALPix nside={nside} (~{pixel_res_arcmin:.1f} arcmin pixel size)"
+    )
+
+    # Convert target coordinates to SkyCoord
+    coords = SkyCoord(ra=df["ra"].values * u.deg, dec=df["dec"].values * u.deg)
+
+    # Get HEALPix pixel indices for all targets
+    pixel_indices = hp.lonlat_to_healpix(coords.ra, coords.dec)
+
+    # Group targets by pixel and find maximum exptime in each pixel
+    df_with_pixels = df.copy()
+    df_with_pixels["healpix_pixel"] = pixel_indices
+
+    pixel_groups = df_with_pixels.groupby("healpix_pixel")
+    pixel_max_exptime = pixel_groups["exptime"].max()
+    pixel_coords = pixel_groups[
+        ["ra", "dec"]
+    ].first()  # Use first target coords as representative
+
+    logger.info(
+        f"Grouped {len(df)} targets into {len(pixel_max_exptime)} HEALPix pixels"
+    )
+    logger.info(
+        f"Pixel exptime range: {pixel_max_exptime.min():.1f}s - {pixel_max_exptime.max():.1f}s"
+    )
+
+    # Prepare observation time periods (same logic as original function)
+    date_middle = date_begin + (date_end - date_begin) / 2
+
+    daterange_1 = pd.date_range(date_begin, date_middle, tz=tz_HST)
+    daterange_2 = pd.date_range(
+        date_middle + timedelta(days=1), date_end + timedelta(days=1), tz=tz_HST
+    )
+
+    dates_begin_1, dates_end_1 = daterange_1[:-1], daterange_1[1:]
+    dates_begin_2, dates_end_2 = daterange_2[:-1], daterange_2[1:]
+
+    nights_begin_1 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
+        for d in dates_begin_1
+    ]
+    nights_end_1 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
+        for d in dates_end_1
+    ]
+
+    # Reverse order for second half
+    nights_begin_2 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
+        for d in dates_begin_2[::-1]
+    ]
+    nights_end_2 = [
+        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
+        for d in dates_end_2[::-1]
+    ]
+
+    n_dates = max(len(dates_begin_1), len(dates_begin_2))
+
+    # Create ephemeris cache
+    eph_cache = EphemerisCache(logger, precision_minutes=precision_minutes)
+
+    # Check visibility for each unique pixel
+    pixel_visibility = {}
+
+    for pixel_id, max_exptime in pixel_max_exptime.items():
+        # Use representative coordinates for this pixel
+        ra_rep = pixel_coords.loc[pixel_id, "ra"]
+        dec_rep = pixel_coords.loc[pixel_id, "dec"]
+
+        # Create target for this pixel
+        target = StaticTarget(name=f"pixel_{pixel_id}", ra=ra_rep, dec=dec_rep)
+
+        # Check visibility with maximum exptime in this pixel
+        t_obs_ok_total = 0
+
+        for dd in range(n_dates):
+            # Check first half of observation period
+            try:
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
+                    target,
+                    observer,
+                    nights_begin_1[dd],
+                    nights_end_1[dd],
+                    min_el,  # [deg]
+                    max_el,  # [deg]
+                    max_exptime,  # [s] Use maximum exptime in this pixel
+                )
+                if t_stop is not None and t_start is not None and t_stop > t_start:
+                    t_obs_ok_total += (t_stop - t_start).seconds
+            except (IndexError, TypeError):
+                pass
+
+            # Check second half of observation period
+            try:
+                eph_key = target
+                _, t_start, t_stop = eph_cache.observable(
+                    eph_key,
+                    target,
+                    observer,
+                    nights_begin_2[dd],
+                    nights_end_2[dd],
+                    min_el,  # [deg]
+                    max_el,  # [deg]
+                    max_exptime,  # [s] Use maximum exptime in this pixel
+                )
+                if t_stop is not None and t_start is not None and t_stop > t_start:
+                    t_obs_ok_total += (t_stop - t_start).seconds
+            except (IndexError, TypeError):
+                pass
+
+            # Early exit if we have enough observing time
+            if t_obs_ok_total >= max_exptime:
+                break
+
+        # Store visibility result for this pixel
+        pixel_visibility[pixel_id] = t_obs_ok_total >= max_exptime
+
+    logger.info(
+        f"Pixel visibility results: {sum(pixel_visibility.values())}/{len(pixel_visibility)} pixels observable"
+    )
+
+    # Apply pixel visibility to individual targets based on their exptime
+    is_observable = np.zeros(len(df), dtype=bool)
+
+    for i, (pixel_id, exptime) in enumerate(zip(pixel_indices, df["exptime"])):
+        if pixel_visibility[pixel_id]:
+            # If pixel is observable with max_exptime, check if this target's exptime is achievable
+            # Since we used max_exptime for the pixel check, any target with smaller exptime
+            # in the same pixel should also be observable
+            is_observable[i] = True
+        else:
+            # If pixel failed with max_exptime, this target with smaller/equal exptime also fails
+            is_observable[i] = False
+
+    # Clear the ephemeris cache
+    logger.debug("Clearing the ephemeris cache")
+    eph_cache.clear_all()
+
+    logger.info(
+        f"Final visibility: {is_observable.sum()}/{len(is_observable)} targets observable"
+    )
 
     return is_observable
 
@@ -548,17 +779,28 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
 
 
 def check_visibility(
-    df, date_begin=None, date_end=None, vectorized=True, logger=logger
+    df,
+    date_begin=None,
+    date_end=None,
+    vectorized=False,
+    healpix=True,
+    nside=32,
+    logger=logger,
 ):
     dict_visibility = {}
 
-    if vectorized:
+    if healpix:
+        logger.info("Using HEALPix-optimized visibility checker")
+        is_visible = visibility_checker_healpix(
+            df, date_begin=date_begin, date_end=date_end, nside=nside
+        )
+    elif vectorized:
         is_visible = visibility_checker_vec(
             df, date_begin=date_begin, date_end=date_end
         )
     else:
         is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
-        print(is_visible)
+        # print(is_visible)
 
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")
@@ -639,7 +881,9 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
-def validate_input(df, date_begin=None, date_end=None, logger=logger):
+def validate_input(
+    df, date_begin=None, date_end=None, healpix=True, nside=32, logger=logger
+):
     logger.info("Validation of the input list starts")
     t_validate_start = time.time()
 
@@ -707,7 +951,12 @@ def validate_input(df, date_begin=None, date_end=None, logger=logger):
     # check columns for visibility
     logger.info("[Visibility] Checking target visibility")
     dict_visibility = check_visibility(
-        df, date_begin=date_begin, date_end=date_end, vectorized=True
+        df,
+        date_begin=date_begin,
+        date_end=date_end,
+        vectorized=False,
+        healpix=healpix,
+        nside=nside,
     )
     logger.info(f"[Visibility] status: {dict_visibility['status']} (Success if True)")
     validation_status["visibility"] = dict_visibility
