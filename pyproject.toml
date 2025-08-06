@@ -5,7 +5,7 @@ description = "Target uploader for PFS openuse"
 authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
     "panel<1.7,>=1.6.0",
-    "numpy<2.0.0",
+    "numpy>=2.0",
     "astropy>=5.3.1",
     "astroplan>=0.9",
     "colorcet>=3.0.1",
@@ -18,7 +18,8 @@ dependencies = [
     "loguru>=0.7.2",
     "markdown-it-py>=3.0.0",
     "mkdocs-macros-plugin>=0.7.0",
-    "mkdocs-material[imaging]>=9.5.4",
+    # "mkdocs-material[imaging]>=9.5.4",
+    "mkdocs-material>=9.5.4",
     "mkdocs-video>=1.5.0",
     "mkdocs>=1.4.3",
     "multiprocess>=0.70.15",
@@ -33,7 +34,7 @@ dependencies = [
     "pybind11>=2.11.1",
     "setuptools>=68.2.2",
     "wheel>=0.41.2",
-    "qplan @ git+https://github.com/naojsoft/qplan.git@check-elevation",
+    "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
