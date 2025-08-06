@@ -33,7 +33,7 @@ dependencies = [
     "pybind11>=2.11.1",
     "setuptools>=68.2.2",
     "wheel>=0.41.2",
-    "qplan @ git+https://github.com/naojsoft/qplan.git@check-elevation",
+    "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
