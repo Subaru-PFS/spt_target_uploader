@@ -57,7 +57,7 @@ class PppResultWidgets:
         self.ppp_error_text_2 = (
             "<font size=5>⚠️ **Error**</font>\n\n"
             "<font size=3>Calculation stops because time is running out. "
-            "If you would get the complete outputs, please modify the input list or consult with the observatory. </font>"
+            "If you would like to get the complete outputs, please modify the input list or consult with the observatory. </font>"
         )
 
         self.ppp_success_text = (
@@ -364,7 +364,9 @@ class PppResultWidgets:
                 obj_allo_M_fin,
                 self.status_,
             ) = latest
-            logger.warning(f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs determined (run out of time)")
+            logger.warning(
+                f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs determined (run out of time)"
+            )
 
             self.status_ = 1  # ppc_status=1 in case of runout time
         else:
