@@ -5,7 +5,7 @@ description = "Target uploader for PFS openuse"
 authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
     "panel<1.7,>=1.6.0",
-    "numpy>=2.0",
+    "numpy<2.0",
     "astropy>=5.3.1",
     "astroplan>=0.9",
     "colorcet>=3.0.1",
