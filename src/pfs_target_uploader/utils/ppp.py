@@ -332,8 +332,8 @@ def PPPrunStart(
             index = np.arange(0, len(sample), 1)
             return index
         else:
-            index = list(np.where(~np.in1d(labels, labels_c))[0]) + [
-                np.where(np.in1d(labels, kk))[0][0] for kk in labels_c
+            index = list(np.where(~np.isin(labels, labels_c))[0]) + [
+                np.where(np.isin(labels, kk))[0][0] for kk in labels_c
             ]
             return sorted(index)
 
@@ -609,7 +609,7 @@ def PPPrunStart(
                         otime="2025-04-10T08:00:00Z",
                     )
 
-                mask_assign = np.in1d(remaining["ob_code"], tgt_ids)
+                mask_assign = np.isin(remaining["ob_code"], tgt_ids)
                 priority_val = 1.0 / remaining[mask_assign]["weight"].sum()
 
                 # record peak
@@ -701,7 +701,7 @@ def PPPrunStart(
 
         # haversine uses (dec,ra) in radian;
         db = DBSCAN(eps=np.radians(d_pfi), min_samples=1, metric="haversine").fit(
-            np.fliplr(np.radians(ppc_xy[:, [1, 2]].astype(np.float_)))
+            np.fliplr(np.radians(ppc_xy[:, [1, 2]].astype(float)))
         )
 
         labels = db.labels_
@@ -1042,7 +1042,7 @@ def PPPrunStart(
                     tot_weight = np.nan
                 else:
                     tot_weight = 1 / sum(
-                        sample[np.in1d(sample["ob_code"], obj_allo_id)]["weight"]
+                        sample[np.isin(sample["ob_code"], obj_allo_id)]["weight"]
                     )
 
                 point_list.append(
@@ -1135,7 +1135,7 @@ def PPPrunStart(
         completeR_n_ = []  # percentage
 
         for ppc in point_l_pri:
-            lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
+            lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
@@ -1467,7 +1467,11 @@ def ppp_result(
 
         # obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
-        simple_cols = [col for col in obj_allo1.colnames if obj_allo1[col].ndim == 1 or obj_allo1[col].shape == ()]
+        simple_cols = [
+            col
+            for col in obj_allo1.colnames
+            if obj_allo1[col].ndim == 1 or obj_allo1[col].shape == ()
+        ]
         obj_allo2 = obj_allo1[simple_cols].to_pandas()
         # obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
@@ -1950,7 +1954,7 @@ def ppp_result_reproduce(
         completeR_n_ = []  # percentage
 
         for ppc in point_l_pri:
-            lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
+            lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
