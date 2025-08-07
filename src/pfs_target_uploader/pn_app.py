@@ -317,6 +317,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
         )
 
         _toggle_widgets(widget_set, disabled=False)
@@ -386,6 +387,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
