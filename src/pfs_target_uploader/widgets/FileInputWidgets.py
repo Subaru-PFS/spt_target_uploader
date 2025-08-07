@@ -65,7 +65,13 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.mime_type = None
         self.file_input.value = None
 
-    def validate(self, date_begin=None, date_end=None, warn_threshold=100000):
+    def validate(
+        self,
+        date_begin=None,
+        date_end=None,
+        single_exptime=900.0,
+        warn_threshold=100000,
+    ):
         t_start = time.time()
         if date_begin >= date_end:
             pn.state.notifications.error(
@@ -129,7 +135,10 @@ class FileInputWidgets(param.Parameterized):
             return None, None, None
 
         validation_status, df_output = validate_input(
-            df_input.copy(deep=True), date_begin=date_begin, date_end=date_end
+            df_input.copy(deep=True),
+            date_begin=date_begin,
+            date_end=date_end,
+            single_exptime=single_exptime,
         )
         t_stop = time.time()
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
