@@ -610,7 +610,6 @@ def PPPrunStart(
                     )
 
                 mask_assign = np.in1d(remaining["ob_code"], tgt_ids)
-                print(sum(mask_assign), remaining["ob_code"], tgt_ids)
                 priority_val = 1.0 / remaining[mask_assign]["weight"].sum()
 
                 # record peak
@@ -679,11 +678,7 @@ def PPPrunStart(
                         )
 
                 # decrement exposure
-                print(mask_assign)
-                print(single_exptime)
-                Table.pprint(remaining[mask_assign])
                 remaining["exptime_PPP"][mask_assign] -= single_exptime
-
                 remaining = remaining[remaining["exptime_PPP"] > 0]
                 remaining = count_N(weight(remaining, conta, contb, contc))
 
