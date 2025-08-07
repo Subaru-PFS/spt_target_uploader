@@ -306,6 +306,7 @@ def visibility_checker_healpix(
     df: pd.DataFrame,
     date_begin: datetime | None = None,
     date_end: datetime | None = None,
+    single_exptime: float = 900.0,
     min_el: float = 30.0,
     max_el: float = 85.0,
     nside: int = 32,
@@ -326,6 +327,8 @@ def visibility_checker_healpix(
         Observation period start date
     date_end : datetime, optional
         Observation period end date
+    single_exptime : float, default 900.0
+        Single exposure time in seconds (used for visibility checks)
     min_el : float, default 30.0
         Minimum elevation constraint [degrees]
     max_el : float, default 85.0
@@ -386,6 +389,12 @@ def visibility_checker_healpix(
     logger.info(
         f"Grouped {len(df)} targets into {len(pixel_max_exptime)} HEALPix pixels"
     )
+
+    # print first ten pixels for debugging
+    logger.info(
+        f"First 10 HEALPix pixels and coordinates used: {pixel_coords.head(10)}"
+    )
+
     logger.info(
         f"Pixel exptime range: {pixel_max_exptime.min():.1f}s - {pixel_max_exptime.max():.1f}s"
     )
@@ -433,6 +442,8 @@ def visibility_checker_healpix(
         ra_rep = pixel_coords.loc[pixel_id, "ra"]
         dec_rep = pixel_coords.loc[pixel_id, "dec"]
 
+        logger.debug(f"Checking visibility for pixel {pixel_id}: ({ra_rep}, {dec_rep})")
+
         # Create target for this pixel
         target = StaticTarget(name=f"pixel_{pixel_id}", ra=ra_rep, dec=dec_rep)
 
@@ -451,7 +462,7 @@ def visibility_checker_healpix(
                     nights_end_1[dd],
                     min_el,  # [deg]
                     max_el,  # [deg]
-                    max_exptime,  # [s] Use maximum exptime in this pixel
+                    single_exptime,  # [s]
                 )
                 if t_stop is not None and t_start is not None and t_stop > t_start:
                     t_obs_ok_total += (t_stop - t_start).seconds
@@ -469,13 +480,16 @@ def visibility_checker_healpix(
                     nights_end_2[dd],
                     min_el,  # [deg]
                     max_el,  # [deg]
-                    max_exptime,  # [s] Use maximum exptime in this pixel
+                    single_exptime,
                 )
                 if t_stop is not None and t_start is not None and t_stop > t_start:
                     t_obs_ok_total += (t_stop - t_start).seconds
             except (IndexError, TypeError):
                 pass
 
+            logger.debug(
+                f"Pixel {pixel_id} observable from {t_start} to {t_stop}, total {t_obs_ok_total}s"
+            )
             # Early exit if we have enough observing time
             if t_obs_ok_total >= max_exptime:
                 break
@@ -782,6 +796,7 @@ def check_visibility(
     df,
     date_begin=None,
     date_end=None,
+    single_exptime=900,
     vectorized=False,
     healpix=True,
     nside=32,
@@ -792,7 +807,11 @@ def check_visibility(
     if healpix:
         logger.info("Using HEALPix-optimized visibility checker")
         is_visible = visibility_checker_healpix(
-            df, date_begin=date_begin, date_end=date_end, nside=nside
+            df,
+            date_begin=date_begin,
+            date_end=date_end,
+            single_exptime=single_exptime,
+            nside=nside,
         )
     elif vectorized:
         is_visible = visibility_checker_vec(
@@ -882,7 +901,13 @@ def check_unique(df, logger=logger):
 
 
 def validate_input(
-    df, date_begin=None, date_end=None, healpix=True, nside=32, logger=logger
+    df,
+    date_begin=None,
+    date_end=None,
+    single_exptime=900,
+    healpix=True,
+    nside=32,
+    logger=logger,
 ):
     logger.info("Validation of the input list starts")
     t_validate_start = time.time()
@@ -954,6 +979,7 @@ def validate_input(
         df,
         date_begin=date_begin,
         date_end=date_end,
+        single_exptime=single_exptime,
         vectorized=False,
         healpix=healpix,
         nside=nside,
