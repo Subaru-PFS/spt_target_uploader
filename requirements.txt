@@ -6,7 +6,7 @@ astropy>=5.3.1
 astropy-healpix>=1.1.2
 black>=23.7.0
 colorcet>=3.0.1
-dask<2025.1.0,>=2023.10.1
+dask>=2023.10.1
 datashader>=0.16.0
 ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git
 flake8>=6.1.0
@@ -27,7 +27,7 @@ mkdocs-material>=9.5.4
 mkdocs-video>=1.5.0
 multiprocess>=0.70.15
 myst-parser>=2.0.0
-numpy<2.0
+numpy>=2.0
 pandas>=2.0.3
 panel<1.7,>=1.6.0
 pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git

@@ -166,7 +166,7 @@ def list_files_app(use_panel_cli=False):
             if "TAC_psl_" in tt
         ]
         row_tacFin = np.where(
-            np.in1d(_table_files_tgt_psl.value["Upload ID"], upload_id_tacFin) == True
+            np.isin(_table_files_tgt_psl.value["Upload ID"], upload_id_tacFin) == True
         )[0]
         _table_files_tgt_psl.selection = [int(tt) for tt in row_tacFin]
         #"""
