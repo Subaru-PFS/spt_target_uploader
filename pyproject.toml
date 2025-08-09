@@ -5,7 +5,7 @@ description = "Target uploader for PFS openuse"
 authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
     "panel<1.7,>=1.6.0",
-    "numpy>=2.0",
+    "numpy>=2.0.0",
     "astropy>=5.3.1",
     "astroplan>=0.9",
     "colorcet>=3.0.1",
@@ -37,7 +37,8 @@ dependencies = [
     "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
-    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    # "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@w.2025.31",
     "psutil>=6.0.0",
     "hdbscan>=0.8.40",
     "skyfield>=1.53",
