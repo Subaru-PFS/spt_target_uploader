@@ -716,7 +716,7 @@ def PPPrunStart(
 
         return ppc_group
 
-    def sam2netflow(sample):
+    def sam2netflow(sample, for_ppc=False):
         """put targets to the format which can be read by netflow
 
         Parameters
@@ -731,7 +731,11 @@ def PPPrunStart(
 
         int_ = 0
         for tt in sample:
-            id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
+            id_, ra, dec = (tt["ob_code"], tt["ra"], tt["dec"])
+            if for_ppc:
+                tm = single_exptime
+            else:
+                tm = tt["exptime_PPP"]
             # targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
             targetL.append(nf.ScienceTarget(id_, ra, dec, tm, tt["priority"], "sci"))
             int_ += 1
@@ -820,7 +824,7 @@ def PPPrunStart(
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
+    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z", for_ppc=False):
         """run netflow (without iteration)
 
         Parameters
@@ -837,7 +841,7 @@ def PPPrunStart(
         Telpa = Tel[:, 3]
 
         bench = Bench(layout="full")
-        tgt = sam2netflow(sample)
+        tgt = sam2netflow(sample, for_ppc)
         classdict = NetflowPreparation(sample)
 
         telescopes = []
@@ -906,6 +910,7 @@ def PPPrunStart(
     def netflowRun_nofibAssign(
         Tel,
         sample,
+        for_ppc=False,
         otime="2025-04-20T08:00:00Z",
     ):
         """run netflow (with iteration)
@@ -920,7 +925,7 @@ def PPPrunStart(
         =======
         solution of Gurobi, PPC list
         """
-        res, telescope, tgt = netflowRun_single(Tel, sample)
+        res, telescope, tgt = netflowRun_single(Tel, sample, otime, for_ppc,)
 
         if sum(np.array([len(tt) for tt in res]) == 0) == 0:
             # All PPCs have fiber assignment
@@ -944,7 +949,7 @@ def PPPrunStart(
                 Tel_t[index, 1] = Tel[index, 1] + shift_ra
                 Tel_t[index, 2] = Tel[index, 2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_, for_ppc)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 iter_1 += 1
@@ -967,13 +972,14 @@ def PPPrunStart(
         res, telescope, tgt_lst_netflow = netflowRun_nofibAssign(
             ppc_lst,
             _tb_tgt_inuse,
+            True,
             otime=otime,
         )
 
         for i, (vis, tel) in enumerate(zip(res, telescope)):
             # assigned targets in each ppc
             tgt_assign_id_lst = []
-            for tidx, cidx in vis.items():
+            for tidx, _ in vis.items():
                 tgt_assign_id_lst.append(tgt_lst_netflow[tidx].ID)
 
         return tgt_assign_id_lst
@@ -1021,7 +1027,7 @@ def PPPrunStart(
                 continue
             sample_inuse = sample[list(set(sample_index))]
 
-            res, telescope, tgt = netflowRun_nofibAssign(ppc_g[uu], sample_inuse)
+            res, telescope, tgt = netflowRun_nofibAssign(ppc_g[uu], sample_inuse, False)
 
             for i, (vis, tel) in enumerate(zip(res, telescope)):
                 fib_eff_t = len(vis) / 2394.0 * 100

@@ -342,7 +342,12 @@ class PppResultWidgets:
             ppp_run.terminate()
 
             # Cleanup
-            ppp_run.join()
+            try:
+                ppp_run.join()
+            except KeyboardInterrupt:
+                ppp_run.terminate()
+                ppp_run.join()
+                sys.exit(0)
 
             latest = None
             while True:
@@ -367,7 +372,6 @@ class PppResultWidgets:
             logger.warning(
                 f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs determined (run out of time)"
             )
-
             self.status_ = 1  # ppc_status=1 in case of runout time
         else:
             latest = None
