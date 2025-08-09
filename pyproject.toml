@@ -5,12 +5,12 @@ description = "Target uploader for PFS openuse"
 authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
     "panel<1.7,>=1.6.0",
-    "numpy<2.0.0",
+    "numpy>=2.0.0",
     "astropy>=5.3.1",
     "astroplan>=0.9",
     "colorcet>=3.0.1",
     "datashader>=0.16.0",
-    "dask>=2023.10.1,<2025.1.0",
+    "dask>=2023.10.1",
     "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
     "gurobipy>=10,<11",
     "holoviews>=1.17.1",
@@ -18,7 +18,8 @@ dependencies = [
     "loguru>=0.7.2",
     "markdown-it-py>=3.0.0",
     "mkdocs-macros-plugin>=0.7.0",
-    "mkdocs-material[imaging]>=9.5.4",
+    # "mkdocs-material[imaging]>=9.5.4",
+    "mkdocs-material>=9.5.4",
     "mkdocs-video>=1.5.0",
     "mkdocs>=1.4.3",
     "multiprocess>=0.70.15",
@@ -36,9 +37,12 @@ dependencies = [
     "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
-    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    # "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@w.2025.31",
     "psutil>=6.0.0",
     "hdbscan>=0.8.40",
+    "skyfield>=1.53",
+    "astropy-healpix>=1.1.2",
 ]
 requires-python = ">=3.11,<3.13"
 readme = "README.md"

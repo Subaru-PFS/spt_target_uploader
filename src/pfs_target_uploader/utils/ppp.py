@@ -332,8 +332,8 @@ def PPPrunStart(
             index = np.arange(0, len(sample), 1)
             return index
         else:
-            index = list(np.where(~np.in1d(labels, labels_c))[0]) + [
-                np.where(np.in1d(labels, kk))[0][0] for kk in labels_c
+            index = list(np.where(~np.isin(labels, labels_c))[0]) + [
+                np.where(np.isin(labels, kk))[0][0] for kk in labels_c
             ]
             return sorted(index)
 
@@ -487,7 +487,57 @@ def PPPrunStart(
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
-    def PPP_centers(sample_f, ppc_f, mutiPro, weight_para):
+    def _make_obj_allo_table(
+        peaks,
+        resolution,
+    ):
+        """
+        Build an astropy Table for PPC allocations from a list of peaks.
+
+        Each peak entry should be:
+        [id, ra, dec, pa, priority, assign_mask, target_ids]
+
+        Returns:
+        Table with columns: ppc_code_, group_id, ppc_ra, ppc_dec, ppc_pa,
+        ppc_priority, tel_fiber_usage_frac, allocated_targets, ppc_resolution.
+        """
+        from astropy.table import Column, Table
+
+        n = len(peaks)
+        codes = [f"Point_{p[0]+1}" for p in peaks]
+        groups = ["Group_1"] * n
+
+        ras = [p[1] for p in peaks]
+        decs = [p[2] for p in peaks]
+        pas = [p[3] for p in peaks]
+        priorities = [p[4] for p in peaks]
+        masks = [p[5] for p in peaks]
+        tgt_lists = [p[6] for p in peaks]
+        fiber_fracs = [sum(mask) / 2394.0 * 100.0 for mask in masks]
+
+        tbl = Table()
+        tbl["ppc_code_"] = Column(codes, dtype=np.str_)
+        tbl["group_id"] = Column(groups, dtype=np.str_)
+        tbl["ppc_ra"] = Column(ras, dtype=np.float64)
+        tbl["ppc_dec"] = Column(decs, dtype=np.float64)
+        tbl["ppc_pa"] = Column(pas, dtype=np.float64)
+        tbl["ppc_priority"] = Column(priorities, dtype=np.float64)
+        tbl["tel_fiber_usage_frac"] = Column(fiber_fracs, dtype=np.float64)
+        tbl["allocated_targets"] = Column(tgt_lists, dtype=object)
+        tbl["ppc_resolution"] = Column([resolution] * n, dtype=np.str_)
+        return tbl
+
+    def PPP_centers(
+        sample_f,
+        ppc_f,
+        mutiPro,
+        weight_para,
+        uS_L2=Table(),
+        cR_L=[],
+        cR_L_=[],
+        sub_l=[],
+        obj_allo_L_fin=Table(),
+    ):
         """determine pointing centers
 
         Parameters
@@ -504,71 +554,136 @@ def PPPrunStart(
         =======
         sample with list of pointing centers in meta
         """
-
         conta, contb, contc = weight_para
         status = 999
-        Nfiber = int(2394 - 200)  # 200 for calibrators
+        Nfiber = 2394 - 200  # 200 reserved for calibrators
+
+        # Precompute densities and weights
         sample_f = count_N(sample_f)
         sample_f = weight(sample_f, conta, contb, contc)
 
+        # If user-specified PPC provided, use that
         if len(ppc_f) > 0:
-            sample_f.meta["PPC"] = np.array(
+            sample_f.meta["PPC"] = np.vstack(
                 [
-                    [tt, ppc_f["ppc_ra"][tt], ppc_f["ppc_dec"][tt], ppc_f["ppc_pa"][tt]]
-                    for tt in range(len(ppc_f))
+                    (i, ppc_f["ppc_ra"][i], ppc_f["ppc_dec"][i], ppc_f["ppc_pa"][i])
+                    for i in range(len(ppc_f))
                 ]
             )
-            # np.array([list(ppc_t) for ppc_t in ppc_f.as_array()])
             status = 2
-            logger.info("PPC determined from the user input [PPP_centers s1]")
+            logger.info("PPC from user input [PPP_centers s1]")
             return sample_f, status
 
-        peak = []
-
-        for sample in target_clustering(
+        peaks = []  # list of [id, ra, dec, pa]
+        # iterate clusters
+        for cluster in target_clustering(
             sample_f, d_pfi, algorithm=clustering_algorithm
         ):
-            sample_s = sample[sample["exptime_PPP"] > 0]  # targets not finished
+            # only unfinished targets
+            remaining = cluster[cluster["exptime_PPP"] > 0]
+            # continue until all exposure done
+            while any(remaining["exptime_PPP"] > 0):
+                # KDE peak
+                _, _, _, ra_peak, dec_peak = KDE(remaining, True)
+                pa_peak = 0.0
 
-            while any(sample_s["exptime_PPP"] > 0):
-                # -------------------------------
-                # ### peak_xy from KDE peak with weights
-                X_, Y_, obj_dis_sig_, peak_x, peak_y = KDE(sample_s, mutiPro)
+                # find targets in FoV
+                idx = PFS_FoV(ra_peak, dec_peak, pa_peak, remaining)
 
-                # -------------------------------
-                index_ = PFS_FoV(
-                    peak_x, peak_y, 0, sample_s
-                )  # all PA set to be 0 for simplicity
+                # run netflow once
+                tgt_ids = netflowRun4PPC(
+                    remaining[list(idx)], ra_peak, dec_peak, pa_peak
+                )
 
-                if len(index_) > 0:
-                    peak.append(
-                        [len(peak), peak_x, peak_y, 0]
-                    )  # ppc_id,ppc_ra,ppc_dec,ppc_PA=0
+                # retry if none assigned
+                for attempt in range(2):
+                    if len(tgt_ids) > 0:
+                        break
+                    ra_peak += np.random.uniform(-0.15, 0.15)
+                    dec_peak += np.random.uniform(-0.15, 0.15)
+                    tgt_ids = netflowRun4PPC(
+                        remaining[list(idx)],
+                        ra_peak,
+                        dec_peak,
+                        pa_peak,
+                        otime="2025-04-10T08:00:00Z",
+                    )
 
-                else:
-                    # add a small random shift so that it will not repeat over a blank position
-                    while len(index_) == 0:
-                        peak_x_t = peak_x + np.random.choice([0.15, -0.15, 0], 1)[0]
-                        peak_y_t = peak_y + np.random.choice([0.15, -0.15, 0], 1)[0]
-                        index_ = PFS_FoV(peak_x_t, peak_y_t, 0, sample_s)
-                    peak.append(
-                        [len(peak), peak_x_t, peak_y_t, 0]
-                    )  # ppc_id,ppc_ra,ppc_dec,ppc_PA=0
+                mask_assign = np.isin(remaining["ob_code"], tgt_ids)
+                priority_val = 1.0 / remaining[mask_assign]["weight"].sum()
 
-                # -------------------------------
-                if len(index_) > Nfiber:
-                    index_ = random.sample(list(index_), Nfiber)
+                # record peak
+                peaks.append(
+                    [
+                        len(peaks),
+                        ra_peak,
+                        dec_peak,
+                        pa_peak,
+                        priority_val,
+                        mask_assign,
+                        list(tgt_ids),
+                    ]
+                )
 
-                sample_s["exptime_PPP"][
-                    list(index_)
-                ] -= single_exptime  # targets in the PPC observed with a specified single_exptime (s)
+                # flush every 1 peaks if queue provided
+                if queue:
+                    res_ = sample_f["resolution"][0]
+                    sample_f.meta["PPC"] = np.array([p[:4] for p in peaks])
+                    obj_table = _make_obj_allo_table(peaks, res_)
 
-                sample_s = sample_s[sample_s["exptime_PPP"] > 0]  # targets not finished
-                sample_s = count_N(sample_s)
-                sample_s = weight(sample_s, conta, contb, contc)
+                    if res_ == "L":
+                        uS_L2_ = sample_f.copy()
+                        obj_allo_L_fin = obj_table.copy()
+                        (uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l) = (
+                            complete_ppc(uS_L2_, obj_allo_L_fin)
+                        )
 
-        sample_f.meta["PPC"] = np.array(peak)
+                        queue.put(
+                            [
+                                uS_L2,
+                                [cR_L_fh, cR_L_n],
+                                [cR_L_fh_, cR_L_n_],
+                                sub_l,
+                                obj_allo_L_fin,
+                                Table(),
+                                [],
+                                [],
+                                [],
+                                Table(),
+                                status,
+                            ]
+                        )
 
+                    elif res_ == "M":
+                        uS_M2_ = sample_f.copy()
+                        obj_allo_M_fin = obj_table.copy()
+                        (uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m) = (
+                            complete_ppc(uS_M2_, obj_allo_M_fin)
+                        )
+
+                        queue.put(
+                            [
+                                uS_L2,
+                                cR_L,
+                                cR_L_,
+                                sub_l,
+                                obj_allo_L_fin,
+                                uS_M2,
+                                [cR_M_fh, cR_M_n],
+                                [cR_M_fh_, cR_M_n_],
+                                sub_m,
+                                obj_allo_M_fin,
+                                status,
+                            ]
+                        )
+
+                # decrement exposure
+                remaining["exptime_PPP"][mask_assign] -= single_exptime
+                remaining = remaining[remaining["exptime_PPP"] > 0]
+                remaining = count_N(weight(remaining, conta, contb, contc))
+
+        # final meta and return
+        sample_f.meta["PPC"] = np.array([p[:4] for p in peaks])
         return sample_f, status
 
     def point_DBSCAN(sample):
@@ -586,7 +701,7 @@ def PPPrunStart(
 
         # haversine uses (dec,ra) in radian;
         db = DBSCAN(eps=np.radians(d_pfi), min_samples=1, metric="haversine").fit(
-            np.fliplr(np.radians(ppc_xy[:, [1, 2]].astype(np.float_)))
+            np.fliplr(np.radians(ppc_xy[:, [1, 2]].astype(float)))
         )
 
         labels = db.labels_
@@ -601,7 +716,7 @@ def PPPrunStart(
 
         return ppc_group
 
-    def sam2netflow(sample):
+    def sam2netflow(sample, for_ppc=False):
         """put targets to the format which can be read by netflow
 
         Parameters
@@ -616,7 +731,11 @@ def PPPrunStart(
 
         int_ = 0
         for tt in sample:
-            id_, ra, dec, tm = (tt["ob_code"], tt["ra"], tt["dec"], tt["exptime_PPP"])
+            id_, ra, dec = (tt["ob_code"], tt["ra"], tt["dec"])
+            if for_ppc:
+                tm = single_exptime
+            else:
+                tm = tt["exptime_PPP"]
             # targetL.append(nf.ScienceTarget(id_, ra, dec, tm, int_, "sci"))
             targetL.append(nf.ScienceTarget(id_, ra, dec, tm, tt["priority"], "sci"))
             int_ += 1
@@ -705,7 +824,7 @@ def PPPrunStart(
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z"):
+    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z", for_ppc=False):
         """run netflow (without iteration)
 
         Parameters
@@ -722,7 +841,7 @@ def PPPrunStart(
         Telpa = Tel[:, 3]
 
         bench = Bench(layout="full")
-        tgt = sam2netflow(sample)
+        tgt = sam2netflow(sample, for_ppc)
         classdict = NetflowPreparation(sample)
 
         telescopes = []
@@ -788,7 +907,12 @@ def PPPrunStart(
 
         return res, telescopes, tgt
 
-    def netflowRun_nofibAssign(Tel, sample):
+    def netflowRun_nofibAssign(
+        Tel,
+        sample,
+        for_ppc=False,
+        otime="2025-04-20T08:00:00Z",
+    ):
         """run netflow (with iteration)
             if no fiber assignment in some PPCs, shift these PPCs with 0.2 deg
 
@@ -801,7 +925,7 @@ def PPPrunStart(
         =======
         solution of Gurobi, PPC list
         """
-        res, telescope, tgt = netflowRun_single(Tel, sample)
+        res, telescope, tgt = netflowRun_single(Tel, sample, otime, for_ppc,)
 
         if sum(np.array([len(tt) for tt in res]) == 0) == 0:
             # All PPCs have fiber assignment
@@ -813,7 +937,7 @@ def PPPrunStart(
 
             Tel = np.array(Tel)
             Tel_t = np.copy(Tel)
-            otime_ = "2024-05-20T08:00:00Z"
+            otime_ = otime
             iter_1 = 0
 
             while len(index) > 0 and iter_1 < 8:
@@ -825,7 +949,7 @@ def PPPrunStart(
                 Tel_t[index, 1] = Tel[index, 1] + shift_ra
                 Tel_t[index, 2] = Tel[index, 2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_)
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_, for_ppc)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 iter_1 += 1
@@ -834,6 +958,31 @@ def PPPrunStart(
                     otime_ = "2024-04-20T08:00:00Z"
 
             return res, telescope, tgt
+
+    def netflowRun4PPC(
+        _tb_tgt_inuse,
+        ppc_x,
+        ppc_y,
+        ppc_pa,
+        otime="2025-05-20T08:00:00Z",
+    ):
+        # run netflow (for PPP_centers)
+        ppc_lst = np.array([[0, ppc_x, ppc_y, ppc_pa, 0]])
+
+        res, telescope, tgt_lst_netflow = netflowRun_nofibAssign(
+            ppc_lst,
+            _tb_tgt_inuse,
+            True,
+            otime=otime,
+        )
+
+        for i, (vis, tel) in enumerate(zip(res, telescope)):
+            # assigned targets in each ppc
+            tgt_assign_id_lst = []
+            for tidx, _ in vis.items():
+                tgt_assign_id_lst.append(tgt_lst_netflow[tidx].ID)
+
+        return tgt_assign_id_lst
 
     def netflowRun(sample):
         """run netflow (with iteration and DBSCAN)
@@ -878,7 +1027,7 @@ def PPPrunStart(
                 continue
             sample_inuse = sample[list(set(sample_index))]
 
-            res, telescope, tgt = netflowRun_nofibAssign(ppc_g[uu], sample_inuse)
+            res, telescope, tgt = netflowRun_nofibAssign(ppc_g[uu], sample_inuse, False)
 
             for i, (vis, tel) in enumerate(zip(res, telescope)):
                 fib_eff_t = len(vis) / 2394.0 * 100
@@ -893,7 +1042,7 @@ def PPPrunStart(
                     tot_weight = np.nan
                 else:
                     tot_weight = 1 / sum(
-                        sample[np.in1d(sample["ob_code"], obj_allo_id)]["weight"]
+                        sample[np.isin(sample["ob_code"], obj_allo_id)]["weight"]
                     )
 
                 point_list.append(
@@ -986,7 +1135,7 @@ def PPPrunStart(
         completeR_n_ = []  # percentage
 
         for ppc in point_l_pri:
-            lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
+            lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])
@@ -1166,7 +1315,22 @@ def PPPrunStart(
             )
             out_obj_allo_L_fin = obj_allo_L
 
-        uS_M_s2, status_ = PPP_centers(uS_M, uPPC_M, True, weight_para)
+        out_uS_L2 = uS_L2
+        out_cR_L = [cR_L_fh, cR_L_n]
+        out_cR_L_ = [cR_L_fh_, cR_L_n_]
+        out_sub_l = sub_l
+
+        uS_M_s2, status_ = PPP_centers(
+            uS_M,
+            uPPC_M,
+            True,
+            weight_para,
+            out_uS_L2,
+            out_cR_L,
+            out_cR_L_,
+            out_sub_l,
+            out_obj_allo_L_fin,
+        )
         obj_allo_M = netflowRun(uS_M_s2)
         if len(uPPC_M) == 0:
             uS_M2 = complete_ppc(uS_M_s2, obj_allo_M)[0]
@@ -1182,11 +1346,6 @@ def PPPrunStart(
                 uS_M_s2, obj_allo_M
             )
             out_obj_allo_M_fin = obj_allo_M
-
-        out_uS_L2 = uS_L2
-        out_cR_L = [cR_L_fh, cR_L_n]
-        out_cR_L_ = [cR_L_fh_, cR_L_n_]
-        out_sub_l = sub_l
 
         out_uS_M2 = uS_M2
         out_cR_M = [cR_M_fh, cR_M_n]
@@ -1308,7 +1467,13 @@ def ppp_result(
 
         # obj_allo1 = obj_allo1.group_by("ppc_code")
         obj_allo1.rename_column("tel_fiber_usage_frac", "Fiber usage fraction (%)")
-        obj_allo2 = Table.to_pandas(obj_allo1)
+        simple_cols = [
+            col
+            for col in obj_allo1.colnames
+            if obj_allo1[col].ndim == 1 or obj_allo1[col].shape == ()
+        ]
+        obj_allo2 = obj_allo1[simple_cols].to_pandas()
+        # obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
 
         # add a column to indicate the color for the scatter plot
@@ -1360,13 +1525,19 @@ def ppp_result(
         ra_max = np.max([obj_allo1["ppc_ra"].max(), uS_["ra"].max()]) + d_pfi
         dec_min = np.min([obj_allo1["ppc_dec"].min(), uS_["dec"].min()]) - d_pfi
         dec_max = np.max([obj_allo1["ppc_dec"].max(), uS_["dec"].max()]) + d_pfi
+
+        priorities = sorted(uS_["priority"].unique())
+        uS_["priority"] = pd.Categorical(
+            uS_["priority"], categories=priorities, ordered=True
+        )
+        uS_ = uS_.sort_values("priority")
+
         p_tgt = uS_.hvplot.scatter(
             x="ra",
             y="dec",
             by="priority",
             color="ppc_color",
             marker="o",
-            # s=20,
             s=60,
             line_color="white",
             line_width=0.5,
@@ -1577,13 +1748,14 @@ def ppp_result(
                 "ppc_resolution",
                 "ppc_priority",
                 "Fiber usage fraction (%)",
-                "allocated_targets",
             ]
             # normalize the priority of ppc to prevent too small value
             obj_alloc["ppc_priority"] = (
                 obj_alloc["ppc_priority"] / max(obj_alloc["ppc_priority"]) * 1e3
             )
-            return Table.to_pandas(obj_alloc)
+            df_ = Table.to_pandas(obj_alloc)
+            df_["allocated_targets"] = [list(x) for x in obj_allo1["allocated_targets"]]
+            return df_
 
         # compose figures
         p_result_fig = pn.Column(
@@ -1782,7 +1954,7 @@ def ppp_result_reproduce(
         completeR_n_ = []  # percentage
 
         for ppc in point_l_pri:
-            lst = np.where(np.in1d(sample["ob_code"], ppc["allocated_targets"]))[0]
+            lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
 
             # achieved fiber hours (in total, in P[0-9])

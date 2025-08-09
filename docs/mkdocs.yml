@@ -23,11 +23,11 @@ use_directory_urls: false
 
 plugins:
   - search
-  - social
   - mkdocs-video:
       is_video: True
       video_autoplay: False
       video_muted: False
+  # - social
 
 
 theme:
@@ -79,11 +79,11 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/Subaru-PFS/spt_target_uploader
-      name: PFS Target Uploader on GitHub
+# extra:
+#   social:
+#     - icon: fontawesome/brands/github
+#       link: https://github.com/Subaru-PFS/spt_target_uploader
+#       name: PFS Target Uploader on GitHub
 
 extra_css:
   - stylesheets/extra.css
