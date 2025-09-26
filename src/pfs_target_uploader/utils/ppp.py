@@ -937,7 +937,6 @@ def PPPrunStart(
                 vis_cost,
                 cobraMoveCost=cobraMoveCost,
                 collision_distance=2.0,
-                # collision_distance=0.01,
                 elbow_collisions=True,
                 gurobi=True,
                 gurobiOptions=gurobiOptions,
