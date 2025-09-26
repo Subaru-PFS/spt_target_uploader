@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import os
 import random
 import sys
@@ -21,6 +22,7 @@ import spatialpandas as sp
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, join, vstack
+from astropy.time import Time
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
@@ -154,6 +156,39 @@ def calc_nppc_from_obstime(
     n_pointings = int(round(t_exp_eff / t_total_per_pointings, 0))
 
     return n_pointings
+
+
+def set_observation_time(ra: float, offset_hour: float = 0.0) -> str:
+    """
+    Set the observation time based on the given RA and offset hour.
+    Observation time will be a corresponding equinox,
+    YYYY-09-20T10:00:00Z for 0<RA<90 and 270<RA<360,
+    and YYYY-03-20T10:00:00Z for 90<RA<270.
+    The time can be adjusted by offset_hour.
+
+    Parameters
+    ----------
+    ra : float
+        Right Ascension in degrees.
+    offset_hour : float, optional
+        Offset hour to adjust the observation time. Default is 0.0 hours.
+
+    Returns
+    -------
+    str
+        Observation time in ISO format (YYYY-MM-DDTHH:MM:SSZ).
+    """
+    # Current year (not need to be precise)
+    current_year = datetime.datetime.now().year
+
+    if (0.0 <= ra < 90.0) or (270.0 <= ra < 360.0):
+        observation_time = Time(f"{current_year}-09-20T10:00:00") + offset_hour * u.hour
+    else:
+        observation_time = Time(f"{current_year}-03-20T10:00:00") + offset_hour * u.hour
+
+    observation_time_out = observation_time.isot.split(".")[0] + "Z"
+
+    return observation_time_out
 
 
 def PPPrunStart(
@@ -625,8 +660,6 @@ def PPPrunStart(
                             ra_peak,
                             dec_peak,
                             pa_peak,
-                            # otime="2025-04-10T08:00:00Z",
-                            otime="2025-10-10T08:00:00Z",
                         )
 
                 mask_assign = np.isin(remaining["ob_code"], tgt_ids)
@@ -833,7 +866,7 @@ def PPPrunStart(
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime="2024-10-20T08:00:00Z", for_ppc=False):
+    def netflowRun_single(Tel, sample, otime=None, for_ppc=False):
         """run netflow (without iteration)
 
         Parameters
@@ -845,9 +878,15 @@ def PPPrunStart(
         =======
         solution of Gurobi, PPC list
         """
+
         Telra = Tel[:, 1]
         Teldec = Tel[:, 2]
         Telpa = Tel[:, 3]
+
+        if otime is None:
+            # set observation time based on the first PPC
+            otime = set_observation_time(Telra[0])
+            logger.info(f"Set observation time to {otime}")
 
         bench = Bench(layout="full")
         tgt = sam2netflow(sample, for_ppc)
@@ -927,7 +966,7 @@ def PPPrunStart(
         Tel,
         sample,
         for_ppc=False,
-        otime="2025-10-20T08:00:00Z",
+        otime=None,
     ):
         """run netflow (with iteration)
             if no fiber assignment in some PPCs, shift these PPCs with 0.2 deg
@@ -941,6 +980,11 @@ def PPPrunStart(
         =======
         solution of Gurobi, PPC list
         """
+
+        if otime is None:
+            otime = set_observation_time(Tel[0, 1])
+            logger.info(f"Set observation time to {otime}")
+
         res, telescope, tgt = netflowRun_single(
             Tel,
             sample,
@@ -988,8 +1032,16 @@ def PPPrunStart(
 
                 iter_1 += 1
 
-                if iter_1 >= 4:
-                    otime_ = "2024-06-20T08:00:00Z"
+                if (iter_1 >= 4) and (iter_1 < 7):
+                    otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=6.0)
+                    logger.info(
+                        f"Change observation time to {otime_} with offset 6 hr at {iter_1=}"
+                    )
+                elif iter_1 >= 7:
+                    otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=12.0)
+                    logger.info(
+                        f"Change observation time to {otime_} with offset 12 hr at {iter_1=}"
+                    )
 
             logger.debug(
                 f"Finished netflow iterations for PPCs with no fiber assignment. {iter_1=} {len(index)=}"
@@ -1002,8 +1054,12 @@ def PPPrunStart(
         ppc_x,
         ppc_y,
         ppc_pa,
-        otime="2025-10-20T08:00:00Z",
+        otime=None,
     ):
+        if otime is None:
+            otime = set_observation_time(ppc_x)
+            logger.info(f"Set observation time to {otime}")
+
         # run netflow (for PPP_centers)
         ppc_lst = np.array([[0, ppc_x, ppc_y, ppc_pa, 0]])
 
