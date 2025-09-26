@@ -168,6 +168,9 @@ def PPPrunStart(
     logger=None,
 ):
     if logger is None:
+        from loguru import logger as global_logger
+
+        logger = global_logger
         logger.remove()
         logger.add(sys.stderr, level="INFO", enqueue=True)
 
@@ -317,6 +320,9 @@ def PPPrunStart(
         list of pointing centers in different group
         """
         # haversine uses (dec,ra) in radian;
+        # FIXME: `affinity` was deprecated in sklearn 1.2 and has been removed in 1.4.
+        # Use `metric` instead, but also check if "haversine" is supported.
+        # See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
         db = AgglomerativeClustering(
             distance_threshold=np.radians(sep),
             n_clusters=None,
@@ -477,13 +483,19 @@ def PPPrunStart(
                 Z = KDE_xy(sample, X_, Y_)
 
             # calculate significance level of KDE
+            logger.debug(f"Shape of Z: {Z.shape}")
             obj_dis_sig_ = (Z - np.mean(Z)) / np.std(Z)
             peak_pos = np.where(obj_dis_sig_ == obj_dis_sig_.max())
+            logger.debug(f"Shape of peak_pos: {peak_pos[0].shape} {peak_pos[1].shape}")
+            logger.debug(f"KDE peak position: {peak_pos}")
 
             peak_y = positions1[0, peak_pos[1][round(len(peak_pos[1]) * 0.5)]]
             peak_x = sorted(set(positions1[1, :]))[
                 peak_pos[0][round(len(peak_pos[0]) * 0.5)]
             ]
+
+            logger.debug(f"KDE peak ra,dec: {peak_x},{peak_y}")
+            logger.debug(f"KDE peak significance: {obj_dis_sig_.max()}")
 
             return X_, Y_, obj_dis_sig_, peak_x, peak_y
 
@@ -576,19 +588,21 @@ def PPPrunStart(
 
         peaks = []  # list of [id, ra, dec, pa]
         # iterate clusters
-        for cluster in target_clustering(
-            sample_f, d_pfi, algorithm=clustering_algorithm
-        ):
+        clusters = target_clustering(sample_f, d_pfi, algorithm=clustering_algorithm)
+        logger.info(f"Number of clusters identified: {len(clusters)}")
+        for cluster in clusters:
             # only unfinished targets
             remaining = cluster[cluster["exptime_PPP"] > 0]
             # continue until all exposure done
             while any(remaining["exptime_PPP"] > 0):
+                logger.debug(f"Remaining objects:{remaining['ob_code']}")
                 # KDE peak
                 _, _, _, ra_peak, dec_peak = KDE(remaining, True)
                 pa_peak = 0.0
 
                 # find targets in FoV
                 idx = PFS_FoV(ra_peak, dec_peak, pa_peak, remaining)
+                logger.debug(f"Target index: {idx}")
 
                 # run netflow once
                 tgt_ids = netflowRun4PPC(
@@ -598,16 +612,22 @@ def PPPrunStart(
                 # retry if none assigned
                 for attempt in range(2):
                     if len(tgt_ids) > 0:
+                        logger.debug(f"netflowRun4PPC assigned {len(tgt_ids)} targets")
                         break
-                    ra_peak += np.random.uniform(-0.15, 0.15)
-                    dec_peak += np.random.uniform(-0.15, 0.15)
-                    tgt_ids = netflowRun4PPC(
-                        remaining[list(idx)],
-                        ra_peak,
-                        dec_peak,
-                        pa_peak,
-                        otime="2025-04-10T08:00:00Z",
-                    )
+                    else:
+                        logger.warning(
+                            f"No target assigned by netflowRun4PPC, retrying netflow ({attempt}/2)"
+                        )
+                        ra_peak += np.random.uniform(-0.15, 0.15)
+                        dec_peak += np.random.uniform(-0.15, 0.15)
+                        tgt_ids = netflowRun4PPC(
+                            remaining[list(idx)],
+                            ra_peak,
+                            dec_peak,
+                            pa_peak,
+                            # otime="2025-04-10T08:00:00Z",
+                            otime="2025-10-10T08:00:00Z",
+                        )
 
                 mask_assign = np.isin(remaining["ob_code"], tgt_ids)
                 priority_val = 1.0 / remaining[mask_assign]["weight"].sum()
@@ -742,7 +762,7 @@ def PPPrunStart(
 
         return targetL
 
-    def NetflowPreparation(sample):
+    def NetflowPreparation():
         """assign cost to each target
 
         Parameters
@@ -755,17 +775,6 @@ def PPPrunStart(
         """
 
         classdict = {}
-
-        """
-        int_ = 0
-        for ii in sample:
-            classdict["sci_P" + str(int_)] = {
-                "nonObservationCost": ii["weight"],
-                "partialObservationCost": ii["weight"] * 1.5,
-                "calib": False,
-            }
-            int_ += 1
-        #"""
 
         classdict["sci_P0"] = {
             "nonObservationCost": 100,
@@ -824,7 +833,7 @@ def PPPrunStart(
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime="2024-05-20T08:00:00Z", for_ppc=False):
+    def netflowRun_single(Tel, sample, otime="2024-10-20T08:00:00Z", for_ppc=False):
         """run netflow (without iteration)
 
         Parameters
@@ -842,12 +851,13 @@ def PPPrunStart(
 
         bench = Bench(layout="full")
         tgt = sam2netflow(sample, for_ppc)
-        classdict = NetflowPreparation(sample)
+        classdict = NetflowPreparation()
 
         telescopes = []
 
         nvisit = len(Telra)
         for ii in range(nvisit):
+            logger.debug(f"Add tel pointing {ii}: {Telra[ii]},{Teldec[ii]},{Telpa[ii]}")
             telescopes.append(nf.Telescope(Telra[ii], Teldec[ii], Telpa[ii], otime))
         tpos = [tele.get_fp_positions(tgt) for tele in telescopes]
 
@@ -888,6 +898,7 @@ def PPPrunStart(
                 vis_cost,
                 cobraMoveCost=cobraMoveCost,
                 collision_distance=2.0,
+                # collision_distance=0.01,
                 elbow_collisions=True,
                 gurobi=True,
                 gurobiOptions=gurobiOptions,
@@ -898,11 +909,16 @@ def PPPrunStart(
             prob.solve()
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
+        logger.debug("Extract solution:")
         for k1, v1 in prob._vardict.items():
+            logger.debug(f"{k1} : {v1}")
             if k1.startswith("Tv_Cv_"):
                 visited = prob.value(v1) > 0
                 if visited:
                     _, _, tidx, cidx, ivis = k1.split("_")
+                    logger.debug(
+                        f"Visit {ivis} assigned to target {tidx} at cobra {cidx}"
+                    )
                     res[int(ivis)][int(tidx)] = int(cidx)
 
         return res, telescopes, tgt
@@ -911,7 +927,7 @@ def PPPrunStart(
         Tel,
         sample,
         for_ppc=False,
-        otime="2025-04-20T08:00:00Z",
+        otime="2025-10-20T08:00:00Z",
     ):
         """run netflow (with iteration)
             if no fiber assignment in some PPCs, shift these PPCs with 0.2 deg
@@ -925,13 +941,23 @@ def PPPrunStart(
         =======
         solution of Gurobi, PPC list
         """
-        res, telescope, tgt = netflowRun_single(Tel, sample, otime, for_ppc,)
+        res, telescope, tgt = netflowRun_single(
+            Tel,
+            sample,
+            otime,
+            for_ppc,
+        )
 
         if sum(np.array([len(tt) for tt in res]) == 0) == 0:
             # All PPCs have fiber assignment
+            logger.debug("All PPCs have fiber assignment at the initial netflow run")
             return res, telescope, tgt
 
         else:
+            logger.debug(
+                "Some PPCs have no fiber assignment at the initial netflow run"
+            )
+
             # if there are PPCs with no fiber assignment
             index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
@@ -941,6 +967,9 @@ def PPPrunStart(
             iter_1 = 0
 
             while len(index) > 0 and iter_1 < 8:
+                logger.debug(
+                    f"Netflow iteration {iter_1}, {len(index)} PPCs with no fiber assignment"
+                )
                 # shift PPCs with 0.2 deg, but only run 6 iterations to save computational time
                 # typically one iteration is enough
                 shift_ra = np.random.choice([-0.3, -0.2, -0.1, 0.1, 0.2, 0.3], 1)[0]
@@ -952,10 +981,19 @@ def PPPrunStart(
                 res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_, for_ppc)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
+                logger.debug(f"{sample=}")
+                logger.debug(f"{res=}")
+                logger.debug(f"{telescope=}")
+                logger.debug(f"{tgt=}")
+
                 iter_1 += 1
 
                 if iter_1 >= 4:
-                    otime_ = "2024-04-20T08:00:00Z"
+                    otime_ = "2024-06-20T08:00:00Z"
+
+            logger.debug(
+                f"Finished netflow iterations for PPCs with no fiber assignment. {iter_1=} {len(index)=}"
+            )
 
             return res, telescope, tgt
 
@@ -964,7 +1002,7 @@ def PPPrunStart(
         ppc_x,
         ppc_y,
         ppc_pa,
-        otime="2025-05-20T08:00:00Z",
+        otime="2025-10-20T08:00:00Z",
     ):
         # run netflow (for PPP_centers)
         ppc_lst = np.array([[0, ppc_x, ppc_y, ppc_pa, 0]])
@@ -1028,6 +1066,8 @@ def PPPrunStart(
             sample_inuse = sample[list(set(sample_index))]
 
             res, telescope, tgt = netflowRun_nofibAssign(ppc_g[uu], sample_inuse, False)
+
+            logger.debug(f"{res=}")
 
             for i, (vis, tel) in enumerate(zip(res, telescope)):
                 fib_eff_t = len(vis) / 2394.0 * 100
@@ -1108,8 +1148,11 @@ def PPPrunStart(
         n_sub = len(sub_l)
 
         if len(point_l) == 0:
+            logger.info("No PPC is determined. Return zeros.")
             return (
                 sample,
+                np.array([[0] * (n_sub + 1)]),
+                np.array([[0] * (n_sub + 1)]),
                 np.array([[0] * (n_sub + 1)]),
                 np.array([[0] * (n_sub + 1)]),
                 sub_l,
@@ -1171,7 +1214,7 @@ def PPPrunStart(
             sub_l,
         )
 
-    def netflow_iter(uS, obj_allo, weight_para, status):
+    def netflow_iter(uS, obj_allo, weight_para, status, max_iter=10):
         """iterate the total procedure to re-assign fibers to targets which have not been assigned
             in the previous/first iteration
 
@@ -1197,14 +1240,20 @@ def PPPrunStart(
 
         if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
             # remove ppc with no fiber assignment
-            obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
+            logger.info("Remove PPCs with no fiber assignment")
+            obj_allo.remove_rows(
+                np.where(np.isclose(obj_allo["tel_fiber_usage_frac"], 0))[0]
+            )
             return obj_allo, status
 
         else:
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
-            while any(uS["exptime_assign"] < uS["exptime_PPP"]) and iter_m2 < 10:
+            while any(uS["exptime_assign"] < uS["exptime_PPP"]) and (
+                iter_m2 < max_iter
+            ):
+                logger.info(f"Netflow iterations {iter_m2+1}/{max_iter}")
                 uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
                 uS_t1["exptime_PPP"] = (
                     uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
@@ -1215,9 +1264,20 @@ def PPPrunStart(
                 obj_allo_t = netflowRun(uS_t2)
 
                 obj_allo = vstack([obj_allo, obj_allo_t])
-                obj_allo.remove_rows(np.where(obj_allo["tel_fiber_usage_frac"] == 0)[0])
+                obj_allo.remove_rows(
+                    np.where(np.isclose(obj_allo["tel_fiber_usage_frac"], 0))[0]
+                )
                 uS = complete_ppc(uS_t2, obj_allo)[0]
                 iter_m2 += 1
+
+            if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
+                logger.info(
+                    f"All targets are assigned with fibers in {iter_m2} iterations"
+                )
+            else:
+                logger.info(
+                    f"Some targets can not be assigned with fibers in {max_iter} iterations"
+                )
 
             return obj_allo, status
 
@@ -1253,13 +1313,16 @@ def PPPrunStart(
         obj_allo_L = netflowRun(uS_L_s2)
 
         if len(uPPC_L) == 0:
+            logger.info("No user-defined PPCs for L sample")
             uS_L2 = complete_ppc(uS_L_s2, obj_allo_L)[0]
+            logger.debug(f"{uS_L2=}")
             obj_allo_L_fin, status_ = netflow_iter(
                 uS_L2, obj_allo_L, weight_para, status_
             )
             uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
                 uS_L_s2, obj_allo_L_fin
             )
+            logger.debug(f"{uS_L2=}")
             out_obj_allo_L_fin = obj_allo_L_fin
 
         elif len(uPPC_L) > 0:
