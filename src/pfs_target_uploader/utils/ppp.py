@@ -300,14 +300,18 @@ def PPPrunStart(
             )
             labels = db.labels_
         elif algorithm.upper() == "HDBSCAN":
-            logger.info("algorithm for target clustering: HDBSCAN")
+            logger.info(
+                "algorithm for target clustering: HDBSCAN (sklearn.cluster.HDBSCAN)"
+            )
             db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
                 np.radians([sample["dec"], sample["ra"]]).T
             )
             labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
         elif algorithm.upper() == "FAST_HDBSCAN":
-            logger.info("algorithm for target clustering: FAST_HDBSCAN")
-            db = HDBSCAN(min_cluster_size=2, metric="haversine").fit(
+            logger.info(
+                "algorithm for target clustering: FAST_HDBSCAN (hdbscan.HDBSCAN)"
+            )
+            db = hdbscan.HDBSCAN(min_cluster_size=2, metric="haversine").fit(
                 np.radians([sample["dec"], sample["ra"]]).T
             )
             labels = db.dbscan_clustering(np.radians(sep), min_cluster_size=1)
@@ -622,12 +626,16 @@ def PPPrunStart(
             return sample_f, status
 
         peaks = []  # list of [id, ra, dec, pa]
+
         # iterate clusters
         clusters = target_clustering(sample_f, d_pfi, algorithm=clustering_algorithm)
         logger.info(f"Number of clusters identified: {len(clusters)}")
-        for cluster in clusters:
+
+        for i, cluster in enumerate(clusters):
+            logger.info(f"Working on cluster {i+1}/{len(clusters)}")
             # only unfinished targets
             remaining = cluster[cluster["exptime_PPP"] > 0]
+            otime = None
             # continue until all exposure done
             while any(remaining["exptime_PPP"] > 0):
                 logger.debug(f"Remaining objects:{remaining['ob_code']}")
@@ -639,9 +647,14 @@ def PPPrunStart(
                 idx = PFS_FoV(ra_peak, dec_peak, pa_peak, remaining)
                 logger.debug(f"Target index: {idx}")
 
+                # set observation time
+                if otime is None:
+                    otime = set_observation_time(ra_peak)
+                    logger.info(f"Set observation time to {otime}")
+
                 # run netflow once
                 tgt_ids = netflowRun4PPC(
-                    remaining[list(idx)], ra_peak, dec_peak, pa_peak
+                    remaining[list(idx)], ra_peak, dec_peak, pa_peak, otime=otime
                 )
 
                 # retry if none assigned
@@ -660,6 +673,7 @@ def PPPrunStart(
                             ra_peak,
                             dec_peak,
                             pa_peak,
+                            otime=otime,
                         )
 
                 mask_assign = np.isin(remaining["ob_code"], tgt_ids)
@@ -886,7 +900,7 @@ def PPPrunStart(
         if otime is None:
             # set observation time based on the first PPC
             otime = set_observation_time(Telra[0])
-            logger.info(f"Set observation time to {otime}")
+            logger.debug(f"Set observation time to {otime}")
 
         bench = Bench(layout="full")
         tgt = sam2netflow(sample, for_ppc)
@@ -982,7 +996,7 @@ def PPPrunStart(
 
         if otime is None:
             otime = set_observation_time(Tel[0, 1])
-            logger.info(f"Set observation time to {otime}")
+            logger.debug(f"Set observation time to {otime}")
 
         res, telescope, tgt = netflowRun_single(
             Tel,
@@ -1033,12 +1047,12 @@ def PPPrunStart(
 
                 if (iter_1 >= 4) and (iter_1 < 7):
                     otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=6.0)
-                    logger.info(
+                    logger.debug(
                         f"Change observation time to {otime_} with offset 6 hr at {iter_1=}"
                     )
                 elif iter_1 >= 7:
                     otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=12.0)
-                    logger.info(
+                    logger.debug(
                         f"Change observation time to {otime_} with offset 12 hr at {iter_1=}"
                     )
 
@@ -1057,7 +1071,7 @@ def PPPrunStart(
     ):
         if otime is None:
             otime = set_observation_time(ppc_x)
-            logger.info(f"Set observation time to {otime}")
+            logger.debug(f"Set observation time to {otime}")
 
         # run netflow (for PPP_centers)
         ppc_lst = np.array([[0, ppc_x, ppc_y, ppc_pa, 0]])
