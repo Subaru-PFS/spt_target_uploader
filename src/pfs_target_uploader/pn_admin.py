@@ -106,6 +106,72 @@ def list_files_app(use_panel_cli=False):
         name="Semester", options=semesters, value=None, width=200
     )
 
+    # Shared state to track current table instance and dataframe
+    current_table_state = {"table": None, "df": None}
+
+    # Function to create zip file from selected rows
+    def zip_select():
+        if download_group.value == "Target":
+            column_ = "fullpath_tgt"
+            prefix_ = "target"
+        elif download_group.value == "PPC":
+            column_ = "fullpath_ppc"
+            prefix_ = "ppc"
+        elif download_group.value == "PPC (after allocation)":
+            column_ = "fullpath_ppc_tac"
+            prefix_ = "ppc_tac"
+
+        # Get current table and dataframe from shared state
+        _table_files_tgt_psl = current_table_state["table"]
+
+        if _table_files_tgt_psl is None:
+            return None
+
+        row_select = _table_files_tgt_psl.selection
+
+        if len(row_select) > 0:
+            tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
+            filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
+            filepath_zip_href = os.path.join(
+                tmpdir.replace(config["OUTPUT_DIR"], "data/", 1),
+                f"{prefix_}_selected.zip",
+            ).replace("//", "/")
+
+            if not os.path.exists(tmpdir):
+                logger.info(f"{tmpdir} not found. Creating...")
+                os.makedirs(tmpdir)
+
+            if os.path.exists(filepath_zip):
+                logger.info(f"{filepath_zip} already exists. Removing...")
+                os.remove(filepath_zip)
+
+            with ZipFile(filepath_zip, "w") as zipfile:
+                # Use iloc to access rows by position (not by index label)
+                for filepath_ in _table_files_tgt_psl.value.iloc[row_select][column_]:
+                    if filepath_ is not None:
+                        zipfile.write(filepath_, os.path.basename(filepath_))
+            zipfile.close()
+            logger.info(f"Zipfile saved under {filepath_zip}")
+        else:
+            filepath_zip = None
+            filepath_zip_href = None
+        return filepath_zip_href
+
+    # Download event handler
+    def download_select(event):
+        filepath_zip = zip_select()
+        if filepath_zip is None:
+            pn.state.notifications.error(
+                "Can not download due to no selected program.",
+                duration=5000,
+            )
+        else:
+            script_list_select = f"window.open('{filepath_zip}')"
+            # Execute javascript to open download (defined in Table_files_tgt_psl)
+            if "execute_javascript" in current_table_state:
+                current_table_state["execute_javascript"](script_list_select)
+            logger.info(f"{filepath_zip} downloaded")
+
     # Target & psl summary table
     def Table_files_tgt_psl(column_checkbox_, semester_):
         if psl_info_input.value is not None:
@@ -184,6 +250,9 @@ def list_files_app(use_panel_cli=False):
             js_panel.object = script
             js_panel.object = ""
 
+        # Store execute_javascript in shared state for use by download_select
+        current_table_state["execute_javascript"] = execute_javascript
+
         def open_panel_download(event):
             if event.column == "download":
                 href_tgt = df_files_tgt_psl["fullpath_tgt"][event.row]
@@ -198,61 +267,6 @@ def list_files_app(use_panel_cli=False):
                 script_ppc = f"window.open('{href_mod_ppc}', '_blank')"
                 execute_javascript(script_tgt)
                 execute_javascript(script_ppc)
-
-        def zip_select():
-            if download_group.value == "Target":
-                column_ = "fullpath_tgt"
-                prefix_ = "target"
-            elif download_group.value == "PPC":
-                column_ = "fullpath_ppc"
-                prefix_ = "ppc"
-            elif download_group.value == "PPC (after allocation)":
-                column_ = "fullpath_ppc_tac"
-                prefix_ = "ppc_tac"
-
-            row_select = _table_files_tgt_psl.selection
-
-            if len(row_select) > 0:
-                tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
-                filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
-                filepath_zip_href = os.path.join(
-                    tmpdir.replace(config["OUTPUT_DIR"], "data/", 1),
-                    f"{prefix_}_selected.zip",
-                ).replace("//", "/")
-                # print(f"{tmpdir=}")
-                # print(f"{filepath_zip=}")
-                # print(f"{filepath_zip_href=}")
-
-                if not os.path.exists(tmpdir):
-                    logger.info(f"{tmpdir} not found. Creating...")
-                    os.makedirs(tmpdir)
-
-                if os.path.exists(filepath_zip):
-                    logger.info(f"{filepath_zip} already exists. Removing...")
-                    os.remove(filepath_zip)
-
-                with ZipFile(filepath_zip, "w") as zipfile:
-                    for filepath_ in _table_files_tgt_psl.value[column_][row_select]:
-                        if filepath_ is not None:
-                            zipfile.write(filepath_, os.path.basename(filepath_))
-                zipfile.close()
-                logger.info(f"Zipfile saved under {filepath_zip}")
-            else:
-                filepath_zip = None
-                filepath_zip_href = None
-            return filepath_zip_href
-
-        def download_select(event):
-            filepath_zip = zip_select()
-            if filepath_zip is None:
-                pn.state.notifications.error(
-                    "Can not download due to no selected program.",
-                    duration=5000,
-                )
-            else:
-                script_list_select = f"window.open('{filepath_zip}')"
-                execute_javascript(script_list_select)
-                logger.info(f"{filepath_zip} downloaded")
 
         def open_panel_magnify(event):
             row_target = event.row
@@ -439,7 +453,10 @@ def list_files_app(use_panel_cli=False):
 
         _table_files_tgt_psl.on_click(open_panel_magnify)
         _table_files_tgt_psl.on_click(open_panel_download)
-        download_selection.on_click(download_select)
+
+        # Store current table and dataframe in shared state
+        current_table_state["table"] = _table_files_tgt_psl
+        current_table_state["df"] = _df_files_tgt_psl
 
         return _table_files_tgt_psl
 
@@ -512,6 +529,9 @@ def list_files_app(use_panel_cli=False):
 
     # Details of PPC
     table_ppc = pn.Column()
+
+    # Register download button event handler (only once, outside Table_files_tgt_psl)
+    download_selection.on_click(download_select)
 
     # -------------------------------------------------------------------
     js_panel = pn.pane.HTML(width=0, height=0, margin=0, sizing_mode="fixed")
