@@ -255,8 +255,8 @@ def list_files_app(use_panel_cli=False):
 
         def open_panel_download(event):
             if event.column == "download":
-                href_tgt = df_files_tgt_psl["fullpath_tgt"][event.row]
-                href_ppc = df_files_tgt_psl["fullpath_ppc"][event.row]
+                href_tgt = _df_files_tgt_psl["fullpath_tgt"].iloc[event.row]
+                href_ppc = _df_files_tgt_psl["fullpath_ppc"].iloc[event.row]
                 # need to fix the path for the download
                 href_mod_tgt = href_tgt.replace(config["OUTPUT_DIR"], "data", 1)
                 href_mod_ppc = href_ppc.replace(config["OUTPUT_DIR"], "data", 1)
@@ -276,10 +276,10 @@ def list_files_app(use_panel_cli=False):
                 # move to "PPC details" tab
                 tab_panels.active = 2
 
-                u_id = _df_files_tgt_psl["Upload ID"][row_target]
-                p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"][row_target])[0]
+                u_id = _df_files_tgt_psl["Upload ID"].iloc[row_target]
+                p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"].iloc[row_target])[0]
                 try:
-                    psl_id = _df_files_tgt_psl["proposal ID"][row_target]
+                    psl_id = _df_files_tgt_psl["proposal ID"].iloc[row_target]
                 except KeyError:
                     psl_id = None
 
@@ -321,7 +321,7 @@ def list_files_app(use_panel_cli=False):
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
 
                 logger.info(f"{row_target=}")
-                if _df_files_tgt_psl["TAC_done"][row_target]:
+                if _df_files_tgt_psl["TAC_done"].iloc[row_target]:
                     # make the ppc list downloadable
                     fd_link = pn.pane.Markdown(
                         f"<font size=4>(<a href={tac_ppc_list_file} target='_blank'>Download the allocated PPC list</a>)</font>",
@@ -358,26 +358,26 @@ def list_files_app(use_panel_cli=False):
 
                     # update tac allocation in program info tab
                     if sum(tb_tac_psl_t["resolution"] == "low") > 0:
-                        _df_files_tgt_psl["TAC_done"][row_target] = True
-                        _df_files_tgt_psl["TAC_FH_L"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_done"] = True
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_FH_L"] = tb_tac_psl_t[
                             "Texp (fiberhour)"
                         ][tb_tac_psl_t["resolution"] == "low"]
-                        _df_files_tgt_psl["TAC_nppc_L"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_nppc_L"] = tb_tac_psl_t[
                             "N_ppc"
                         ][tb_tac_psl_t["resolution"] == "low"]
-                        _df_files_tgt_psl["TAC_ROT_L"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_ROT_L"] = tb_tac_psl_t[
                             "Request time (h)"
                         ][tb_tac_psl_t["resolution"] == "low"]
 
                     if sum(tb_tac_psl_t["resolution"] == "medium") > 0:
-                        _df_files_tgt_psl["TAC_done"][row_target] = True
-                        _df_files_tgt_psl["TAC_FH_M"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_done"] = True
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_FH_M"] = tb_tac_psl_t[
                             "Texp (fiberhour)"
                         ][tb_tac_psl_t["resolution"] == "medium"]
-                        _df_files_tgt_psl["TAC_nppc_M"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_nppc_M"] = tb_tac_psl_t[
                             "N_ppc"
                         ][tb_tac_psl_t["resolution"] == "medium"]
-                        _df_files_tgt_psl["TAC_ROT_M"][row_target] = tb_tac_psl_t[
+                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_ROT_M"] = tb_tac_psl_t[
                             "Request time (h)"
                         ][tb_tac_psl_t["resolution"] == "medium"]
 
@@ -421,7 +421,7 @@ def list_files_app(use_panel_cli=False):
                         margin=(20, 0, 0, 0),
                     )
 
-                    if not _df_files_tgt_psl["TAC_done"][row_target]:
+                    if not _df_files_tgt_psl["TAC_done"].iloc[row_target]:
                         fd_link = pn.pane.Markdown(
                             "<font size=4>(Download the allocated PPC list)</font>",
                             margin=(0, 0, 0, -40),
