@@ -146,7 +146,8 @@ def list_files_app(use_panel_cli=False):
                 os.remove(filepath_zip)
 
             with ZipFile(filepath_zip, "w") as zipfile:
-                for filepath_ in _table_files_tgt_psl.value[column_][row_select]:
+                # Use iloc to access rows by position (not by index label)
+                for filepath_ in _table_files_tgt_psl.value.iloc[row_select][column_]:
                     if filepath_ is not None:
                         zipfile.write(filepath_, os.path.basename(filepath_))
             zipfile.close()
