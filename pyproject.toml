@@ -7,12 +7,13 @@ dependencies = [
     "panel<1.7,>=1.6.0",
     "numpy>=2.0.0",
     "astropy>=5.3.1",
-    "astroplan>=0.9",
+    "astroplan",
     "colorcet>=3.0.1",
     "datashader>=0.16.0",
     "dask>=2023.10.1",
     "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
-    "gurobipy>=10,<11",
+    # "gurobipy>=10,<11",
+    "gurobipy>=12,<13",
     "holoviews>=1.17.1",
     "hvplot>=0.8.4",
     "loguru>=0.7.2",
@@ -30,21 +31,23 @@ dependencies = [
     "seaborn>=0.12.2",
     "spatialpandas>=0.4.9",
     "typer>=0.12.3",
-    "pip>=23.2.1",
-    "pybind11>=2.11.1",
-    "setuptools>=68.2.2",
-    "wheel>=0.41.2",
-    "qplan @ git+https://github.com/naojsoft/qplan.git",
-    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
-    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
-    # "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
-    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@w.2025.31",
+    "pip",
+    "pybind11",
+    "setuptools",
+    "wheel",
     "psutil>=6.0.0",
     "hdbscan>=0.8.40",
     "skyfield>=1.53",
     "astropy-healpix>=1.1.2",
+    "qplan @ git+https://github.com/naojsoft/qplan.git",
+    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@u/monodera/refactoring-hotfix",
+    # "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git#egg=pfs-utils",
+    "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@tickets/INSTRM-2729",
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.12,<3.13"
 readme = "README.md"
 license = { text = "MIT" }
 
@@ -52,7 +55,7 @@ license = { text = "MIT" }
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 
 [build-system]
-requires = ["setuptools", "wheel", "pybind11"]
+requires = ["setuptools", "wheel", "pybind11", "lsst-versions"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -64,7 +67,7 @@ version = { attr = "pfs_target_uploader.__version__" }
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "-e git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
+    # "-e git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
     "black>=23.7.0",
     "ruff",
     "flake8>=6.1.0",
