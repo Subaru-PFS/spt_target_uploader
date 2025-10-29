@@ -12,15 +12,12 @@ dependencies = [
     "datashader>=0.16.0",
     "dask>=2023.10.1",
     "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
-    # "gurobipy>=10,<11",
     "gurobipy>=12,<13",
     "holoviews>=1.17.1",
     "hvplot>=0.8.4",
     "loguru>=0.7.2",
-    "markdown-it-py>=3.0.0",
     "mkdocs-macros-plugin>=0.7.0",
-    # "mkdocs-material[imaging]>=9.5.4",
-    "mkdocs-material>=9.5.4",
+    "mkdocs-material[imaging]>=9.5.4",
     "mkdocs-video>=1.5.0",
     "mkdocs>=1.4.3",
     "multiprocess>=0.70.15",
@@ -31,21 +28,16 @@ dependencies = [
     "seaborn>=0.12.2",
     "spatialpandas>=0.4.9",
     "typer>=0.12.3",
-    "pip",
-    "pybind11",
-    "setuptools",
-    "wheel",
     "psutil>=6.0.0",
     "hdbscan>=0.8.40",
     "skyfield>=1.53",
     "astropy-healpix>=1.1.2",
     "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
-    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@u/monodera/refactoring-hotfix",
-    # "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
-    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
-    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git#egg=pfs-utils",
-    "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@tickets/INSTRM-2729",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
+    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git",
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
+    "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git",
 ]
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
@@ -55,7 +47,7 @@ license = { text = "MIT" }
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 
 [build-system]
-requires = ["setuptools", "wheel", "pybind11", "lsst-versions"]
+requires = ["setuptools", "wheel", "pybind11"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -66,13 +58,7 @@ include-package-data = true
 version = { attr = "pfs_target_uploader.__version__" }
 
 [tool.pdm.dev-dependencies]
-dev = [
-    # "-e git+https://github.com/Subaru-PFS/ics_cobraCharmer.git#egg=ics-cobraCharmer",
-    "black>=23.7.0",
-    "ruff",
-    "flake8>=6.1.0",
-    "ipython>=8.14.0",
-]
+dev = ["black>=23.7.0", "ruff", "flake8>=6.1.0", "ipython>=8.14.0"]
 profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
 
 [tool.pdm.scripts]
@@ -130,22 +116,24 @@ gen-requirements = { cmd = [
 ], help = "Generate requirements.txt" }
 
 
-# [tool.pdm.options]
-# add = ["--no-isolation"]
-# install = ["--no-isolation"]
-
 [tool.ruff]
-target-version = "py39"
+target-version = "py312"
 line-length = 88
-# line-length = 128
 
 [tool.ruff.lint]
 ignore = [
-    "F401", # module imported but unused
-    "F841", # local variable is assigned to but never used
-    "E501", # line too long, handled by black
-    "B008", # do not perform function calls in argument defaults
-    "C901", # too complex
+    "F401",   # module imported but unused
+    "F841",   # local variable is assigned to but never used
+    "E501",   # line too long, handled by black
+    "B008",   # do not perform function calls in argument defaults
+    "C901",   # too complex
+    "N802",   # function name should be lowercase
+    "N803",   # argument name should be lowercase
+    "N806",   # variable in function should be lowercase
+    "N815",   # variable in class should be lowercase
+    "N816",   # attribute in class should be lowercase
+    "EM101",  # use 'isinstance()' instead of comparing types directly
+    "TRY003", # unnecessary except block
 ]
 # select = [
 #     "E",  # pycodestyle errors
@@ -159,16 +147,4 @@ ignore = [
 
 [tool.black]
 line-length = 88
-target-version = ["py39", "py310", "py311"]
-
-# [tool.pdm.options]
-# add = ["--no-isolation", "--no-self"]
-# install = ["--no-isolation", "--no-self"]
-# add = ["--no-isolation"]
-# install = ["--no-isolation"]
-# lock = ["--no-cross-platform"]
-
-# [tool.black]
-# line-length = 120
-# target-version = ["py39", "py310", "py311"]
-# target-version = ["py311"]
+target-version = ["py312"]

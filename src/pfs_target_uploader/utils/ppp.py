@@ -4,6 +4,7 @@ import datetime
 import os
 import random
 import sys
+import tempfile
 import time
 import warnings
 from contextlib import redirect_stdout
@@ -911,28 +912,31 @@ def PPPrunStart(
             otime = set_observation_time(Telra[0])
             logger.debug(f"Set observation time to {otime}")
 
-        # Create Bench object
-        # bench = Bench(layout="full")
-        instdata_setup_envvar()  # set PFS_INSTDATA_DIR
-        cobra_coach_dir = None
+        # set PFS_INSTDATA_DIR environment variable
+        instdata_setup_envvar()
+
+        # Create cobraCoach object with a temporary directory
+        # Using TemporaryDirectory to ensure automatic cleanup via garbage collection
+        cobra_coach_tmpdir = tempfile.TemporaryDirectory()
+        cobra_coach_dir = cobra_coach_tmpdir.name
         cobra_coach = CobraCoach(
             loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
         )
+
         # Get the black dots calibration product
         calibration_file_name = os.path.join(
-            os.environ["PFS_INSTDATA_DIR"],
-            "data/pfi/dot",
-            "black_dots_mm.csv",
+            os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
         )
         black_dots_calibration_product = BlackDotsCalibrationProduct(
             calibration_file_name
         )
+
         bench = Bench(
             cobraCoach=cobra_coach,
             blackDotsCalibrationProduct=black_dots_calibration_product,
             blackDotsMargin=black_dot_radius_margin,
         )
-        print("Number of cobras:", bench.cobras.nCobras)
+        logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
         tgt = sam2netflow(sample, for_ppc)
         classdict = NetflowPreparation()
@@ -977,7 +981,6 @@ def PPPrunStart(
                 tgt,
                 tpos,
                 classdict,
-                # 900,
                 single_exptime,
                 vis_cost,
                 cobraMoveCost=cobraMoveCost,
