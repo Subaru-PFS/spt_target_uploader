@@ -14,9 +14,25 @@ cd spt_target_uploader
 ### Installing dependencies
 
 ```sh
-pip install -r requirements.txt  # perhaps optional
-pip install -e .
+# Install dependencies with uv (recommended)
+uv sync                  # Install all dependencies
+uv sync --extra dev      # Install with dev tools (black, ruff, etc.)
 
+# Or with PDM
+pdm install              # Install all dependencies
+pdm install -G dev       # Install with dev tools
+
+# Or with pip (legacy)
+pip install -r requirements.txt
+pip install -e .
+pip install -e .[dev]    # With dev tools
+
+# Setup environment configuration files
+cp .env.shared.example .env.shared
+cp .env.private.example .env.private
+# Edit .env.shared and .env.private with your configuration
+
+# Create required directories
 mkdir -p data/
 mkdir -p data/temp/
 ```
@@ -24,24 +40,36 @@ mkdir -p data/temp/
 ### Build documentation
 
 ```sh
-cd docs
-mkdocs build
-cd ..
+./scripts/build-doc.sh   # Auto-detect runner (uv/pdm/venv)
 ```
+
+### Requirements
+
+#### Gurobi Optimization Solver
+
+The pointing simulation uses the Gurobi optimizer. While the application can run without a license for small target lists, larger datasets will be subject to Gurobi's size limitations.
+
+For production use with large target lists, you will need:
+
+- Gurobi optimizer installed
+- A valid Gurobi license (commercial or academic)
+
+Visit [Gurobi's website](https://www.gurobi.com/) for license information.
 
 ## Run the app
 
 ```sh
-pfs-uploader-cli start-app uploader \
-    --allow-websocket-origin=localhost:5008 \
-    --static-dirs doc="./docs/site/" \
-    --static-dirs data="./data"
+# Start main uploader app (development)
+./scripts/serve-app.sh          # Auto-detect runner (uv/pdm/venv)
+
+# Or start admin app (development)
+./scripts/serve-app-admin.sh    # Auto-detect runner
 ```
 
-Open the target uploader at http://localhost:5008/ .
+Open the target uploader at <http://localhost:5008/>.
 Uploaded files will be stored under `data` with the following structure.
 
-```
+```text
 $ tree data/
 data/
 └── <year>
@@ -62,7 +90,7 @@ Plots are available in the `ppp_figure` file and all files are included in the `
 
 The path to the `data` directory can be controlled by the `OUTPUT_DIR` environment variable in `.env.shared`. An example of `.env.shared` is the following.
 
-```
+```bash
 # OUTPUT_DIR_PREFIX must be identical to the directory value specified as `data` above.
 OUTPUT_DIR="data"
 ```
@@ -71,7 +99,7 @@ OUTPUT_DIR="data"
 
 The following parameters can be set in the `.env.shared` file to configure the app.
 
-```
+```bash
 # Output directory for the submitted files
 OUTPUT_DIR="data"
 
@@ -89,8 +117,8 @@ OUTPUT_DIR="data"
 PPP_QUIET=1
 
 # Target clustering algorithm
-# HDBSCAN or DBSCAN
-CLUSTERING_ALGORITHM=HDBSCAN
+# FAST_HDBSCAN, HDBSCAN, or DBSCAN
+CLUSTERING_ALGORITHM=FAST_HDBSCAN
 
 # Text to be announce at the beginning (Markdown)
 ANN_FILE="user_announcement.md"
@@ -142,4 +170,4 @@ You can remove duplicates by the following command.
 pfs-uploader-cli clean-uid $OUTPUT_DIR/$UPLOADID_DB
 ```
 
-See [the manual](./cli.md) for more options.
+See [the CLI documentation](./docs/cli.md) for more options.
