@@ -43,9 +43,9 @@ from pfs.instdata import setup_envvar as instdata_setup_envvar
 # ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
 # isort: split
 import bokeh
-from pkg_resources import parse_version
+from packaging.version import Version
 
-if parse_version(bokeh.__version__) < parse_version("3.3"):
+if Version(bokeh.__version__) < Version("3.3"):
     hv.renderer("bokeh").webgl = False
 
 warnings.filterwarnings("ignore")
