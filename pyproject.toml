@@ -34,14 +34,15 @@ dependencies = [
     "astropy-healpix>=1.1.2",
     "qplan @ git+https://github.com/naojsoft/qplan.git",
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
-    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@u/monodera/refactoring-hotfix3",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git",
     "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git",
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git",
     "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git",
 ]
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 
 [project.scripts]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
