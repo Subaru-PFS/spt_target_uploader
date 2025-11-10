@@ -4,6 +4,7 @@ import datetime
 import os
 import random
 import sys
+import tempfile
 import time
 import warnings
 from contextlib import redirect_stdout
@@ -33,7 +34,10 @@ from spatialpandas.geometry import PolygonArray
 # below for netflow
 # isort: split
 import ets_fiber_assigner.netflow as nf
+from ics.cobraCharmer.cobraCoach.cobraCoach import CobraCoach
 from ics.cobraOps.Bench import Bench
+from ics.cobraOps.BlackDotsCalibrationProduct import BlackDotsCalibrationProduct
+from pfs.instdata import setup_envvar as instdata_setup_envvar
 
 # check bokeh version
 # ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
@@ -880,7 +884,13 @@ def PPPrunStart(
         """optional: penalize assignments where the cobra has to move far out"""
         return 0.1 * dist
 
-    def netflowRun_single(Tel, sample, otime=None, for_ppc=False):
+    def netflowRun_single(
+        Tel,
+        sample,
+        otime=None,
+        for_ppc=False,
+        black_dot_radius_margin=1.65,
+    ):
         """run netflow (without iteration)
 
         Parameters
@@ -902,7 +912,32 @@ def PPPrunStart(
             otime = set_observation_time(Telra[0])
             logger.debug(f"Set observation time to {otime}")
 
-        bench = Bench(layout="full")
+        # set PFS_INSTDATA_DIR environment variable
+        instdata_setup_envvar()
+
+        # Create cobraCoach object with a temporary directory
+        # Using TemporaryDirectory to ensure automatic cleanup via garbage collection
+        cobra_coach_tmpdir = tempfile.TemporaryDirectory()
+        cobra_coach_dir = cobra_coach_tmpdir.name
+        cobra_coach = CobraCoach(
+            loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
+        )
+
+        # Get the black dots calibration product
+        calibration_file_name = os.path.join(
+            os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
+        )
+        black_dots_calibration_product = BlackDotsCalibrationProduct(
+            calibration_file_name
+        )
+
+        bench = Bench(
+            cobraCoach=cobra_coach,
+            blackDotsCalibrationProduct=black_dots_calibration_product,
+            blackDotsMargin=black_dot_radius_margin,
+        )
+        logger.info(f"Number of cobras: {bench.cobras.nCobras}")
+
         tgt = sam2netflow(sample, for_ppc)
         classdict = NetflowPreparation()
 
@@ -946,7 +981,6 @@ def PPPrunStart(
                 tgt,
                 tpos,
                 classdict,
-                # 900,
                 single_exptime,
                 vis_cost,
                 cobraMoveCost=cobraMoveCost,
