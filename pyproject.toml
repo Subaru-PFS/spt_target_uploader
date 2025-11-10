@@ -41,7 +41,8 @@ dependencies = [
 ]
 requires-python = ">=3.12,<3.13"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 
 [project.scripts]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
@@ -57,64 +58,9 @@ include-package-data = true
 [tool.setuptools.dynamic]
 version = { attr = "pfs_target_uploader.__version__" }
 
-[tool.pdm.dev-dependencies]
-dev = ["black>=23.7.0", "ruff", "flake8>=6.1.0", "ipython>=8.14.0"]
+[project.optional-dependencies]
+dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0"]
 profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
-
-[tool.pdm.scripts]
-serve-app = { cmd = [
-    "pdm",
-    "run",
-    "pfs-uploader-cli",
-    "start-app",
-    "uploader",
-    "--port",
-    "5008",
-    "--allow-websocket-origin",
-    "localhost:5008",
-    "--allow-websocket-origin",
-    "localhost:8080",
-    "--prefix=uploader/",
-    "--static-dirs",
-    "doc=docs/site",
-    "--static-dirs",
-    "data=data",
-    "--max-upload-size=500",
-    "--autoreload",
-], help = "Start the dev server for app and admin pages" }
-serve-app-admin = { cmd = [
-    "pdm",
-    "run",
-    "pfs-uploader-cli",
-    "start-app",
-    "admin",
-    "--port",
-    "5009",
-    "--allow-websocket-origin",
-    "localhost:5009",
-    "--prefix=uploader-admin/",
-    "--static-dirs",
-    "doc=docs/site",
-    "--static-dirs",
-    "data=data",
-    "--max-upload-size=100",
-    "--autoreload",
-], help = "Start the dev server for app and admin pages" }
-serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
-build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
-gen-requirements = { cmd = [
-    "pdm",
-    "export",
-    "--format",
-    "requirements",
-    "--without-hashes",
-    "--pyproject",
-    "--dev",
-    "--output",
-    "requirements.txt",
-    "--verbose",
-], help = "Generate requirements.txt" }
-
 
 [tool.ruff]
 target-version = "py312"
@@ -148,3 +94,65 @@ ignore = [
 [tool.black]
 line-length = 88
 target-version = ["py312"]
+
+# ==============================================================================
+# DEPRECATED: PDM Scripts (Legacy)
+# ==============================================================================
+# NOTE: The PDM scripts below are deprecated and maintained for backward compatibility only.
+# For new development, use the shell scripts in scripts/ directory instead,
+# which support automatic detection of uv/pdm/venv runners.
+# See scripts/serve-app.sh, scripts/serve-app-admin.sh, etc.
+#
+# [tool.pdm.scripts]
+# serve-app = { cmd = [
+#     "pdm",
+#     "run",
+#     "pfs-uploader-cli",
+#     "start-app",
+#     "uploader",
+#     "--port",
+#     "5008",
+#     "--allow-websocket-origin",
+#     "localhost:5008",
+#     "--allow-websocket-origin",
+#     "localhost:8080",
+#     "--prefix=uploader/",
+#     "--static-dirs",
+#     "doc=docs/site",
+#     "--static-dirs",
+#     "data=data",
+#     "--max-upload-size=500",
+#     "--autoreload",
+# ], help = "Start the dev server for app and admin pages" }
+# serve-app-admin = { cmd = [
+#     "pdm",
+#     "run",
+#     "pfs-uploader-cli",
+#     "start-app",
+#     "admin",
+#     "--port",
+#     "5009",
+#     "--allow-websocket-origin",
+#     "localhost:5009",
+#     "--prefix=uploader-admin/",
+#     "--static-dirs",
+#     "doc=docs/site",
+#     "--static-dirs",
+#     "data=data",
+#     "--max-upload-size=100",
+#     "--autoreload",
+# ], help = "Start the dev server for app and admin pages" }
+# serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
+# build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
+# gen-requirements = { cmd = [
+#     "pdm",
+#     "export",
+#     "--format",
+#     "requirements",
+#     "--without-hashes",
+#     "--pyproject",
+#     "--dev",
+#     "--output",
+#     "requirements.txt",
+#     "--verbose",
+# ], help = "Generate requirements.txt" }
