@@ -404,6 +404,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     filesizes = np.zeros(n_files, dtype=float)
     n_obj = np.zeros(n_files, dtype=int)
     t_exp = np.zeros(n_files, dtype=float)
+    n_ppc = np.zeros(n_files, dtype=int)
     links = np.full(n_files, None, dtype=object)
 
     fullpath_target = np.full(n_files, None, dtype=object)
@@ -521,6 +522,12 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             tb_l = tb_psl[tb_psl["resolution"] == "low"]
             tb_m = tb_psl[tb_psl["resolution"] == "medium"]
 
+            # skip if tb_psl["N_ppc"] is None
+            if len(tb_psl) > 0 and tb_psl["N_ppc"][0] is not None:
+                n_ppc[i] = np.max(
+                    tb_psl["N_ppc"]
+                )  # should return the total number of PPCs
+
             if len(tb_l) > 0:
                 exp_sci_l[i] = tb_l["Texp (h)"]
                 exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
@@ -560,6 +567,7 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             "Upload ID": upload_ids,
             "TAC_done": tac_done,
             "n_obj": n_obj,
+            "n_ppc": n_ppc,
             "Exptime_tgt (FH)": t_exp,
             "Exptime_sci_L (h)": exp_sci_l,
             "Exptime_sci_M (h)": exp_sci_m,
