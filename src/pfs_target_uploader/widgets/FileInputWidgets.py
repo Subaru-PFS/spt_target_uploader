@@ -148,4 +148,9 @@ class FileInputWidgets(param.Parameterized):
         if validation_status["required_keys"]["status"]:
             df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
 
+        # append first 7 characters of secret_token to ob_codes
+        df_output["ob_code"] = df_output["ob_code"].apply(
+            lambda x: f"{x}_{self.secret_token[:7]}"
+        )
+
         return validation_status, df_input, df_output
