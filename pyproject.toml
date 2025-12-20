@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Target uploader for PFS openuse"
 authors = [{ name = "Masato Onodera", email = "monodera@naoj.org" }]
 dependencies = [
-    "panel<1.7,>=1.6.0",
+    "panel<1.9,>=1.8.0",
     "numpy>=2.0.0",
     "astropy>=5.3.1",
     "astroplan",
