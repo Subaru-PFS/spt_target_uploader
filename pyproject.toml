@@ -48,15 +48,16 @@ license-files = ["LICENSE"]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 
 [build-system]
-requires = ["setuptools", "wheel", "pybind11"]
+requires = ["setuptools>=64", "setuptools-scm>=8.0", "wheel", "pybind11"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 include-package-data = true
 
-[tool.setuptools.dynamic]
-version = { attr = "pfs_target_uploader.__version__" }
+[tool.setuptools_scm]
+version_file = "src/pfs_target_uploader/_version.py"
+fallback_version = "0.0.0+unknown"
 
 [project.optional-dependencies]
 dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0"]
