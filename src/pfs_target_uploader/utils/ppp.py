@@ -45,8 +45,16 @@ from pfs.instdata import setup_envvar as instdata_setup_envvar
 import bokeh
 from packaging.version import Version
 
-if Version(bokeh.__version__) < Version("3.3"):
-    hv.renderer("bokeh").webgl = False
+# Disable WebGL for Firefox compatibility
+# Root cause: Firefox WebGL raises "invalid width" error during image texture creation
+# Error: (regl) invalid width in _set_image → texture → create2D (bokeh-gl.min.js)
+# Chrome/Brave work fine, but we cannot control which browser users use
+# Canvas renderer is more compatible across all browsers, especially with VPN
+# TODO: Monitor Bokeh/HoloViews/Firefox updates for WebGL compatibility improvements
+#       and consider re-enabling WebGL in the future for better performance
+# if Version(bokeh.__version__) < Version("3.3"):
+#     hv.renderer("bokeh").webgl = False
+hv.renderer("bokeh").webgl = False
 
 warnings.filterwarnings("ignore")
 
