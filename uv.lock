@@ -603,6 +603,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/19/0d/6660d55f7373b2ff8152401a83e02084956da23ae58cddbfb0b330978fe9/greenlet-3.2.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3b3812d8d0c9579967815af437d96623f45c0f2ae5f04e366de62a12d83a8fb0", size = 607586, upload-time = "2025-08-07T13:18:28.544Z" },
     { url = "https://files.pythonhosted.org/packages/8e/1a/c953fdedd22d81ee4629afbb38d2f9d71e37d23caace44775a3a969147d4/greenlet-3.2.4-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:abbf57b5a870d30c4675928c37278493044d7c14378350b3aa5d484fa65575f0", size = 1123281, upload-time = "2025-08-07T13:42:39.858Z" },
     { url = "https://files.pythonhosted.org/packages/3f/c7/12381b18e21aef2c6bd3a636da1088b888b97b7a0362fac2e4de92405f97/greenlet-3.2.4-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:20fb936b4652b6e307b8f347665e2c615540d4b42b3b4c8a321d8286da7e520f", size = 1151142, upload-time = "2025-08-07T13:18:22.981Z" },
+    { url = "https://files.pythonhosted.org/packages/27/45/80935968b53cfd3f33cf99ea5f08227f2646e044568c9b1555b58ffd61c2/greenlet-3.2.4-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:ee7a6ec486883397d70eec05059353b8e83eca9168b9f3f9a361971e77e0bcd0", size = 1564846, upload-time = "2025-11-04T12:42:15.191Z" },
+    { url = "https://files.pythonhosted.org/packages/69/02/b7c30e5e04752cb4db6202a3858b149c0710e5453b71a3b2aec5d78a1aab/greenlet-3.2.4-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:326d234cbf337c9c3def0676412eb7040a35a768efc92504b947b3e9cfc7543d", size = 1633814, upload-time = "2025-11-04T12:42:17.175Z" },
     { url = "https://files.pythonhosted.org/packages/e9/08/b0814846b79399e585f974bbeebf5580fbe59e258ea7be64d9dfb253c84f/greenlet-3.2.4-cp312-cp312-win_amd64.whl", hash = "sha256:a7d4e128405eea3814a12cc2605e0e6aedb4035bf32697f72deca74de4105e02", size = 299899, upload-time = "2025-08-07T13:38:53.448Z" },
 ]
 
@@ -1424,7 +1426,7 @@ wheels = [
 
 [[package]]
 name = "panel"
-version = "1.6.3"
+version = "1.8.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bleach" },
@@ -1433,6 +1435,7 @@ dependencies = [
     { name = "markdown" },
     { name = "markdown-it-py" },
     { name = "mdit-py-plugins" },
+    { name = "narwhals" },
     { name = "packaging" },
     { name = "pandas" },
     { name = "param" },
@@ -1441,9 +1444,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/92/38656349dc1f5f2270c9804740dd7a85715239e4f3fe2e932970fbe58629/panel-1.6.3.tar.gz", hash = "sha256:6ae6e9ffc9aec0a00587b2ce6f4dcb3a0f5f7aa914dac702feaa0d0451aab976", size = 30193596, upload-time = "2025-04-23T16:48:17.526Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/62/9147e3e5b8a4971606c1aa1ecf66d889ea7529914899e4192f4c5125430b/panel-1.8.4.tar.gz", hash = "sha256:c4d6e7e3a895d3a42b6b69ee30d3acc191580619a2d1b8cd18f7f6684246a67f", size = 32098216, upload-time = "2025-12-02T18:08:02.51Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/fe/d01b6eae59933d56c345e57cdde5ffe379b7b1f56d192782ab8071249f73/panel-1.6.3-py3-none-any.whl", hash = "sha256:ccd2a0587ab382bd55b8ea099706f31b64aadac697b8a41923d3b18b9ed618d6", size = 28210643, upload-time = "2025-04-23T16:48:13.498Z" },
+    { url = "https://files.pythonhosted.org/packages/27/39/796ffe83cf6a1a6458f42db0a5c2ea7671478651e8945386e89625af5fdc/panel-1.8.4-py3-none-any.whl", hash = "sha256:d0e0f316c78159c87544a403d4600f7f056a6cafdc035df5b13c9c8667c36c96", size = 30184708, upload-time = "2025-12-02T18:07:59.568Z" },
 ]
 
 [[package]]
@@ -1600,7 +1603,7 @@ requires-dist = [
     { name = "myst-parser", specifier = ">=2.0.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.0.3" },
-    { name = "panel", specifier = ">=1.6.0,<1.7" },
+    { name = "panel", specifier = ">=1.8.0,<1.9" },
     { name = "pfs-instdata", git = "https://github.com/Subaru-PFS/pfs_instdata.git" },
     { name = "pfs-utils", git = "https://github.com/Subaru-PFS/pfs_utils.git" },
     { name = "psutil", specifier = ">=6.0.0" },
