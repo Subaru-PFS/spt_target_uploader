@@ -86,7 +86,8 @@ class StatusWidgets:
             if validation_status["optional_keys"]["status"] and np.any(
                 validation_status["visibility"]["success"]
             ):
-                self.status.object = self.success_object
+                # self.status.object = self.success_object
+                self.status.object = self.success_text
                 self.status.alert_type = "success"
             else:
                 # self.status.object = "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size=5>  Success</font> <font size=3>with warnings</font>"

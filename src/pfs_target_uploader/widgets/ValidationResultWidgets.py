@@ -74,6 +74,7 @@ class ValidationResultWidgets:
         self.warning_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_str = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
 
         self.info_text_keys = pn.pane.Markdown("", max_width=self.box_width)
@@ -139,6 +140,7 @@ class ValidationResultWidgets:
             self.warning_text_keys,
             self.warning_text_str,
             self.warning_text_vals,
+            self.warning_text_flux,
             self.warning_text_visibility,
             self.info_text_keys,
             self.info_text_str,
@@ -315,10 +317,10 @@ class ValidationResultWidgets:
 
         # flux columns
         # TODO: show a list of detected/undetected flux columns
-        if validation_status["flux"]["status"]:
+        if validation_status["flux_columns"]["status"]:
             self.append_title("info")
             self.info_text_flux.object = "<font size=4><u>Flux information</u></font>\n\n<font size=3>All `ob_code`s have at least one flux information. The detected filters are the following: </font>"
-            for f in validation_status["flux"]["filters"]:
+            for f in validation_status["flux_columns"]["filters"]:
                 self.info_text_flux.object += f"<font size=3>`{f}`</font>, "
             self.info_text_flux.object = self.info_text_flux.object[:-2]
 
@@ -328,21 +330,42 @@ class ValidationResultWidgets:
             self.append_title("error")
             # add an error message and data table for duplicates
             self.error_text_flux.object = "<font size=4><u>Missing flux information</u></font>\n\n<font size=3>No flux information found in the following `ob_code`s. Detected filters are the following: </font>"
-            for f in validation_status["flux"]["filters"]:
+            for f in validation_status["flux_columns"]["filters"]:
                 self.error_text_flux.object += f"<font size=3>`{f}`</font>, "
-            if len(validation_status["flux"]["filters"]) > 0:
+            if len(validation_status["flux_columns"]["filters"]) > 0:
                 self.error_text_flux.object = self.error_text_flux.object[:-2]
 
             self.error_table_flux.frozen_columns = []
             if self.error_table_flux.value is not None:
                 self.error_table_flux.value[0:0]
             self.error_table_flux.value = df.loc[
-                ~validation_status["flux"]["success"], :
+                ~validation_status["flux_columns"]["success"], :
             ]
             self.error_table_flux.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_flux)
             self.error_pane.append(self.error_table_flux)
             self.error_table_flux.visible = True
+
+        # Flux values
+        if validation_status["flux_values"]["status"]:
+            self.append_title("info")
+
+            self.info_text_flux.object += "\n\n<font size=3>Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).</font>"
+            self.info_pane.append(self.info_text_flux)
+        else:
+            self.append_title("warning")
+            self.warning_text_flux.object = (
+                "<font size=4><u>Suspicious flux values</u></font>\n\n"
+            )
+            self.warning_text_flux.object += (
+                "<font size=3>Significant fraction "
+                f"({validation_status['flux_values']['frac_suspicious_flux_all']:.2%}) "
+                "of flux values are in the suspicious range "
+                f"({validation_status['flux_values']['min_flux']} and {validation_status['flux_values']['max_flux']}). "
+                "Please verify that the flux values are in the unit of nano Jansky (nJy), not, e.g., magnitude.</font>"
+            )
+
+            self.warning_pane.append(self.warning_text_flux)
 
         # Visibility
         # TODO: add begin_date and end_date in the message
@@ -420,7 +443,8 @@ class ValidationResultWidgets:
             validation_status["required_keys"]["status"]
             and validation_status["str"]["status"]
             and validation_status["values"]["status"]
-            and validation_status["flux"]["status"]
+            and validation_status["flux_columns"]["status"]
+            # flux_values is warning-only, not included in success criteria
             and validation_status["visibility"]["status"]
             and validation_status["unique"]["status"]
         ):
