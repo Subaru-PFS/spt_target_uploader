@@ -78,6 +78,21 @@ Flux columns are validated against conditions described in the [Flux Information
 
     All `ob_code`s have at least one flux information. The detected filters are the following: `<detected filter columns>`
 
+### Flux values
+
+Flux values are checked to identify potential unit errors (magnitude vs. nano-Jansky). If a significant fraction (≥90%) of flux values fall in the range 10-30, a warning is issued as this range is typical for magnitudes but suspicious for nJy values.
+
+!!! warning "Warning message is raised as follows"
+
+    Significant fraction (`XX.X%`) of flux values are in the suspicious range (10 and 30). Please verify that the flux values are in the unit of nano Jansky (nJy), not, e.g., magnitude.
+
+!!! success "Info message is shown as follows"
+
+    Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).
+
+!!! note "This is a warning-only check"
+
+    This validation does not prevent submission. It serves as a reminder to verify that flux values are provided in nJy, not in other units such as magnitudes, Jy (Jansky), or mJy (milli-Jansky).
 
 ### Target visibility
 

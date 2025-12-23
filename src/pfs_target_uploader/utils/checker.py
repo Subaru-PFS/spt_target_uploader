@@ -792,6 +792,97 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     return dict_flux, dfout
 
 
+def check_fluxvalues(
+    df: pd.DataFrame,
+    filter_category: dict = filter_category,
+    min_flux: float = 10.0,
+    max_flux: float = 30.0,
+    thresh_frac_suspicious: float = 0.9,
+    logger=logger,
+):
+    bands = filter_category.keys()
+
+    dict_flux_values = {}
+
+    for band in bands:
+        if f"flux_{band}" in df.columns:
+            is_flux_finite = np.isfinite(df[f"flux_{band}"])
+            is_flux_suspicious = (
+                (df[f"flux_{band}"] >= min_flux)
+                & (df[f"flux_{band}"] <= max_flux)
+                & is_flux_finite
+            )
+
+            frac_suspicious = (
+                np.sum(is_flux_suspicious) / np.sum(is_flux_finite)
+                if np.sum(is_flux_finite) > 0
+                else np.nan
+            )
+
+            num_total = np.sum(is_flux_finite)
+            num_suspicious = np.sum(is_flux_suspicious)
+
+            dict_flux_values[f"frac_suspicious_flux_{band}"] = frac_suspicious
+            dict_flux_values[f"status_flux_{band}"] = (
+                True if frac_suspicious < thresh_frac_suspicious else False
+            )
+            dict_flux_values[f"num_total_flux_{band}"] = num_total
+            dict_flux_values[f"num_suspicious_flux_{band}"] = num_suspicious
+
+            # Log the results for each band
+            if num_total > 0:
+                if dict_flux_values[f"status_flux_{band}"]:
+                    logger.info(
+                        f"[Flux {band}] {frac_suspicious:.1%} suspicious values "
+                        f"({num_suspicious}/{num_total}) - OK"
+                    )
+                else:
+                    logger.warning(
+                        f"[Flux {band}] {frac_suspicious:.1%} suspicious values "
+                        f"({num_suspicious}/{num_total}) - WARNING: possible magnitude instead of nJy"
+                    )
+
+    status_flux_values = True
+    num_total_flux = 0
+    num_suspicious_flux = 0
+
+    for band in bands:
+        if f"status_flux_{band}" in dict_flux_values:
+            status_flux_values = (
+                status_flux_values and dict_flux_values[f"status_flux_{band}"]
+            )
+            num_total_flux += dict_flux_values[f"num_total_flux_{band}"]
+            num_suspicious_flux += dict_flux_values[f"num_suspicious_flux_{band}"]
+    dict_flux_values["status"] = status_flux_values
+    dict_flux_values["thresh_frac_suspicious"] = thresh_frac_suspicious
+    dict_flux_values["min_flux"] = min_flux
+    dict_flux_values["max_flux"] = max_flux
+    dict_flux_values["num_total_flux"] = num_total_flux
+    dict_flux_values["num_suspicious_flux"] = num_suspicious_flux
+    dict_flux_values["frac_suspicious_flux_all"] = (
+        num_suspicious_flux / num_total_flux if num_total_flux > 0 else np.nan
+    )
+
+    # Log overall summary
+    if num_total_flux > 0:
+        frac_all = num_suspicious_flux / num_total_flux
+        if status_flux_values:
+            logger.info(
+                f"[Flux overall] {frac_all:.1%} suspicious values "
+                f"({num_suspicious_flux}/{num_total_flux}) - OK"
+            )
+        else:
+            logger.warning(
+                f"[Flux overall] {frac_all:.1%} suspicious values "
+                f"({num_suspicious_flux}/{num_total_flux}) - WARNING: "
+                f"threshold exceeded ({thresh_frac_suspicious:.0%})"
+            )
+    else:
+        logger.warning("[Flux overall] No flux values found to check")
+
+    return dict_flux_values
+
+
 def check_visibility(
     df,
     date_begin=None,
@@ -929,7 +1020,8 @@ def validate_input(
 
     validation_status["str"] = {"status": None}
     validation_status["values"] = {"status": None}
-    validation_status["flux"] = {"status": None}
+    validation_status["flux_columns"] = {"status": None}
+    validation_status["flux_values"] = {"status": None}
     validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
 
@@ -968,10 +1060,17 @@ def validate_input(
         return validation_status, df
 
     # check columns for flux
-    logger.info("[Fluxes] Checking flux information")
-    dict_flux, df = check_fluxcolumns(df)
-    logger.info(f"[Fluxes] status: {dict_flux['status']} (Success if True)")
-    validation_status["flux"] = dict_flux
+    logger.info("[Flux columns] Checking flux information")
+    dict_flux_columns, df = check_fluxcolumns(df)
+    validation_status["flux_columns"] = dict_flux_columns
+    logger.info(
+        f"[Flux columns] status: {dict_flux_columns['status']} (Success if True)"
+    )
+
+    logger.info("[Flux values] Checking flux values for suspicious entries")
+    dict_flux_values = check_fluxvalues(df)
+    validation_status["flux_values"] = dict_flux_values
+    logger.info(f"[Flux values] status: {dict_flux_values['status']} (Success if True)")
 
     # check columns for visibility
     logger.info("[Visibility] Checking target visibility")
@@ -997,14 +1096,14 @@ def validate_input(
         validation_status["required_keys"]["status"]
         and validation_status["str"]["status"]
         and validation_status["values"]["status"]
-        and validation_status["flux"]["status"]
+        and validation_status["flux_columns"]["status"]
         and validation_status["visibility"]["status"]
         and validation_status["unique"]["status"]
     ):
         logger.info("[Summary] succeeded to meet all validation criteria")
         validation_status["status"] = True
     else:
-        logger.info("[Summary] failed to meet all validation criteria")
+        logger.warning("[Summary] failed to meet all validation criteria")
 
     msg_t_stop()
 
