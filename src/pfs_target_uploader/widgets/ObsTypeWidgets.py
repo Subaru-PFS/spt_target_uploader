@@ -46,7 +46,7 @@ class ObsTypeWidgets(param.Parameterized):
             value=900,
             step=10,
             start=10,
-            end=7200,
+            end=1800,
             disabled=True,
         )
 
