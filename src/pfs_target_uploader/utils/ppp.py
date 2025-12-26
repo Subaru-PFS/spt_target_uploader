@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import datetime
+import logging
 import os
 import random
 import sys
 import tempfile
 import time
 import warnings
-from contextlib import redirect_stdout
 from functools import partial
 from itertools import chain
 
@@ -30,6 +30,13 @@ from matplotlib.path import Path
 from sklearn.cluster import DBSCAN, HDBSCAN, AgglomerativeClustering
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
+
+from .suppress_logging import (
+    suppress_loggers,
+    suppress_root_logger,
+    suppress_stdout,
+    suppress_third_party_logging,
+)
 
 # below for netflow
 # isort: split
@@ -924,26 +931,28 @@ def PPPrunStart(
         instdata_setup_envvar()
 
         # Create cobraCoach object with a temporary directory
-        # Using TemporaryDirectory to ensure automatic cleanup via garbage collection
-        cobra_coach_tmpdir = tempfile.TemporaryDirectory()
-        cobra_coach_dir = cobra_coach_tmpdir.name
-        cobra_coach = CobraCoach(
-            loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
-        )
+        # Use a context manager to ensure cleanup immediately after initialization.
+        with tempfile.TemporaryDirectory() as cobra_coach_dir:
+            # CobraCoach / cobraOps tend to be noisy (both stdlib logging and low-level
+            # stderr writes). Suppress them only during initialization.
+            with suppress_third_party_logging(enabled=True, redirect_stderr=True):
+                cobra_coach = CobraCoach(
+                    loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
+                )
 
-        # Get the black dots calibration product
-        calibration_file_name = os.path.join(
-            os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
-        )
-        black_dots_calibration_product = BlackDotsCalibrationProduct(
-            calibration_file_name
-        )
+                # Get the black dots calibration product
+                calibration_file_name = os.path.join(
+                    os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
+                )
+                black_dots_calibration_product = BlackDotsCalibrationProduct(
+                    calibration_file_name
+                )
 
-        bench = Bench(
-            cobraCoach=cobra_coach,
-            blackDotsCalibrationProduct=black_dots_calibration_product,
-            blackDotsMargin=black_dot_radius_margin,
-        )
+                bench = Bench(
+                    cobraCoach=cobra_coach,
+                    blackDotsCalibrationProduct=black_dots_calibration_product,
+                    blackDotsMargin=black_dot_radius_margin,
+                )
         logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
         tgt = sam2netflow(sample, for_ppc)
@@ -955,7 +964,10 @@ def PPPrunStart(
         for ii in range(nvisit):
             logger.debug(f"Add tel pointing {ii}: {Telra[ii]},{Teldec[ii]},{Telpa[ii]}")
             telescopes.append(nf.Telescope(Telra[ii], Teldec[ii], Telpa[ii], otime))
-        tpos = [tele.get_fp_positions(tgt) for tele in telescopes]
+
+        # Suppress verbose logging from coordinate transformation
+        with suppress_root_logger(logging.WARNING):
+            tpos = [tele.get_fp_positions(tgt) for tele in telescopes]
 
         # optional: slightly increase the cost for later observations,
         # to observe as early as possible
@@ -977,30 +989,34 @@ def PPPrunStart(
 
         forbiddenPairs = [[] for i in range(nvisit)]
 
-        if ppp_quiet:
-            out_target = open(os.devnull, "w")
-        else:
-            out_target = sys.stdout
-        # disable netflow output
-        with redirect_stdout(out_target):
-            # compute observation strategy
-            prob = nf.buildProblem(
-                bench,
-                tgt,
-                tpos,
-                classdict,
-                single_exptime,
-                vis_cost,
-                cobraMoveCost=cobraMoveCost,
-                collision_distance=2.0,
-                elbow_collisions=True,
-                gurobi=True,
-                gurobiOptions=gurobiOptions,
-                alreadyObserved=alreadyObserved,
-                forbiddenPairs=forbiddenPairs,
-            )
+        # Suppress gurobipy's verbose INFO logs (it uses stdlib logging).
+        with suppress_loggers(
+            ("gurobipy",),
+            level=logging.WARNING,
+            include_root=False,
+            suppress_handlers=True,
+            enabled=True,
+        ):
+            # disable netflow stdout output
+            with suppress_stdout(ppp_quiet):
+                # compute observation strategy
+                prob = nf.buildProblem(
+                    bench,
+                    tgt,
+                    tpos,
+                    classdict,
+                    single_exptime,
+                    vis_cost,
+                    cobraMoveCost=cobraMoveCost,
+                    collision_distance=2.0,
+                    elbow_collisions=True,
+                    gurobi=True,
+                    gurobiOptions=gurobiOptions,
+                    alreadyObserved=alreadyObserved,
+                    forbiddenPairs=forbiddenPairs,
+                )
 
-            prob.solve()
+                prob.solve()
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
         logger.debug("Extract solution:")
