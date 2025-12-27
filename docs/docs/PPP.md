@@ -23,8 +23,8 @@ The procedure is briefly listed below:
 
 #### Different observation types
 
-- **Queue** type (default): the online PPP will run to automatically determine pointings with a fixed individual exposure time of 900 seconds
-- **Classical** type: the online PPP can accept a custom individual exposure time and/or pointing list from the `Config` tab
+- **Queue** type (default): the online PPP will run to automatically determine pointings with a fixed total exposure time per pointing of 900 seconds
+- **Classical** type: the online PPP can accept a custom total exposure time per pointing and/or pointing list from the `Config` tab
 in the side panel
 
     - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
@@ -64,7 +64,7 @@ The online PPP will give a status report of the pointing simulation.
 
 !!! danger "Errors are raised in the following cases"
 
-    - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with an individual exposure time of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying individual exposure time can solve the problem.
+    - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with a total exposure time per pointing of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying the total exposure time per pointing can solve the problem.
     - No fibers can be assigned due to no available fibers. Slightly shifting the pointing by ~0.2-0.5 degree can solve the problem in most cases.
     - The running time exceeds 15 minutes.
 

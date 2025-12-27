@@ -74,7 +74,7 @@ class ObsTypeWidgets(param.Parameterized):
                     width=400,
                 ),
                 pn.widgets.TooltipIcon(
-                    value="(Optional for Classical) Set **individual exposure time** and **pointing centers** in the **Config** tab.",
+                    value="(Optional for Classical) Set **total exposure time per pointing** and **pointing centers** in the **Config** tab.",
                     margin=(0, 0, 0, -230),
                 ),
             ),
@@ -82,6 +82,14 @@ class ObsTypeWidgets(param.Parameterized):
         )
 
         self.exptime_pane = pn.Column(
-            "<font size=3><i class='far fa-clock'></i> **Individual exposure time (s)**</font>",
+            pn.pane.Markdown(
+                "<font size=3><i class='far fa-clock'></i> **Total exposure time (s) per pointing**</font>",
+                margin=(0, 10),
+            ),
+            pn.pane.Markdown(
+                "The total exposure time per pointing will be split into a pair of sub-exposures for cosmic-ray removal. "
+                "See <a href='https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection' target='_blank' rel='noopener noreferrer'>the PFS instrument website</a> for more details.",
+                margin=(-10, 10, -10, 10),
+            ),
             self.single_exptime,
         )
