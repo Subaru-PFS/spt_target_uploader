@@ -54,6 +54,13 @@ The `Upload ID` may be used for the following purposes.
 - Inquiry to the observatory when you have any issues with the target list and pointing list.
 - Proposal preparation (you need to write down `Upload ID` in the proposal to apply for observing time with PFS).
 
+#### Appending suffix to `ob_code` based on `Upload ID`
+
+The `ob_code` in the original target list will be modified to include the `Upload ID` as a suffix.
+For example, if the original `ob_code` is `target001` and the `Upload ID` is `bd5c2886009167bf`,
+the modified `ob_code` will be `target001_bd5c288` (the Upload ID is truncated to the first 7 characters).
+This modified `ob_code` will help the observatory to avoid unnecessary conflicts when replacing and/or
+appending target lists.
 
 ### Download the results
 
@@ -61,5 +68,3 @@ You can also download the results following the link "Download the results as a 
 The zip file contains files sent to the observatory as listed in the section above (see `README.txt` in the ZIP file).
 In contrast to the ZIP file downloadable after the PFS pointing simulation,
 the files contain `Upload ID` in filenames and header sections of `.ecsv` files.
-
-
