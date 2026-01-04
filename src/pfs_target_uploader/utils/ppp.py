@@ -1012,7 +1012,6 @@ def PPPrunStart(
         bench,
         otime=None,
         for_ppc=False,
-        black_dot_radius_margin=1.65,
     ):
         """run netflow (without iteration)
 
