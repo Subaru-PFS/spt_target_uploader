@@ -165,6 +165,40 @@ DOCKER_PUSH=true DOCKER_USER=your-dockerhub-username ./scripts/build-container.s
 ./scripts/gen-cli-readme.sh venv     # Force use of .venv directly
 ```
 
+### GitHub Actions Workflows
+
+#### Automated Copyright Year Update
+
+The repository includes a GitHub Actions workflow that automatically updates the copyright year in the LICENSE file.
+
+**Workflow file**: `.github/workflows/update-copyright.yml`
+
+**Execution triggers**:
+
+- **Automatic**: Runs every January 1st at 00:00 UTC (via cron schedule)
+- **Manual**: Can be triggered manually from GitHub Actions UI
+
+**How it works**:
+
+1. Checks if LICENSE file exists
+2. Updates copyright year from `2023` to `2023-{CURRENT_YEAR}` or updates existing range
+3. Creates a Pull Request if changes are detected
+4. PR targets the `dev-main` branch with label `automated` and `maintenance`
+
+**Manual execution**:
+
+1. Go to repository on GitHub
+2. Navigate to **Actions** tab
+3. Select **"Update Copyright Year"** workflow
+4. Click **"Run workflow"** button
+5. Review and merge the automatically created PR
+
+**What happens**:
+
+- If changes are needed: Creates PR with branch name `auto-update-copyright-{YEAR}`
+- If already up-to-date: Workflow completes without creating PR
+- PR includes summary of changes and can be reviewed before merging
+
 ## Architecture Overview
 
 ### Core Components
