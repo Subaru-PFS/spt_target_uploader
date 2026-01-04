@@ -68,6 +68,80 @@ warnings.filterwarnings("ignore")
 pn.extension(notifications=True)
 
 
+class PPPTimer:
+    """PPP stage timing tracker utility"""
+
+    def __init__(self, logger, verbose=False):
+        self.logger = logger
+        self.verbose = verbose
+        self.timings = {}
+        self.stage_stack = []
+
+    def start(self, stage_name):
+        """Start timing a stage"""
+        t_start = time.time()
+        self.stage_stack.append((stage_name, t_start))
+        if self.verbose:
+            indent = "  " * (len(self.stage_stack) - 1)
+            self.logger.info(f"{indent}[TIMING] {stage_name} started")
+        return t_start
+
+    def stop(self, stage_name=None):
+        """Stop timing the current stage"""
+        if not self.stage_stack:
+            return
+
+        expected_name, t_start = self.stage_stack.pop()
+        if stage_name and stage_name != expected_name:
+            self.logger.warning(
+                f"Timer mismatch: expected {expected_name}, got {stage_name}"
+            )
+
+        t_stop = time.time()
+        duration = t_stop - t_start
+
+        # Store timing
+        if expected_name not in self.timings:
+            self.timings[expected_name] = []
+        self.timings[expected_name].append(duration)
+
+        # Log (only if verbose mode is enabled)
+        if self.verbose:
+            indent = "  " * len(self.stage_stack)
+            self.logger.info(
+                f"{indent}[TIMING] {expected_name} completed in {duration:.2f}s"
+            )
+
+        return duration
+
+    def summary(self):
+        """Log summary of all timings"""
+        if not self.verbose:
+            return
+
+        self.logger.info("=" * 60)
+        self.logger.info("PPP TIMING SUMMARY")
+        self.logger.info("=" * 60)
+
+        # Sort by total time descending
+        totals = {name: sum(times) for name, times in self.timings.items()}
+
+        for name in sorted(totals, key=totals.get, reverse=True):
+            times = self.timings[name]
+            total = totals[name]
+            count = len(times)
+            avg = total / count
+
+            if count > 1:
+                self.logger.info(
+                    f"  {name}: {total:.2f}s total ({count}x, avg {avg:.2f}s)"
+                )
+            else:
+                self.logger.info(f"  {name}: {total:.2f}s")
+
+        self.logger.info("=" * 60)
+
+
 def calc_total_obstime(
     n_sci_frame: int,
     single_exptime: float,
@@ -220,6 +294,7 @@ def PPPrunStart(
     clustering_algorithm="HDBSCAN",
     queue=None,
     logger=None,
+    timing_verbose=False,
 ):
     if logger is None:
         from loguru import logger as global_logger
@@ -231,6 +306,34 @@ def PPPrunStart(
     r_pfi = d_pfi / 2.0
 
     ppp_quiet = quiet
+
+    # Initialize PPP timer
+    ppp_timer = PPPTimer(logger, verbose=timing_verbose)
+    ppp_timer.start("PPP_Total")
+
+    # Create Bench object once at the start (reused across all netflow runs)
+    ppp_timer.start("CobraCoach_Initialization")
+    instdata_setup_envvar()
+    with tempfile.TemporaryDirectory() as cobra_coach_dir:
+        with suppress_third_party_logging(enabled=True, redirect_stderr=True):
+            cobra_coach = CobraCoach(
+                loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
+            )
+
+            calibration_file_name = os.path.join(
+                os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
+            )
+            black_dots_calibration_product = BlackDotsCalibrationProduct(
+                calibration_file_name
+            )
+
+            bench = Bench(
+                cobraCoach=cobra_coach,
+                blackDotsCalibrationProduct=black_dots_calibration_product,
+                blackDotsMargin=1.65,
+            )
+    ppp_timer.stop("CobraCoach_Initialization")
+    logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
     if weight_para is None:
         weight_para = [2.02, 0.01, 0.01]
@@ -647,7 +750,9 @@ def PPPrunStart(
         peaks = []  # list of [id, ra, dec, pa]
 
         # iterate clusters
+        ppp_timer.start("Target_Clustering")
         clusters = target_clustering(sample_f, d_pfi, algorithm=clustering_algorithm)
+        ppp_timer.stop("Target_Clustering")
         logger.info(f"Number of clusters identified: {len(clusters)}")
 
         for i, cluster in enumerate(clusters):
@@ -659,7 +764,9 @@ def PPPrunStart(
             while any(remaining["exptime_PPP"] > 0):
                 logger.debug(f"Remaining objects:{remaining['ob_code']}")
                 # KDE peak
+                ppp_timer.start("KDE_Computation")
                 _, _, _, ra_peak, dec_peak = KDE(remaining, True)
+                ppp_timer.stop("KDE_Computation")
                 pa_peak = 0.0
 
                 # find targets in FoV
@@ -902,6 +1009,7 @@ def PPPrunStart(
     def netflowRun_single(
         Tel,
         sample,
+        bench,
         otime=None,
         for_ppc=False,
         black_dot_radius_margin=1.65,
@@ -926,34 +1034,6 @@ def PPPrunStart(
             # set observation time based on the first PPC
             otime = set_observation_time(Telra[0])
             logger.debug(f"Set observation time to {otime}")
-
-        # set PFS_INSTDATA_DIR environment variable
-        instdata_setup_envvar()
-
-        # Create cobraCoach object with a temporary directory
-        # Use a context manager to ensure cleanup immediately after initialization.
-        with tempfile.TemporaryDirectory() as cobra_coach_dir:
-            # CobraCoach / cobraOps tend to be noisy (both stdlib logging and low-level
-            # stderr writes). Suppress them only during initialization.
-            with suppress_third_party_logging(enabled=True, redirect_stderr=True):
-                cobra_coach = CobraCoach(
-                    loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
-                )
-
-                # Get the black dots calibration product
-                calibration_file_name = os.path.join(
-                    os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
-                )
-                black_dots_calibration_product = BlackDotsCalibrationProduct(
-                    calibration_file_name
-                )
-
-                bench = Bench(
-                    cobraCoach=cobra_coach,
-                    blackDotsCalibrationProduct=black_dots_calibration_product,
-                    blackDotsMargin=black_dot_radius_margin,
-                )
-        logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
         tgt = sam2netflow(sample, for_ppc)
         classdict = NetflowPreparation()
@@ -1000,6 +1080,7 @@ def PPPrunStart(
             # disable netflow stdout output
             with suppress_stdout(ppp_quiet):
                 # compute observation strategy
+                ppp_timer.start("Gurobi_BuildProblem")
                 prob = nf.buildProblem(
                     bench,
                     tgt,
@@ -1015,8 +1096,11 @@ def PPPrunStart(
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
                 )
+                ppp_timer.stop("Gurobi_BuildProblem")
 
+                ppp_timer.start("Gurobi_Solve")
                 prob.solve()
+                ppp_timer.stop("Gurobi_Solve")
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
         logger.debug("Extract solution:")
@@ -1059,6 +1143,7 @@ def PPPrunStart(
         res, telescope, tgt = netflowRun_single(
             Tel,
             sample,
+            bench,
             otime,
             for_ppc,
         )
@@ -1093,7 +1178,7 @@ def PPPrunStart(
                 Tel_t[index, 1] = Tel[index, 1] + shift_ra
                 Tel_t[index, 2] = Tel[index, 2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample, otime_, for_ppc)
+                res, telescope, tgt = netflowRun_single(Tel_t, sample, bench, otime_, for_ppc)
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 logger.debug(f"{sample=}")
@@ -1380,6 +1465,7 @@ def PPPrunStart(
             while any(uS["exptime_assign"] < uS["exptime_PPP"]) and (
                 iter_m2 < max_iter
             ):
+                ppp_timer.start(f"Netflow_Iteration_{iter_m2+1}")
                 logger.info(f"Netflow iterations {iter_m2+1}/{max_iter}")
                 uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
                 uS_t1["exptime_PPP"] = (
@@ -1395,6 +1481,7 @@ def PPPrunStart(
                     np.where(np.isclose(obj_allo["tel_fiber_usage_frac"], 0))[0]
                 )
                 uS = complete_ppc(uS_t2, obj_allo)[0]
+                ppp_timer.stop(f"Netflow_Iteration_{iter_m2+1}")
                 iter_m2 += 1
 
             if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
@@ -1545,6 +1632,10 @@ def PPPrunStart(
     t_ppp_stop = time.time()
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
     logger.info(f"PPP running status: {status_:.0f}")
+
+    # Stop PPP timer and show summary
+    ppp_timer.stop("PPP_Total")
+    ppp_timer.summary()
 
     queue.put(
         [

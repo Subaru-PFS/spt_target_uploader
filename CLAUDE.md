@@ -209,9 +209,10 @@ All UI components are modularized in the `widgets/` directory:
 ### Important Settings
 ```bash
 OUTPUT_DIR="data"                    # Data storage location
-MAX_EXETIME=0                       # PPP timeout (0 = no limit)  
+MAX_EXETIME=0                       # PPP timeout (0 = no limit)
 CLUSTERING_ALGORITHM=FAST_HDBSCAN   # Target clustering method
 PPP_QUIET=1                         # Suppress verbose PPP output
+PPP_TIMING_VERBOSE=0                # PPP timing logs (0=off, 1=on)
 LOG_LEVEL="INFO"                    # Logging verbosity
 UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
 ```
@@ -248,7 +249,26 @@ Tests are minimal in this repository. Most testing is done through:
 
 ## Performance Optimizations
 
+### CobraCoach Object Reuse
+
+The PPP simulation reuses CobraCoach/Bench objects across multiple netflow iterations to avoid repeated initialization overhead:
+
+- **Implementation**: CobraCoach/Bench objects are created once at the start of `PPPrunStart()` and passed to all `netflowRun_single()` calls
+- **Benefit**: Eliminates repeated initialization (typically ~2 seconds per initialization)
+- **Impact**: Significant speedup for simulations requiring many netflow iterations
+- **Location**: `utils/ppp.py` - `PPPrunStart()` creates the Bench object, `netflowRun_single()` receives it as a parameter
+
+### Performance Timing Measurement
+
+PPP includes optional detailed timing measurement to identify performance bottlenecks:
+
+- **Configuration**: Set `PPP_TIMING_VERBOSE=1` in `.env.shared` or pass as environment variable
+- **Output**: Logs execution time for each major stage (CobraCoach initialization, clustering, Gurobi solver, etc.)
+- **Usage**: Enable when profiling PPP performance, disable for production use
+- **Implementation**: `PPPTimer` class in `utils/ppp.py`
+
 ### HEALPix Visibility Checking
+
 The visibility checker has been optimized for clustered targets using HEALPix tessellation:
 
 - **Algorithm**: Groups targets by HEALPix pixels (nside=32, ~110 arcmin resolution)
@@ -258,7 +278,8 @@ The visibility checker has been optimized for clustered targets using HEALPix te
 - **Usage**: Enabled by default; controllable via `healpix=True/False` parameter
 - **Time Resolution**: Uses 15-minute ephemeris precision, optimized for 6-month observation periods
 
-### Functions
+### Visibility Checker Functions
+
 - `visibility_checker_vec()`: Original per-target method (slower but exact)
 - `visibility_checker_healpix()`: HEALPix-optimized method (default)
 - `check_visibility()`: Wrapper function with method selection
