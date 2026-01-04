@@ -13,6 +13,7 @@ import panel as pn
 import psutil
 import typer
 from astropy.table import Table
+from dotenv import load_dotenv
 from loguru import logger
 
 from ..utils.checker import validate_input
@@ -164,6 +165,9 @@ def simulate(
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
+    # Load environment variables from .env.shared file
+    load_dotenv(".env.shared")
+
     logger.remove(0)
     logger.add(sys.stderr, level=log_level.value, enqueue=True)
 
@@ -199,6 +203,9 @@ def simulate(
 
     #########################################################################
 
+    # Load PPP performance settings from environment
+    ppp_timing_verbose = bool(int(os.getenv("PPP_TIMING_VERBOSE", "0")))
+
     ppp_run_results = mp.Manager().Queue()
 
     ppp_run = mp.Process(
@@ -214,6 +221,7 @@ def simulate(
             "HDBSCAN",  # clustering_algorithm
             ppp_run_results,
             logger,
+            ppp_timing_verbose,  # timing_verbose
         ),
     )
 
