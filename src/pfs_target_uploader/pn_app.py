@@ -10,6 +10,7 @@ import panel as pn
 from dotenv import dotenv_values
 from loguru import logger
 
+from . import __version__ as pfs_target_uploader_version
 from .utils.db import single_insert_uid_db
 from .utils.mail import send_email
 from .utils.session import assign_secret_token
@@ -262,9 +263,27 @@ def target_uploader_app(use_panel_cli=False):
         ppcinput_watcher,
     )
 
+    sidebar_about = pn.Column(
+        pn.Column(
+            pn.pane.Markdown(
+                "<font size=4><i class='fas fa-tag'></i>  **Version**</font>",
+                sizing_mode="stretch_width",
+            ),
+        ),
+        pn.Column(
+            pn.pane.Markdown(
+                f"{pfs_target_uploader_version}",
+                sizing_mode="stretch_width",
+            ),
+            margin=(-20, 0, 0, 0),
+        ),
+        margin=(10, 0, 0, 0),
+    )
+
     tab_sidebar = pn.Tabs(
         ("Home", sidebar_column),
         ("Config", sidebar_configs),
+        ("About", sidebar_about),
     )
     # tab_sidebar.active = 1
 

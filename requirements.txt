@@ -8,7 +8,7 @@ astroplan==0.10.1
     #   pfs-datamodel
     #   pfs-target-uploader
     #   pfs-utils
-astropy==7.1.1
+astropy==7.2.0
     # via
     #   astroplan
     #   astropy-healpix
@@ -24,7 +24,7 @@ astropy==7.1.1
     #   pfs-utils
 astropy-healpix==1.1.2
     # via pfs-target-uploader
-astropy-iers-data==0.2025.11.3.0.38.37
+astropy-iers-data==0.2026.1.5.0.43.43
     # via
     #   astropy
     #   ics-utils
@@ -36,11 +36,11 @@ babel==2.17.0
     # via
     #   mkdocs-material
     #   sphinx
-backrefs==5.9
+backrefs==6.1
     # via mkdocs-material
 bleach==6.3.0
     # via panel
-bokeh==3.7.3
+bokeh==3.8.2
     # via
     #   holoviews
     #   hvplot
@@ -50,7 +50,7 @@ cairocffi==1.7.1
     # via cairosvg
 cairosvg==2.8.2
     # via mkdocs-material
-certifi==2025.10.5
+certifi==2026.1.4
     # via
     #   requests
     #   skyfield
@@ -58,7 +58,7 @@ cffi==2.0.0
     # via cairocffi
 charset-normalizer==3.4.4
     # via requests
-click==8.3.0
+click==8.3.1
     # via
     #   dask
     #   mkdocs
@@ -89,7 +89,7 @@ cssselect2==0.8.0
     # via cairosvg
 cycler==0.12.1
     # via matplotlib
-dask==2025.10.0
+dask==2025.12.0
     # via
     #   pfs-target-uploader
     #   spatialpandas
@@ -109,13 +109,13 @@ et-xmlfile==2.0.0
     # via openpyxl
 ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@7f19141655aa5a65c49a94a652e9180a388680c8
     # via pfs-target-uploader
-fitsio==1.2.8
+fitsio==1.3.0
     # via ics-utils
 fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip
     # via pfs-target-uploader
-fonttools==4.60.1
+fonttools==4.61.1
     # via matplotlib
-fsspec==2025.10.0
+fsspec==2025.12.0
     # via
     #   dask
     #   spatialpandas
@@ -123,37 +123,37 @@ future==1.0.0
     # via pfs-tron-actorcore
 ghp-import==2.1.0
     # via mkdocs
-ginga==5.4.0
+ginga==5.5.1
     # via qplan
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.45
+gitpython==3.1.46
     # via ics-utils
-greenlet==3.2.4 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
+greenlet==3.3.0 ; platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'
     # via sqlalchemy
 gurobipy==12.0.3
     # via pfs-target-uploader
-hdbscan==0.8.40
+hdbscan==0.8.41
     # via pfs-target-uploader
 hjson==3.1.0
     # via
     #   mkdocs-macros-plugin
     #   super-collections
-holoviews==1.21.0
+holoviews==1.22.1
     # via
     #   hvplot
     #   pfs-target-uploader
-hvplot==0.12.1
+hvplot==0.12.2
     # via pfs-target-uploader
 hyperlink==21.0.0
     # via twisted
-ics-cobracharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@620507e253be4604573e36d193ea3bce4f03cace
+ics-cobracharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@408215e8a6b92522fba5a556482bd344cf2db287
     # via
     #   ics-cobraops
     #   pfs-target-uploader
-ics-cobraops @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@3a8c689ee7700329094cd738c2e5176284b7200c
+ics-cobraops @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@73e4e4eb75a0eb5666522c3dd7884a95862329f9
     # via pfs-target-uploader
-ics-utils @ git+https://github.com/Subaru-PFS/ics_utils.git@bdfb39c9ecf71654cc747c10278337f19f5ef506
+ics-utils @ git+https://github.com/Subaru-PFS/ics_utils.git@0b7e59169d1298f62f5ff6ce78ef1ec0317a273c
     # via
     #   ics-cobracharmer
     #   ics-cobraops
@@ -161,11 +161,11 @@ idna==3.11
     # via
     #   hyperlink
     #   requests
-imageio==2.37.0
+imageio==2.37.2
     # via scikit-image
 imagesize==1.4.1
     # via sphinx
-incremental==24.7.2
+incremental==24.11.0
     # via twisted
 jinja2==3.1.6
     # via
@@ -175,7 +175,7 @@ jinja2==3.1.6
     #   mkdocs-material
     #   myst-parser
     #   sphinx
-joblib==1.5.2
+joblib==1.5.3
     # via
     #   hdbscan
     #   qplan
@@ -188,17 +188,17 @@ lazy-loader==0.4
     # via scikit-image
 linkify-it-py==2.0.3
     # via panel
-llvmlite==0.45.1
+llvmlite==0.46.0
     # via numba
 locket==1.0.0
     # via partd
 loguru==0.7.3
     # via pfs-target-uploader
-lsst-utils==29.2025.4400
+lsst-utils==29.2025.4900
     # via pfs-datamodel
 lxml==6.0.2
     # via mkdocs-video
-markdown==3.9
+markdown==3.10
     # via
     #   fontawesome-markdown
     #   mkdocs
@@ -215,7 +215,7 @@ markupsafe==3.0.3
     # via
     #   jinja2
     #   mkdocs
-matplotlib==3.10.7
+matplotlib==3.10.8
     # via
     #   ics-cobracharmer
     #   ics-cobraops
@@ -241,9 +241,9 @@ mkdocs==1.6.1
     #   pfs-target-uploader
 mkdocs-get-deps==0.2.0
     # via mkdocs
-mkdocs-macros-plugin==1.4.1
+mkdocs-macros-plugin==1.5.0
     # via pfs-target-uploader
-mkdocs-material==9.6.23
+mkdocs-material==9.7.1
     # via pfs-target-uploader
 mkdocs-material-extensions==1.3.1
     # via mkdocs-material
@@ -255,17 +255,18 @@ multiprocess==0.70.18
     # via pfs-target-uploader
 myst-parser==4.0.1
     # via pfs-target-uploader
-narwhals==2.10.1
+narwhals==2.15.0
     # via
     #   bokeh
+    #   holoviews
     #   panel
-networkx==3.5
+networkx==3.6.1
     # via scikit-image
-numba==0.62.1
+numba==0.63.1
     # via
     #   datashader
     #   spatialpandas
-numpy==2.3.4
+numpy==2.3.5
     # via
     #   astroplan
     #   astropy
@@ -303,7 +304,7 @@ numpy==2.3.4
     #   skyfield
     #   tifffile
     #   xarray
-opdb @ git+https://github.com/Subaru-PFS/spt_operational_database.git@cf007037e6ae4ff689fe80f6ac250b5ab791d4db
+opdb @ git+https://github.com/Subaru-PFS/spt_operational_database.git@027858ed26e7937ba7d85b1238f4a92c1f1f468d
     # via ics-cobracharmer
 opencv-python==4.11.0.86
     # via ics-cobracharmer
@@ -318,6 +319,7 @@ packaging==25.0
     #   ginga
     #   holoviews
     #   hvplot
+    #   incremental
     #   lazy-loader
     #   matplotlib
     #   mkdocs
@@ -347,12 +349,12 @@ pandas==2.3.3
     #   seaborn
     #   spatialpandas
     #   xarray
-panel==1.8.4
+panel==1.8.5
     # via
     #   holoviews
     #   hvplot
     #   pfs-target-uploader
-param==2.2.1
+param==2.3.1
     # via
     #   datashader
     #   holoviews
@@ -362,22 +364,23 @@ param==2.2.1
     #   pyviz-comms
 partd==1.4.2
     # via dask
-pathspec==0.12.1
+pathspec==1.0.1
     # via
     #   mkdocs
     #   mkdocs-macros-plugin
-pfs-datamodel @ git+https://github.com/Subaru-PFS/datamodel.git@a0dda35edc3609dc170f4372107e2367b0aa4593
+pfs-datamodel @ git+https://github.com/Subaru-PFS/datamodel.git@772cfdb975eb5b2910319a1db043cf45fdc49c62
     # via
     #   ics-utils
     #   pfs-utils
-pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@dc3321f74bdcf7dc096346840a6a68a90d731eb0
+pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1633ee44266415aa7f3949371e535b16db63df1b
     # via
     #   ics-cobracharmer
     #   ics-cobraops
     #   pfs-target-uploader
+    #   pfs-utils
 pfs-tron-actorcore @ git+https://github.com/Subaru-PFS/tron_actorcore.git@1d390cab1b0c1436a57828c620fbf910d83a6fee
     # via ics-utils
-pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@259b1447d4563926d368ac963f9e38d6675dc463
+pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@8298935a6daee249c09daae93cfc7fe987363642
     # via
     #   ics-cobracharmer
     #   ics-cobraops
@@ -392,14 +395,18 @@ pillow==11.3.0
     #   matplotlib
     #   mkdocs-material
     #   scikit-image
-platformdirs==4.5.0
+platformdirs==4.5.1
     # via mkdocs-get-deps
 ply==3.11
     # via pfs-tron-actorcore
-psutil==7.1.3
+psutil==7.2.1
     # via
     #   lsst-utils
     #   pfs-target-uploader
+psycopg==3.3.2
+    # via pfs-utils
+psycopg-binary==3.3.2 ; implementation_name != 'pypy'
+    # via psycopg
 psycopg2-binary==2.9.11
     # via
     #   ics-utils
@@ -423,19 +430,20 @@ pygments==2.19.2
     #   mkdocs-material
     #   rich
     #   sphinx
-pymdown-extensions==10.16.1
+pymdown-extensions==10.20
     # via mkdocs-material
-pyparsing==3.2.5
+pyparsing==3.3.1
     # via matplotlib
 pyqt5==5.15.11
     # via ics-cobracharmer
-pyqt5-qt5==5.15.17
+pyqt5-qt5==5.15.18
     # via pyqt5
-pyqt5-sip==12.17.1
+pyqt5-sip==12.17.2
     # via pyqt5
 python-dateutil==2.9.0.post0
     # via
     #   ghp-import
+    #   holoviews
     #   matplotlib
     #   mkdocs-macros-plugin
     #   pandas
@@ -471,7 +479,7 @@ pyyaml==6.0.3
     #   qplan
 pyyaml-env-tag==1.1
     # via mkdocs
-qplan @ git+https://github.com/naojsoft/qplan.git@3c9bab2db5571817cb5f4595f26c241bc787492a
+qplan @ git+https://github.com/naojsoft/qplan.git@5fb294dce7dc681a82ed504122477d9969ccfca9
     # via pfs-target-uploader
 qtpy==2.4.3
     # via
@@ -488,11 +496,13 @@ retrying==1.4.2
     # via spatialpandas
 rich==14.2.0
     # via typer
-roman-numerals-py==3.1.0
+roman-numerals==4.1.0
+    # via roman-numerals-py
+roman-numerals-py==4.1.0
     # via sphinx
-scikit-image==0.25.2
+scikit-image==0.26.0
     # via ics-cobracharmer
-scikit-learn==1.7.2
+scikit-learn==1.8.0
     # via
     #   hdbscan
     #   pfs-target-uploader
@@ -512,9 +522,7 @@ seaborn==0.13.2
 sep==1.4.1
     # via ics-cobracharmer
 setuptools==80.9.0
-    # via
-    #   ics-cobracharmer
-    #   incremental
+    # via ics-cobracharmer
 sgp4==2.25
     # via skyfield
 shellingham==1.5.4
@@ -547,23 +555,24 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-sqlalchemy==2.0.44
+sqlalchemy==2.0.45
     # via
     #   ics-utils
     #   opdb
+    #   pfs-utils
 structlog==25.5.0
     # via lsst-utils
 super-collections==0.6.2
     # via mkdocs-macros-plugin
-termcolor==3.2.0
+termcolor==3.3.0
     # via mkdocs-macros-plugin
 threadpoolctl==3.6.0
     # via
     #   lsst-utils
     #   scikit-learn
-tifffile==2025.10.16
+tifffile==2025.12.20
     # via scikit-image
-tinycss2==1.4.0
+tinycss2==1.5.1
     # via
     #   cairosvg
     #   cssselect2
@@ -572,7 +581,7 @@ toolz==1.1.0
     #   dask
     #   datashader
     #   partd
-tornado==6.5.2 ; sys_platform != 'emscripten'
+tornado==6.5.4 ; sys_platform != 'emscripten'
     # via bokeh
 tqdm==4.67.1
     # via panel
@@ -580,19 +589,22 @@ twisted==25.5.0
     # via
     #   ics-utils
     #   pfs-tron-actorcore
-typer==0.20.0
+typer==0.21.1
     # via pfs-target-uploader
 typing-extensions==4.15.0
     # via
     #   panel
+    #   psycopg
     #   sqlalchemy
     #   twisted
     #   typer
-tzdata==2025.2
-    # via pandas
+tzdata==2025.3
+    # via
+    #   pandas
+    #   psycopg
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.5.0
+urllib3==2.6.2
     # via requests
 watchdog==6.0.0
     # via mkdocs
@@ -603,13 +615,13 @@ webencodings==0.5.1
     #   tinycss2
 win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
-wrapt==2.0.0
+wrapt==2.0.1
     # via deprecated
-xarray==2025.10.1
+xarray==2025.12.0
     # via datashader
 xlrd==2.0.2
     # via qplan
-xyzservices==2025.10.0
+xyzservices==2025.11.0
     # via bokeh
-zope-interface==8.0.1
+zope-interface==8.1.1
     # via twisted
