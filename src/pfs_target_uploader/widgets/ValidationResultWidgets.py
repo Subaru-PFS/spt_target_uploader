@@ -462,20 +462,47 @@ class ValidationResultWidgets:
             # add a warning message and data table for internal duplicates
             self.warning_text_intdups.object = (
                 "<font size=4><u>Internal duplication</u></font>\n\n"
-                "<font size=3>Targets with identical coordinates or with nearby coordinates are detected in the following entries. "
+                "<font size=3>Targets with identical coordinates or with nearby coordinates with the same resolution mode are detected in the following targets. "
                 "Please verify if these targets are not duplicates.</font>"
             )
             self.warning_table_intdups.frozen_columns = []
             if self.warning_table_intdups.value is not None:
                 self.warning_table_intdups.value[0:0]
-            # Sort by ra and dec for easier visual inspection of spatial clustering
+
+            # Add nn_sep column to duplicated targets
             df_intdups = df.loc[
                 validation_status["internal_duplication"]["flags"], :
-            ].sort_values(by=["ra", "dec"])
-            self.warning_table_intdups.value = df_intdups
+            ].copy()
+
+            # Add nearest neighbor separation in arcsec
+            nn_sep_array = validation_status["internal_duplication"]["nn_sep"]
+            df_intdups["separation"] = nn_sep_array[
+                validation_status["internal_duplication"]["flags"]
+            ]
+
+            # Sort by ra and dec for easier visual inspection of spatial clustering
+            df_intdups = df_intdups.sort_values(by=["ra", "dec"])
+
+            # Select and reorder columns for display
+            display_columns = [
+                "ob_code",
+                "obj_id",
+                "ra",
+                "dec",
+                "resolution",
+                "reference_arm",
+                "separation",
+            ]
+            # Only include columns that exist in the dataframe
+            available_columns = [
+                col for col in display_columns if col in df_intdups.columns
+            ]
+            df_intdups_display = df_intdups[available_columns]
+
+            self.warning_table_intdups.value = df_intdups_display
             self.warning_pane.append(self.warning_text_intdups)
             self.warning_pane.append(self.warning_table_intdups)
-            self.warning_table_intdups.frozen_columns = ["index"]
+            self.warning_table_intdups.frozen_columns = []
             self.warning_table_intdups.visible = True
 
         # overall success

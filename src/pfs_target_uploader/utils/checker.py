@@ -993,7 +993,7 @@ def check_unique(df, logger=logger):
 
 
 def check_internal_duplicate(
-    df: pd.DataFrame, sep: u.Quantity = 0.5 * u.arcsec, logger=logger
+    df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
 ) -> dict:
 
     df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
@@ -1003,11 +1003,21 @@ def check_internal_duplicate(
         max_points_for_agglomerative=None,
     )
 
+    # Combine all duplicates (exact + near) with nn_sep information
+    df_dups_all = pd.concat([df_dups_exact, df_dups_near], ignore_index=False)
+
     is_duplicated = np.ones(df.index.size, dtype=bool)
+    nn_sep_array = np.full(df.index.size, np.nan)
 
     for i in df.index:
         if df["ob_code"][i] in df_isolated["ob_code"].to_numpy():
             is_duplicated[i] = False
+        elif df["ob_code"][i] in df_dups_all["ob_code"].to_numpy():
+            # Get nn_sep for this target
+            nn_sep_value = df_dups_all.loc[
+                df_dups_all["ob_code"] == df["ob_code"][i], "nn_sep"
+            ].values[0]
+            nn_sep_array[i] = nn_sep_value
 
     if len(df) == len(df_isolated):
         logger.info("No duplicated or clustered targets found internally.")
@@ -1016,7 +1026,7 @@ def check_internal_duplicate(
         logger.warning("Duplicated or clustered targets found internally.")
         status = False
 
-    return dict(status=status, flags=is_duplicated)
+    return dict(status=status, flags=is_duplicated, nn_sep=nn_sep_array)
 
 
 def validate_input(
