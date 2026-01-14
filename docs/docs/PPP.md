@@ -23,25 +23,25 @@ The procedure is briefly listed below:
 
 #### Different observation types
 
-- **Queue** type (default): the online PPP will run to automatically determine pointings with a fixed individual exposure time of 900 seconds
-- **Classical** type: the online PPP can accept a custom individual exposure time and/or pointing list from the `Config` tab
-in the side panel
+- **Queue** type (default): the online PPP will run to automatically determine pointings with a fixed total exposure time per pointing of 900 seconds
+- **Classical** type: the online PPP can accept a custom total exposure time per pointing and/or pointing list from the `Config` tab
+  in the side panel. See the [Input Target List](inputs.md#optional-input-pointing-list) section for details of the custom pointing list.
 
-    - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
+      - Mandatory fields of the custom pointing list are listed below. An example can be seen [here](examples/example_ppclist.csv).
 
-    | Name           | Datatype | Unit   | Description                                                                                        |
-    |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
-    | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
-    | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
-    | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+      | Name           | Datatype | Unit   | Description                                                                                        |
+      |----------------|----------|--------|----------------------------------------------------------------------------------------------------|
+      | ppc_ra         | float    | degree | Right Ascension (J2000.0 or ICRS at the epoch of 2000.0)                                           |
+      | ppc_dec        | float    | degree | Declination (J2000.0 or ICRS at the epoch of 2000.0)                                               |
+      | ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
 
-    - Optional fields of the custom pointing list are listed below.
+      - Optional fields of the custom pointing list are listed below.
 
-    | Name         | Datatype | Unit   | Description                                 |
-    |--------------|----------|--------|---------------------------------------------|
-    | ppc_pa       | float    | degree | Position angle                              |
-    | ppc_priority | float    |        | Priority of the pointing center in the list |
-    | ppc_code     | str      |        | Name of the pointing center                 |
+      | Name         | Datatype | Unit   | Description                                 |
+      |--------------|----------|--------|---------------------------------------------|
+      | ppc_pa       | float    | degree | Position angle                              |
+      | ppc_priority | float    |        | Priority of the pointing center in the list |
+      | ppc_code     | str      |        | Name of the pointing center                 |
 
 <figure markdown>
   ![Config queue](images/ppp_queue.png){ width="300"}
@@ -64,10 +64,9 @@ The online PPP will give a status report of the pointing simulation.
 
 !!! danger "Errors are raised in the following cases"
 
-    - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with an individual exposure time of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying individual exposure time can solve the problem.
+    - (Usually under **Classical** mode) No fibers can be assigned since the input pointings can not complete any targets. For example, if a target requests 1800 sec, but only one pointing with a total exposure time per pointing of 900 sec is given, no fiber can be assigned to the target since it can not be completed. Adding pointings or modifying the total exposure time per pointing can solve the problem.
     - No fibers can be assigned due to no available fibers. Slightly shifting the pointing by ~0.2-0.5 degree can solve the problem in most cases.
     - The running time exceeds 15 minutes.
-
 
 !!! warning "Warnings are raised in the following cases:"
 
@@ -110,7 +109,7 @@ A table including the following information will be displayed.
 The table contents change interactively with the draggable slider(s) above the table.
 
 | Name                 | Unit      | Description                                                                                                        |
-|----------------------|-----------|--------------------------------------------------------------------------------------------------------------------|
+| -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
 | resolution           |           | `low`, `medium` or `total`                                                                                         |
 | N_ppc                |           | Number of pointings, can be adjusted by the slider                                                                 |
 | Texp                 | hour      | Total on-source time requested to complete `N_ppc` pointings                                                       |
@@ -119,7 +118,7 @@ The table contents change interactively with the draggable slider(s) above the t
 | Used fiber fraction  | %         | Average fiber usage fraction of pointings                                                                          |
 | Fraction of PPC <30% | %         | Fration of pointings having the fiber usage fraction < 30%                                                         |
 | P_all                | %         | Completion rate of the entire program                                                                              |
-| P_[0-9]              | %         | Completion rate of each priority group                                                                             |
+| P\_[0-9]             | %         | Completion rate of each priority group                                                                             |
 
 - If only one resolution mode (low or medium) is used, the table will only show information in that mode.
 - The completion rates are calculated using `FiberHour_allocated / FiberHour_total`. It's important to note that this calculation includes partially observed targets in each pointing.
@@ -129,6 +128,7 @@ The table contents change interactively with the draggable slider(s) above the t
 The <u>Completion Rate</u> (top and middle) and <u>Target Distribution</u> (bottom) will be shown for each resolution mode.
 
 #### Completion Rate
+
 `PPC_id`
 : ID of PFS pointing center, PPCs are sorted by the total priority of targets assigned on them
 
@@ -154,7 +154,7 @@ Transparent <span style="color: grey;">gray</span> hexagons show the PFS FoV at 
 In the PPP calculation, the following parameters are fixed.
 
 | Description                            | Value | Unit    |
-|----------------------------------------|------:|---------|
+| -------------------------------------- | ----: | ------- |
 | Number of fibers                       |  2394 |         |
 | Number of calibrators                  |   200 |         |
 | Fiber configuration time per exposure  |   180 | s       |
