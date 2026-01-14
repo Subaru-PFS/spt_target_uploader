@@ -492,6 +492,7 @@ class ValidationResultWidgets:
                 "dec",
                 "resolution",
                 "reference_arm",
+                "exptime",
                 "separation",
             ]
             # Only include columns that exist in the dataframe
