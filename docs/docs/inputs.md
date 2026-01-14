@@ -257,7 +257,7 @@ Optional fields are listed below.
 | ppc_priority | float    |        | Priority of the ppc                 |
 | ppc_code     | str      |        | A string identifier for the target. |
 
-### Practical examples
+### Practical example
 
 When submitting a user-defined pointing list, you need to consider the combination of _total exposure time per pointing_ and _number of pointing centers_ (see also [configurations](PPP.md#different-observation-types) section), because the total exposure time per pointing is split into 2 exposures for better cosmic-ray rejection (see [the instrument web page](https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection)).
 
