@@ -1,11 +1,13 @@
-# Input Target List
+# Inputs
 
-## File format
+## Input Target List
+
+### File format
 
 An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
 the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
 
-## Content
+### Content
 
 Here the word "target" is a combination of values of the fields described below. There are required and optional fields. String values must consist of `[A-Za-z0-9_-+.]`.
 
@@ -16,7 +18,7 @@ Here the word "target" is a combination of values of the fields described below.
 A quick example of the content is shown below.
 
 | ob_code     | obj_id |                 ra |                dec | exptime | priority | resolution | reference_arm |     g_hsc | g_hsc_error |
-|-------------|-------:|-------------------:|-------------------:|--------:|---------:|------------|---------------|----------:|------------:|
+| ----------- | -----: | -----------------: | -----------------: | ------: | -------: | ---------- | ------------- | --------: | ----------: |
 | ob_00000000 |      0 |  278.6241774801468 |  56.29564017478978 |  3600.0 |        9 | L          | b             |   3093.21 |      388.14 |
 | ob_00000001 |      1 | 157.99623831073885 |  31.71664232033844 |  3600.0 |        7 | M          | r             | 108911.74 |    30452.86 |
 | ob_00000002 |      2 | 309.09525116809766 | -6.329978341797448 |  3600.0 |        3 | M          | n             |  11842.32 |     2905.20 |
@@ -25,17 +27,17 @@ A quick example of the content is shown below.
 
 Mandatory fields are listed below.
 
-| Name          | Datatype   | Unit   | Description                                                                                                                          |
-|---------------|------------|--------|--------------------------------------------------------------------------------------------------------------------------------------|
-| ob_code       | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                                                   |
-| obj_id        | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                                            |
-| ra            | float      | degree | Right Ascension (ICRS at the reference epoch of 2000.0)                                                                              |
-| dec           | float      | degree | Declination (ICRS at the reference epoch of 2000.0)                                                                                  |
-| exptime       | float      | second | Exposure time requested for the object under the nominal observing condition.                                                        |
-| priority      | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority                             |
-| resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                   |
-| flux          | float      | nJy    | Flux of at least one filter in the pre-defined [list](#filters)                                                                      |
-| reference_arm | str        |        | Reference arm name used to evaluate the effective exposure  time (`b`: blue, `r`: red, `n`: near-IR, and `m`: medium-resolution red) |
+| Name          | Datatype   | Unit   | Description                                                                                                                         |
+| ------------- | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ob_code       | str        |        | A string identifier for the target. Each `ob_code` must be unique within the list.                                                  |
+| obj_id        | 64-bit int |        | Object ID (-9223372036854775808 to +9223372036854775807).                                                                           |
+| ra            | float      | degree | Right Ascension (ICRS at the reference epoch of 2000.0)                                                                             |
+| dec           | float      | degree | Declination (ICRS at the reference epoch of 2000.0)                                                                                 |
+| exptime       | float      | second | Exposure time requested for the object under the nominal observing condition.                                                       |
+| priority      | int        |        | Priority (integer value in [0-9]) for the object within the list. Smaller the value, higher the priority                            |
+| resolution    | str        |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution                                  |
+| flux          | float      | nJy    | Flux of at least one filter in the pre-defined [list](#filters)                                                                     |
+| reference_arm | str        |        | Reference arm name used to evaluate the effective exposure time (`b`: blue, `r`: red, `n`: near-IR, and `m`: medium-resolution red) |
 
 #### About `reference_arm`
 
@@ -54,7 +56,7 @@ Some examples of good and bad cases are shown below.
 A standard case.
 
 | ob_code | obj_id |
-|---------|-------:|
+| ------- | -----: |
 | ob_1    |      1 |
 | ob_2    |      2 |
 
@@ -63,7 +65,7 @@ A standard case.
 The following case violates the unique constraints by setting the duplicated `(obj_id, resolution)` values.
 
 | ob_code  | obj_id | resolution |
-|----------|-------:|------------|
+| -------- | -----: | ---------- |
 | ob_1_L_1 |      1 | L          |
 | ob_1_L_2 |      1 | L          |
 
@@ -72,7 +74,7 @@ The following case violates the unique constraints by setting the duplicated `(o
 You can request to observe an object with both `L` and `M` resolutions, but you need to use a different `ob_code` for each case.
 
 | ob_code | obj_id | resolution |
-|---------|-------:|------------|
+| ------- | -----: | ---------- |
 | ob_1_L  |      1 | L          |
 | ob_1_M  |      1 | M          |
 
@@ -81,7 +83,7 @@ You can request to observe an object with both `L` and `M` resolutions, but you 
 You cannot have multiple rows of an object a target list, even if you assign different `ob_code` for each row.
 
 | ob_code     | obj_id | exptime | resolution |
-|-------------|-------:|--------:|------------|
+| ----------- | -----: | ------: | ---------- |
 | ob_1_900s_1 |      1 |     900 | L          |
 | ob_1_900s_2 |      1 |     900 | L          |
 | ob_1_900s_3 |      1 |     900 | L          |
@@ -92,7 +94,7 @@ You cannot have multiple rows of an object a target list, even if you assign dif
 For the case above, please make a row by summing up the exposure time as follows.
 
 | ob_code    | obj_id | exptime | resolution |
-|------------|-------:|--------:|------------|
+| ---------- | -----: | ------: | ---------- |
 | ob_1_3600s |      1 |    3600 | L          |
 
 #### About astrometry
@@ -120,7 +122,7 @@ Flux columns must conform to the following requirements.
 ✅ Good
 
 | ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
-|---------|-------|-------------|--------|--------------|-------|-------------|
+| ------- | ----- | ----------- | ------ | ------------ | ----- | ----------- |
 | 1       | 10000 | 100         |        |              |       |             |
 | 2       | 20000 | 200         | 20000  |              |       |             |
 | 3       |       |             |        |              | 30000 | 300         |
@@ -130,7 +132,7 @@ Flux columns must conform to the following requirements.
 - For the `ob_code 3`, `g_hsc` will be used and `g_ps1` will be ignored.
 
 | ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
-|---------|-------|-------------|--------|--------------|-------|-------------|
+| ------- | ----- | ----------- | ------ | ------------ | ----- | ----------- |
 | 1       | 10000 | 100         |        |              |       |             |
 | 2       | 20000 | 200         | 20000  |              |       |             |
 | 3       | 35000 | 350         |        |              | 30000 | 300         |
@@ -141,7 +143,7 @@ Flux columns must conform to the following requirements.
 - The `i_hsc` must be either `i_old_hsc` or `i2_hsc`.
 
 | ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
-|---------|-------|-------------|-------|-------------|-------|-------------|
+| ------- | ----- | ----------- | ----- | ----------- | ----- | ----------- |
 | 1       |       |             |       |             |       |             |
 | 2       | 20000 | 200         | 20000 |             |       |             |
 | 3       |       |             |       |             | 30000 | 300         |
@@ -151,7 +153,7 @@ Flux columns must conform to the following requirements.
 Optional fields are listed below.
 
 | Name     | Datatype | Unit     | Default | Description                                |
-|----------|----------|----------|---------|--------------------------------------------|
+| -------- | -------- | -------- | ------- | ------------------------------------------ |
 | pmra     | float    | mas/year | 0       | Proper motion in right ascension direction |
 | pmdec    | float    | mas/year | 0       | Proper motion in declination direction     |
 | parallax | float    | mas      | 1e-7    | Parallax                                   |
@@ -170,7 +172,7 @@ Specifying filters not in the following will be ignored.
 #### `g` category filters
 
 | Name    | Description          |
-|---------|----------------------|
+| ------- | -------------------- |
 | g_hsc   | HSC g filter         |
 | g_ps1   | Pan-STARRS1 g filter |
 | g_sdss  | SDSS g filter        |
@@ -179,7 +181,7 @@ Specifying filters not in the following will be ignored.
 #### `r` category filters
 
 | Name      | Description                 |
-|-----------|-----------------------------|
+| --------- | --------------------------- |
 | r_old_hsc | HSC r filter (old r filter) |
 | r2_hsc    | HSC r2 filter               |
 | r_ps1     | Pan-STARRS1 r filter        |
@@ -189,7 +191,7 @@ Specifying filters not in the following will be ignored.
 #### `i` category filters
 
 | Name      | Description                 |
-|-----------|-----------------------------|
+| --------- | --------------------------- |
 | i_old_hsc | HSC i filter (old i filter) |
 | i2_hsc    | HSC i2 filter               |
 | i_ps1     | Pan-STARRS1 i filter        |
@@ -199,7 +201,7 @@ Specifying filters not in the following will be ignored.
 #### `z` category filters
 
 | Name   | Description          |
-|--------|----------------------|
+| ------ | -------------------- |
 | z_hsc  | HSC z filter         |
 | z_ps1  | Pan-STARRS1 z filter |
 | z_sdss | SDSS z filter        |
@@ -207,10 +209,65 @@ Specifying filters not in the following will be ignored.
 #### `y` category filters
 
 | Name  | Description          |
-|-------|----------------------|
+| ----- | -------------------- |
 | y_hsc | HSC Y filter         |
 | y_ps1 | Pan-STARRS1 y filter |
 
 #### `j` category filters
 
 TBD
+
+## (Optional) Input Pointing List
+
+For classical-mode observations, a user-defined pointing list can be provided.
+
+### File format for the pointing list
+
+An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
+the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
+
+### Quick example of the pointing list
+
+[An example CSV file](examples/example_ppclist.csv) is available.
+
+A quick example of the content is shown below.
+
+| ppc_code    | ppc_ra             | ppc_dec        | ppc_pa | ppc_resolution | ppc_priority |
+| ----------- | ------------------ | -------------- | ------ | -------------- | ------------ |
+| Point_low_1 | 49.89556493946     | 41.51756603678 | 0.0    | L              | 0.0          |
+| Point_low_2 | 48.89683299114     | 41.33165269544 | 0.0    | L              | 0.0          |
+| Point_low_3 | 50.020406433000005 | 40.80069845724 | 0.0    | L              | 0.0          |
+| Point_low_4 | 50.6446139007      | 42.03279417592 | 0.0    | L              | 0.0          |
+
+### Content of the pointing list
+
+Mandatory fields are listed below.
+
+| Name           | Datatype | Unit   | Description                                                                                        |
+| -------------- | -------- | ------ | -------------------------------------------------------------------------------------------------- |
+| ppc_ra         | float    | degree | Right Ascension (ICRS at the reference epoch of 2000.0)                                            |
+| ppc_dec        | float    | degree | Declination (ICRS at the reference epoch of 2000.0)                                                |
+| ppc_resolution | str      |        | Grating used in the red optical arms. `L` for the low resolution and `M` for the medium resolution |
+
+Optional fields are listed below.
+
+| Name         | Datatype | Unit   | Description                         |
+| ------------ | -------- | ------ | ----------------------------------- |
+| ppc_pa       | float    | degree | Position angle                      |
+| ppc_priority | float    |        | Priority of the ppc                 |
+| ppc_code     | str      |        | A string identifier for the target. |
+
+### Practical examples
+
+When submitting a user-defined pointing list, you need to consider the combination of _total exposure time per pointing_ and _number of pointing centers_ (see also [configurations](PPP.md#different-observation-types) section), because the total exposure time per pointing is split into 2 exposures for better cosmic-ray rejection (see [the instrument web page](https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection)).
+
+Suppose you want to observe the COSMOS field with a **total integration for 1 hour** at a fixed pointing center. You also consider **the unit exposure time of 15 minutes**. In this case, you need to prepare a pointing list like below.
+
+| ppc_ra | ppc_dec | ppc_resolution |
+| ------ | ------- | -------------- |
+| 150.1  | 2.2     | L              |
+| 150.1  | 2.2     | L              |
+| 150.1  | 2.2     | L              |
+| 150.1  | 2.2     | L              |
+
+This will result in four 15-minute exposure sequences at the same pointing center. Each 15-minute exposure sequence consists of 2 exposures of 7.5 minutes each for cosmic-ray rejection. This results in 8 visits (or 8 FITS files per arm per spectrograph).

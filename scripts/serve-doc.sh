@@ -83,4 +83,4 @@ esac
 
 # Change to docs directory and execute mkdocs serve
 cd "${PROJECT_ROOT}/docs"
-exec ${RUNNER} serve
+exec ${RUNNER} serve --livereload

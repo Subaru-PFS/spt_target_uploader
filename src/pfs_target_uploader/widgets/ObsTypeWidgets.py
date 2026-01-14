@@ -88,7 +88,7 @@ class ObsTypeWidgets(param.Parameterized):
             ),
             pn.pane.Markdown(
                 "The total exposure time per pointing will be split into a pair of sub-exposures for cosmic-ray removal. "
-                "See <a href='https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection' target='_blank' rel='noopener noreferrer'>the PFS instrument website</a> for more details.",
+                "See <a href='https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection' target='_blank' rel='noopener noreferrer'>the PFS instrument website</a> and <a href='/uploader/doc/inputs.html#optional-input-pointing-list' target='_blank' rel='noopener noreferrer'>the Input Pointing List section</a> of the uploader's User Guide for more details.",
                 margin=(-10, 10, -10, 10),
             ),
             self.single_exptime,
