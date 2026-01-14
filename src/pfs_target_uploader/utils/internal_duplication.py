@@ -326,8 +326,9 @@ def _find_duplicates_with_separation(
     # Set default max_cluster_diameter
     if max_cluster_diameter is None:
         # Default: 2 * max_separation
-        # This allows clustering targets within fiber diameter range
-        # while max_separation is ~half fiber diameter for nearest neighbor calculation
+        # For PFS: fiber diameter = 1.0 arcsec, fiber radius = 0.5 arcsec
+        # max_cluster_diameter = fiber diameter for detecting physical conflicts
+        # max_separation = fiber radius for nearest neighbor detection
         max_cluster_diameter = max_separation * 2
         logger.debug(
             f"Using default max_cluster_diameter = {max_cluster_diameter:.6f} deg (2 * max_separation)"
@@ -352,7 +353,7 @@ def _find_duplicates_with_separation(
 
 def dupcheck_internal(
     df: pd.DataFrame,
-    sep: u.Quantity = 1.0 * u.arcsec,
+    sep: u.Quantity = 0.5 * u.arcsec,
     max_cluster_diameter: u.Quantity | None = None,
     max_points_for_agglomerative: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -368,10 +369,10 @@ def dupcheck_internal(
     df : pandas.DataFrame
         DataFrame containing target data for a single proposal
     sep : astropy.units.Quantity
-        Maximum angular separation for considering duplicates (default: 1 arcsec)
+        Maximum angular separation for nearest neighbor search (default: 0.5 arcsec = PFS fiber radius)
     max_cluster_diameter : astropy.units.Quantity or None
-        Maximum cluster diameter (angular units).
-        If None: defaults to 2 * sep
+        Maximum cluster diameter (angular units) for grouping targets.
+        If None: defaults to 2 * sep (default: 1.0 arcsec = PFS fiber diameter)
     max_points_for_agglomerative : int or None
         Maximum points allowed for AgglomerativeClustering.
         If None: no limit

@@ -993,13 +993,13 @@ def check_unique(df, logger=logger):
 
 
 def check_internal_duplicate(
-    df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
+    df: pd.DataFrame, sep: u.Quantity = 0.5 * u.arcsec, logger=logger
 ) -> dict:
 
     df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
         df,
         sep=sep,
-        max_cluster_diameter=None,
+        max_cluster_diameter=1.0 * u.arcsec,  # PFS fiber diameter
         max_points_for_agglomerative=None,
     )
 
