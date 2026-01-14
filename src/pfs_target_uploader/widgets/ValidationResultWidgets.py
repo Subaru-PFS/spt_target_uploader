@@ -487,7 +487,7 @@ class ValidationResultWidgets:
             # Select and reorder columns for display
             display_columns = [
                 "ob_code",
-                "obj_id",
+                "obj_id_str",
                 "ra",
                 "dec",
                 "resolution",
