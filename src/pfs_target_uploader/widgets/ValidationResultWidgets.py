@@ -475,10 +475,11 @@ class ValidationResultWidgets:
             ].copy()
 
             # Add nearest neighbor separation in arcsec
+            # Use a Series indexed like df to ensure correct alignment even if df
+            # has a non-sequential or non-zero-based index.
             nn_sep_array = validation_status["internal_duplication"]["nn_sep"]
-            df_intdups["separation"] = nn_sep_array[
-                validation_status["internal_duplication"]["flags"]
-            ]
+            nn_sep_series = pd.Series(nn_sep_array, index=df.index)
+            df_intdups["separation"] = nn_sep_series.loc[df_intdups.index].values
 
             # Sort by ra and dec for easier visual inspection of spatial clustering
             df_intdups = df_intdups.sort_values(by=["ra", "dec"])

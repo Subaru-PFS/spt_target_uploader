@@ -1006,18 +1006,19 @@ def check_internal_duplicate(
     # Combine all duplicates (exact + near) with nn_sep information
     df_dups_all = pd.concat([df_dups_exact, df_dups_near], ignore_index=False)
 
-    is_duplicated = np.ones(df.index.size, dtype=bool)
-    nn_sep_array = np.full(df.index.size, np.nan)
+    # Initialize output arrays (use len(df) to avoid index assumptions)
+    is_duplicated = np.ones(len(df), dtype=bool)
+    nn_sep_array = np.full(len(df), np.nan)
 
-    for i in df.index:
-        if df["ob_code"][i] in df_isolated["ob_code"].to_numpy():
-            is_duplicated[i] = False
-        elif df["ob_code"][i] in df_dups_all["ob_code"].to_numpy():
-            # Get nn_sep for this target
-            nn_sep_value = df_dups_all.loc[
-                df_dups_all["ob_code"] == df["ob_code"][i], "nn_sep"
-            ].values[0]
-            nn_sep_array[i] = nn_sep_value
+    # Vectorized: mark isolated targets as not duplicated using isin() - O(n)
+    isolated_mask = df["ob_code"].isin(df_isolated["ob_code"])
+    is_duplicated[isolated_mask.to_numpy()] = False
+
+    # Vectorized: assign nn_sep for duplicated targets using map() - O(n)
+    if not df_dups_all.empty:
+        nn_sep_map = df_dups_all.set_index("ob_code")["nn_sep"]
+        nn_sep_series = df["ob_code"].map(nn_sep_map)
+        nn_sep_array = nn_sep_series.to_numpy()
 
     if len(df) == len(df_isolated):
         logger.info("No duplicated or clustered targets found internally.")

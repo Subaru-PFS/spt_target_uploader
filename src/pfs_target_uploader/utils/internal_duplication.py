@@ -415,7 +415,7 @@ def dupcheck_internal(
     df_dups = df_result.loc[df_result["dup_label"] >= 0, :].copy()
     # Add duplication count to df_dups
     df_dups["dup_count"] = df_dups.groupby("dup_label")["dup_label"].transform("count")
-    df_dups["nn_sep"] = nn_separations[df_result["dup_label"] >= 0]
+    df_dups["nn_sep"] = nn_separations[(df_result["dup_label"] >= 0).to_numpy()]
     # Sort df_dups by dup_count and dup_label
     df_dups.sort_values(by=["dup_count", "dup_label"], inplace=True)
 
