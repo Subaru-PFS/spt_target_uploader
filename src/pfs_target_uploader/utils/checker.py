@@ -28,6 +28,7 @@ from . import (
     required_keys,
     target_datatype,
 )
+from .internal_duplication import dupcheck_internal
 
 warnings.filterwarnings("ignore")
 
@@ -991,6 +992,31 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
+def check_internal_duplicate(df, sep=1.0 * u.arcsec, logger=logger):
+
+    df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
+        df,
+        sep=sep,
+        max_cluster_diameter=None,
+        max_points_for_agglomerative=None,
+    )
+
+    is_duplicated = np.ones(df.index.size, dtype=bool)
+
+    for i in df.index:
+        if df["ob_code"][i] in df_isolated["ob_code"].to_numpy():
+            is_duplicated[i] = False
+
+    if len(df) == len(df_isolated):
+        logger.info("No duplicated or clustered targets found internally.")
+        status = True
+    else:
+        logger.warning("Duplicated or clustered targets found internally.")
+        status = False
+
+    return dict(status=status, flags=is_duplicated)
+
+
 def validate_input(
     df,
     date_begin=None,
@@ -1091,6 +1117,14 @@ def validate_input(
     dict_unique = check_unique(df)
     logger.info(f"[Uniqueness] status: {dict_unique['status']} (Success if True)")
     validation_status["unique"] = dict_unique
+
+    # check internal duplication by coordinates
+    logger.info("[Internal duplication] Checking internal duplication by coordinates")
+    dict_internal_dup = check_internal_duplicate(df)
+    logger.info(
+        f"[Internal duplication] status: {dict_internal_dup['status']} (Success if True)"
+    )
+    validation_status["internal_duplication"] = dict_internal_dup
 
     if (
         validation_status["required_keys"]["status"]

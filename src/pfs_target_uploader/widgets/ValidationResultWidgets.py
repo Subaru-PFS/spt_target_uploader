@@ -76,6 +76,7 @@ class ValidationResultWidgets:
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.info_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_str = pn.pane.Markdown("", max_width=self.box_width)
@@ -83,6 +84,7 @@ class ValidationResultWidgets:
         self.info_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.error_table_str = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
@@ -110,6 +112,10 @@ class ValidationResultWidgets:
         )
 
         self.error_table_dups = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+
+        self.warning_table_intdups = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
         )
 
@@ -142,12 +148,14 @@ class ValidationResultWidgets:
             self.warning_text_vals,
             self.warning_text_flux,
             self.warning_text_visibility,
+            self.warning_text_intdups,
             self.info_text_keys,
             self.info_text_str,
             self.info_text_vals,
             self.info_text_flux,
             self.info_text_visibility,
             self.info_text_dups,
+            self.info_text_intdups,
         ]:
             t.object = ""
 
@@ -160,6 +168,7 @@ class ValidationResultWidgets:
             self.error_table_visibility,
             self.warning_table_visibility,
             self.error_table_dups,
+            self.warning_table_intdups,
         ]:
             if t.value is not None:
                 t.value[0:0]
@@ -439,6 +448,35 @@ class ValidationResultWidgets:
             self.error_table_dups.frozen_columns = ["index"]
             self.error_table_dups.visible = True
 
+        # internal duplication
+        if validation_status["internal_duplication"]["status"]:
+            self.append_title("info")
+            self.info_text_intdups.object += (
+                "<font size=4><u>Internal duplication by coordinate</u></font>"
+                "\n\n<font size=3>No internal duplication is detected.</font>"
+            )
+            self.info_pane.append(self.info_text_intdups)
+            self.warning_table_intdups.visible = False
+        else:
+            self.append_title("warning")
+            # add a warning message and data table for internal duplicates
+            self.warning_text_intdups.object = (
+                "<font size=4><u>Internal duplication</u></font>\n\n"
+                "<font size=3>Targets with identical coordinates or with nearby coordinates are detected in the following entries. "
+                "Please verify if these targets are not duplicates.</font>"
+            )
+            self.warning_table_intdups.frozen_columns = []
+            if self.warning_table_intdups.value is not None:
+                self.warning_table_intdups.value[0:0]
+            self.warning_table_intdups.value = df.loc[
+                validation_status["internal_duplication"]["flags"], :
+            ]
+            self.warning_pane.append(self.warning_text_intdups)
+            self.warning_pane.append(self.warning_table_intdups)
+            self.warning_table_intdups.frozen_columns = ["index"]
+            self.warning_table_intdups.visible = True
+
+        # overall success
         if (
             validation_status["required_keys"]["status"]
             and validation_status["str"]["status"]
