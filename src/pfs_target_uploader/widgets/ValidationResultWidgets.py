@@ -468,9 +468,11 @@ class ValidationResultWidgets:
             self.warning_table_intdups.frozen_columns = []
             if self.warning_table_intdups.value is not None:
                 self.warning_table_intdups.value[0:0]
-            self.warning_table_intdups.value = df.loc[
+            # Sort by ra and dec for easier visual inspection of spatial clustering
+            df_intdups = df.loc[
                 validation_status["internal_duplication"]["flags"], :
-            ]
+            ].sort_values(by=["ra", "dec"])
+            self.warning_table_intdups.value = df_intdups
             self.warning_pane.append(self.warning_text_intdups)
             self.warning_pane.append(self.warning_table_intdups)
             self.warning_table_intdups.frozen_columns = ["index"]

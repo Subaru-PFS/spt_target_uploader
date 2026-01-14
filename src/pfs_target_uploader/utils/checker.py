@@ -992,7 +992,9 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
-def check_internal_duplicate(df, sep=1.0 * u.arcsec, logger=logger):
+def check_internal_duplicate(
+    df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
+) -> dict:
 
     df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
         df,

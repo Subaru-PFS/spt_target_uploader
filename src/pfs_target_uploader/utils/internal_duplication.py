@@ -10,6 +10,8 @@ from loguru import logger
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
 
+# Tolerance for exact coordinate match (0.00001 arcsec ≈ 0.05 milliarcsec)
+# Well below typical astrometric precision (~10 mas for Gaia)
 EXACT_DUPLICATE_TOLERANCE = 1e-5  # arcsec
 
 
@@ -53,7 +55,7 @@ def _cluster_with_agglomerative(
     nn_separations = np.full(n_points, np.nan)
 
     # Step 1: Find candidate neighbors within max_cluster_diameter
-    logger.info(
+    logger.debug(
         f"Searching for neighbors within {max_cluster_diameter:.6f} deg for {n_points} points..."
     )
     idx1, idx2, seps_cluster, _ = search_around_sky(
@@ -74,7 +76,7 @@ def _cluster_with_agglomerative(
     has_neighbors = np.unique(np.concatenate([idx1_cluster, idx2_cluster]))
     n_with_neighbors = len(has_neighbors)
 
-    logger.info(
+    logger.debug(
         f"Found {n_with_neighbors} points with neighbors ({n_with_neighbors/n_points*100:.1f}%)"
     )
 
@@ -149,11 +151,9 @@ def _cluster_with_agglomerative(
         distances_rad = pairwise_distances(coords_rad, metric="haversine")
 
         # Set distance to infinity for points with different medium resolution
-        for i in range(comp_size):
-            for j in range(i + 1, comp_size):
-                if comp_is_mr[i] != comp_is_mr[j]:
-                    distances_rad[i, j] = np.inf
-                    distances_rad[j, i] = np.inf
+        # Vectorized: create mask for all pairs with different resolution
+        diff_resolution_mask = comp_is_mr[:, None] != comp_is_mr[None, :]
+        distances_rad[diff_resolution_mask] = np.inf
 
         # Cluster with complete linkage
         agg = AgglomerativeClustering(
@@ -190,16 +190,34 @@ def _cluster_with_agglomerative(
     valid = not_self & same_resolution
     idx1, idx2, seps = idx1[valid], idx2[valid], seps[valid]
 
-    # Compute nearest neighbor separation within each cluster
-    for cluster_id in np.unique(labels[labels >= 0]):
-        cluster_mask = labels == cluster_id
-        cluster_points = np.where(cluster_mask)[0]
+    # Compute nearest neighbor separation - optimized vectorized approach
+    # Only compute for points that are in clusters (labels >= 0)
+    clustered_mask = labels >= 0
+    clustered_indices = np.where(clustered_mask)[0]
 
-        for point_idx in cluster_points:
-            matches_mask = (idx1 == point_idx) | (idx2 == point_idx)
-            if np.any(matches_mask):
-                point_seps = seps[matches_mask]
-                nn_separations[point_idx] = np.min(point_seps.arcsec)
+    if len(clustered_indices) > 0:
+        seps_arcsec = seps.arcsec
+
+        # Create temporary dataframe for efficient groupby operation
+        df_pairs = pd.DataFrame({
+            'idx1': idx1,
+            'idx2': idx2,
+            'sep': seps_arcsec
+        })
+
+        # For each point, find its minimum separation (considering both idx1 and idx2)
+        # Stack idx1 and idx2 to treat them symmetrically
+        df_stacked = pd.concat([
+            df_pairs[['idx1', 'sep']].rename(columns={'idx1': 'idx'}),
+            df_pairs[['idx2', 'sep']].rename(columns={'idx2': 'idx'})
+        ])
+
+        # Filter to only clustered points and compute minimum
+        df_stacked = df_stacked[df_stacked['idx'].isin(clustered_indices)]
+        min_seps = df_stacked.groupby('idx')['sep'].min()
+
+        # Assign minimum separations back to the array
+        nn_separations[min_seps.index] = min_seps.values
 
     # Statistics
     n_clusters = len(np.unique(labels[labels >= 0]))
@@ -266,32 +284,44 @@ def _find_duplicates_with_separation(
             f"is_medium_resolution={len(is_medium_resolution)}"
         )
 
+    # Initialize result arrays for all points
+    labels = np.full(n_points, -1, dtype=int)
+    nn_separations = np.full(n_points, np.nan)
+
     # Check for invalid values
-    if np.any(~np.isfinite(ra)) or np.any(~np.isfinite(dec)):
-        n_invalid = np.sum(~np.isfinite(ra)) + np.sum(~np.isfinite(dec))
+    valid = np.isfinite(ra) & np.isfinite(dec)
+
+    if not np.all(valid):
+        n_invalid = np.sum(~valid)
         logger.warning(f"Found {n_invalid} non-finite coordinate values (NaN/inf)")
-        # Filter out invalid coordinates
-        valid = np.isfinite(ra) & np.isfinite(dec)
+
         if not np.any(valid):
             raise ValueError("No valid coordinates found")
-        logger.warning(f"Filtering to {np.sum(valid)} valid coordinates")
-        ra = ra[valid]
-        dec = dec[valid]
-        is_medium_resolution = is_medium_resolution[valid]
-        n_points = len(ra)
 
-    # Validate coordinate ranges
-    if np.any((ra < 0) | (ra > 360)):
+        logger.warning(f"Processing {np.sum(valid)} valid coordinates, marking {n_invalid} as isolated")
+
+        # Process only valid coordinates
+        valid_ra = ra[valid]
+        valid_dec = dec[valid]
+        valid_is_mr = is_medium_resolution[valid]
+    else:
+        # All coordinates are valid
+        valid_ra = ra
+        valid_dec = dec
+        valid_is_mr = is_medium_resolution
+
+    # Validate coordinate ranges (only for valid coordinates)
+    if np.any((valid_ra < 0) | (valid_ra > 360)):
         raise ValueError(
-            f"RA must be in range [0, 360], found values in [{ra.min()}, {ra.max()}]"
+            f"RA must be in range [0, 360], found values in [{valid_ra.min()}, {valid_ra.max()}]"
         )
-    if np.any((dec < -90) | (dec > 90)):
+    if np.any((valid_dec < -90) | (valid_dec > 90)):
         raise ValueError(
-            f"Dec must be in range [-90, 90], found values in [{dec.min()}, {dec.max()}]"
+            f"Dec must be in range [-90, 90], found values in [{valid_dec.min()}, {valid_dec.max()}]"
         )
 
-    # Create SkyCoord objects
-    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame="icrs")
+    # Create SkyCoord objects for valid coordinates
+    coords = SkyCoord(ra=valid_ra * u.deg, dec=valid_dec * u.deg, frame="icrs")
 
     # Set default max_cluster_diameter
     if max_cluster_diameter is None:
@@ -304,13 +334,18 @@ def _find_duplicates_with_separation(
         )
 
     # Use AgglomerativeClustering for strict diameter constraint
-    labels, nn_separations = _cluster_with_agglomerative(
+    valid_labels, valid_nn_separations = _cluster_with_agglomerative(
         coords,
-        is_medium_resolution,
+        valid_is_mr,
         max_separation,
         max_cluster_diameter,
         max_points_for_agglomerative,
     )
+
+    # Map results back to original indices
+    labels[valid] = valid_labels
+    nn_separations[valid] = valid_nn_separations
+    # Invalid coordinates remain as -1 and nan (already initialized)
 
     return labels, nn_separations
 
@@ -334,7 +369,6 @@ def dupcheck_internal(
         DataFrame containing target data for a single proposal
     sep : astropy.units.Quantity
         Maximum angular separation for considering duplicates (default: 1 arcsec)
-        Output directory path (default: ".")
     max_cluster_diameter : astropy.units.Quantity or None
         Maximum cluster diameter (angular units).
         If None: defaults to 2 * sep
@@ -373,12 +407,14 @@ def dupcheck_internal(
     logger.debug(f"{len(nn_separations)=}")
 
     # Group df by labels for duplicated objects
-    df["dup_label"] = labels
+    # Create a copy to avoid modifying the original DataFrame
+    df_result = df.copy()
+    df_result["dup_label"] = labels
 
-    df_dups = df.loc[df["dup_label"] >= 0, :].copy()
+    df_dups = df_result.loc[df_result["dup_label"] >= 0, :].copy()
     # Add duplication count to df_dups
     df_dups["dup_count"] = df_dups.groupby("dup_label")["dup_label"].transform("count")
-    df_dups["nn_sep"] = nn_separations[df["dup_label"] >= 0]
+    df_dups["nn_sep"] = nn_separations[df_result["dup_label"] >= 0]
     # Sort df_dups by dup_count and dup_label
     df_dups.sort_values(by=["dup_count", "dup_label"], inplace=True)
 
@@ -395,7 +431,7 @@ def dupcheck_internal(
         :,
     ].copy()
 
-    df_isolated = df.loc[df["dup_label"] == -1, :].copy()
+    df_isolated = df_result.loc[df_result["dup_label"] == -1, :].copy()
     df_isolated["dup_count"] = 1
     df_isolated["dup_label"] = -1
     df_isolated["nn_sep"] = np.nan
