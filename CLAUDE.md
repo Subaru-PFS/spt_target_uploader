@@ -306,17 +306,39 @@ PPP includes optional detailed timing measurement to identify performance bottle
 The visibility checker has been optimized for clustered targets using HEALPix tessellation:
 
 - **Algorithm**: Groups targets by HEALPix pixels (nside=32, ~110 arcmin resolution)
-- **Optimization**: Uses maximum exptime per pixel, reducing calculations from N targets to N_pixels << N
+  - Uses first target's coordinates as representative for each pixel (conservative approximation)
+  - Calculates total observable time across observation period for each pixel
+  - Compares each target's exptime against its pixel's total observable time
+- **Optimization**: Reduces calculations from N targets to N_pixels << N (typically 10-100x fewer)
 - **Performance**: Provides significant speedup (5-50x) for spatially clustered target lists
-- **Implementation**: `visibility_checker_healpix()` in `utils/checker.py`
+- **Implementation**: `visibility_checker_healpix()` in `utils/checker.py` (RECOMMENDED)
 - **Usage**: Enabled by default; controllable via `healpix=True/False` parameter
 - **Time Resolution**: Uses 15-minute ephemeris precision, optimized for 6-month observation periods
+- **Correctness**: Fixed in PR #411 to correctly handle targets with small exptime in partially-observable pixels
 
 ### Visibility Checker Functions
 
-- `visibility_checker_vec()`: Original per-target method (slower but exact)
-- `visibility_checker_healpix()`: HEALPix-optimized method (default)
-- `check_visibility()`: Wrapper function with method selection
+Three implementations available with varying performance characteristics:
+
+- **`visibility_checker()`** (LEGACY): Original per-target method (slowest but exact)
+  - Sequential processing of each target
+  - Kept for testing and validation purposes
+  - Use only for verification or small target lists
+
+- **`visibility_checker_vec()`** (LEGACY): Vectorized method with early exit optimization
+  - Uses `np.vectorize` and observation period splitting
+  - Faster than original but slower than HEALPix
+  - Kept for testing and validation purposes
+
+- **`visibility_checker_healpix()`** (RECOMMENDED): HEALPix-optimized method
+  - Default implementation for production use
+  - 5-50x faster than legacy implementations
+  - Correctly handles partial observability scenarios
+  - Conservative approximation ensures no overestimation of observability
+
+- **`check_visibility()`**: Wrapper function with automatic method selection
+  - Defaults to HEALPix implementation
+  - Provides consistent interface across all methods
 
 ## Development Notes
 
