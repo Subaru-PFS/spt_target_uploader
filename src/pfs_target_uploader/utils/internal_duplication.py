@@ -42,6 +42,11 @@ def _cluster_with_agglomerative(
         Maximum separation in degrees for nearest neighbor calculation
     max_cluster_diameter : float
         Maximum cluster diameter in degrees
+    max_points_for_agglomerative : int or None
+        Maximum number of points allowed for AgglomerativeClustering per
+        connected component. If a component exceeds this limit, a ValueError
+        is raised. If None, no limit is applied. This parameter exists to
+        prevent excessive memory usage from large distance matrices.
 
     Returns:
     --------
@@ -422,7 +427,10 @@ def dupcheck_internal(
     max_dups = df_dups["dup_count"].max()
     max_dups = max_dups if np.isfinite(max_dups) else 0
 
-    logger.info(f"Maximum duplication count: {max_dups}")
+    if max_dups == 0:
+        logger.info("No duplicates found")
+    else:
+        logger.info(f"Maximum duplication count: {max_dups}")
 
     # Separate exact duplicates (within tolerance) from near duplicates
     df_dups_exact = df_dups.loc[df_dups["nn_sep"] < EXACT_DUPLICATE_TOLERANCE, :].copy()

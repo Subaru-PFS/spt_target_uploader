@@ -995,7 +995,37 @@ def check_unique(df, logger=logger):
 def check_internal_duplicate(
     df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
 ) -> dict:
+    """
+    Check for internal duplicate or clustered targets within a single input table.
 
+    This function identifies exact and near-duplicate targets (within ``sep``)
+    based on sky position and returns a boolean mask of duplicated targets
+    together with the nearest-neighbour separation for each.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input target table. The ``"ob_code"`` column must uniquely identify
+        each target. This uniqueness should be enforced by running
+        :func:`check_unique` before calling this function.
+    sep : astropy.units.Quantity, optional
+        Maximum angular separation used to define near-duplicates.
+        Default is 1.0 arcsec (PFS fiber diameter).
+    logger : loguru.Logger, optional
+        Logger instance used for reporting.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys:
+
+        - ``"status"``: ``True`` if no internal duplicates or clusters are
+          found, otherwise ``False``.
+        - ``"flags"``: a boolean array of the same length as ``df`` where
+          ``True`` marks duplicated targets and ``False`` marks isolated ones.
+        - ``"nn_sep"``: a float array giving the nearest-neighbour separation
+          (in arcsec) for duplicated targets, and ``NaN`` for isolated ones.
+    """
     df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
         df,
         sep=sep,

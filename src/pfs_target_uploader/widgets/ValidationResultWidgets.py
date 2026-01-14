@@ -451,7 +451,7 @@ class ValidationResultWidgets:
         # internal duplication
         if validation_status["internal_duplication"]["status"]:
             self.append_title("info")
-            self.info_text_intdups.object += (
+            self.info_text_intdups.object = (
                 "<font size=4><u>Internal duplication by coordinate</u></font>"
                 "\n\n<font size=3>No internal duplication is detected.</font>"
             )
