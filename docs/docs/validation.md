@@ -122,8 +122,20 @@ Duplication of ob_code and obj_id
     are detected in the following targets.
 
 !!! success "Info message is raised for successful validation"
+
     All `ob_code` and `(obj_id, resolution)` are unique.
 
+### Duplication by coordinates
+
+Duplication within the target list is checked by comparing coordinates (ra, dec) of targets with the same resolution mode. If two or more targets are found within 1 arcsecond, they are considered as potential duplicates. If internal duplicates are detected, a warning message will be displayed along with invalid rows.
+
+!!! warning "Warning message is raised in the following case"
+
+    Targets with identical coordinates or with nearby coordinates are detected in the following entries. Please verify if these targets are not duplicates.
+
+!!! success "Info message is shown for successful validation"
+
+    No internal duplication is detected.
 
 ## Validation Results
 

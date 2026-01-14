@@ -28,6 +28,7 @@ from . import (
     required_keys,
     target_datatype,
 )
+from .internal_duplication import dupcheck_internal
 
 warnings.filterwarnings("ignore")
 
@@ -1077,6 +1078,74 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
+def check_internal_duplicate(
+    df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
+) -> dict:
+    """
+    Check for internal duplicate or clustered targets within a single input table.
+
+    This function identifies exact and near-duplicate targets (within ``sep``)
+    based on sky position and returns a boolean mask of duplicated targets
+    together with the nearest-neighbour separation for each.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input target table. The ``"ob_code"`` column must uniquely identify
+        each target. This uniqueness should be enforced by running
+        :func:`check_unique` before calling this function.
+    sep : astropy.units.Quantity, optional
+        Maximum angular separation used to define near-duplicates.
+        Default is 1.0 arcsec (PFS fiber diameter).
+    logger : loguru.Logger, optional
+        Logger instance used for reporting.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys:
+
+        - ``"status"``: ``True`` if no internal duplicates or clusters are
+          found, otherwise ``False``.
+        - ``"flags"``: a boolean array of the same length as ``df`` where
+          ``True`` marks duplicated targets and ``False`` marks isolated ones.
+        - ``"nn_sep"``: a float array giving the nearest-neighbour separation
+          (in arcsec) for duplicated targets, and ``NaN`` for isolated ones.
+    """
+    df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
+        df,
+        sep=sep,
+        max_cluster_diameter=1.0 * u.arcsec,  # PFS fiber diameter
+        max_points_for_agglomerative=None,
+    )
+
+    # Combine all duplicates (exact + near) with nn_sep information
+    df_dups_all = pd.concat([df_dups_exact, df_dups_near], ignore_index=False)
+
+    # Initialize output arrays (use len(df) to avoid index assumptions)
+    is_duplicated = np.ones(len(df), dtype=bool)
+    nn_sep_array = np.full(len(df), np.nan)
+
+    # Vectorized: mark isolated targets as not duplicated using isin() - O(n)
+    isolated_mask = df["ob_code"].isin(df_isolated["ob_code"])
+    is_duplicated[isolated_mask.to_numpy()] = False
+
+    # Vectorized: assign nn_sep for duplicated targets using map() - O(n)
+    if not df_dups_all.empty:
+        nn_sep_map = df_dups_all.set_index("ob_code")["nn_sep"]
+        nn_sep_series = df["ob_code"].map(nn_sep_map)
+        nn_sep_array = nn_sep_series.to_numpy()
+
+    if len(df) == len(df_isolated):
+        logger.info("No duplicated or clustered targets found internally.")
+        status = True
+    else:
+        logger.warning("Duplicated or clustered targets found internally.")
+        status = False
+
+    return dict(status=status, flags=is_duplicated, nn_sep=nn_sep_array)
+
+
 def validate_input(
     df,
     date_begin=None,
@@ -1177,6 +1246,14 @@ def validate_input(
     dict_unique = check_unique(df)
     logger.info(f"[Uniqueness] status: {dict_unique['status']} (Success if True)")
     validation_status["unique"] = dict_unique
+
+    # check internal duplication by coordinates
+    logger.info("[Internal duplication] Checking internal duplication by coordinates")
+    dict_internal_dup = check_internal_duplicate(df)
+    logger.info(
+        f"[Internal duplication] status: {dict_internal_dup['status']} (Success if True)"
+    )
+    validation_status["internal_duplication"] = dict_internal_dup
 
     if (
         validation_status["required_keys"]["status"]

@@ -76,6 +76,7 @@ class ValidationResultWidgets:
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.info_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_str = pn.pane.Markdown("", max_width=self.box_width)
@@ -83,6 +84,7 @@ class ValidationResultWidgets:
         self.info_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.error_table_str = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
@@ -110,6 +112,10 @@ class ValidationResultWidgets:
         )
 
         self.error_table_dups = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+
+        self.warning_table_intdups = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
         )
 
@@ -142,12 +148,14 @@ class ValidationResultWidgets:
             self.warning_text_vals,
             self.warning_text_flux,
             self.warning_text_visibility,
+            self.warning_text_intdups,
             self.info_text_keys,
             self.info_text_str,
             self.info_text_vals,
             self.info_text_flux,
             self.info_text_visibility,
             self.info_text_dups,
+            self.info_text_intdups,
         ]:
             t.object = ""
 
@@ -160,6 +168,7 @@ class ValidationResultWidgets:
             self.error_table_visibility,
             self.warning_table_visibility,
             self.error_table_dups,
+            self.warning_table_intdups,
         ]:
             if t.value is not None:
                 t.value[0:0]
@@ -439,6 +448,66 @@ class ValidationResultWidgets:
             self.error_table_dups.frozen_columns = ["index"]
             self.error_table_dups.visible = True
 
+        # internal duplication
+        if validation_status["internal_duplication"]["status"]:
+            self.append_title("info")
+            self.info_text_intdups.object = (
+                "<font size=4><u>Internal duplication by coordinate</u></font>"
+                "\n\n<font size=3>No internal duplication is detected.</font>"
+            )
+            self.info_pane.append(self.info_text_intdups)
+            self.warning_table_intdups.visible = False
+        else:
+            self.append_title("warning")
+            # add a warning message and data table for internal duplicates
+            self.warning_text_intdups.object = (
+                "<font size=4><u>Internal duplication</u></font>\n\n"
+                "<font size=3>Targets with identical coordinates or with nearby coordinates with the same resolution mode are detected in the following targets. "
+                "Please verify if these targets are not duplicates.</font>"
+            )
+            self.warning_table_intdups.frozen_columns = []
+            if self.warning_table_intdups.value is not None:
+                self.warning_table_intdups.value[0:0]
+
+            # Add nn_sep column to duplicated targets
+            df_intdups = df.loc[
+                validation_status["internal_duplication"]["flags"], :
+            ].copy()
+
+            # Add nearest neighbor separation in arcsec
+            # Use a Series indexed like df to ensure correct alignment even if df
+            # has a non-sequential or non-zero-based index.
+            nn_sep_array = validation_status["internal_duplication"]["nn_sep"]
+            nn_sep_series = pd.Series(nn_sep_array, index=df.index)
+            df_intdups["separation"] = nn_sep_series.loc[df_intdups.index].values
+
+            # Sort by ra and dec for easier visual inspection of spatial clustering
+            df_intdups = df_intdups.sort_values(by=["ra", "dec"])
+
+            # Select and reorder columns for display
+            display_columns = [
+                "ob_code",
+                "obj_id",
+                "ra",
+                "dec",
+                "resolution",
+                "reference_arm",
+                "exptime",
+                "separation",
+            ]
+            # Only include columns that exist in the dataframe
+            available_columns = [
+                col for col in display_columns if col in df_intdups.columns
+            ]
+            df_intdups_display = df_intdups[available_columns]
+
+            self.warning_table_intdups.value = df_intdups_display
+            self.warning_pane.append(self.warning_text_intdups)
+            self.warning_pane.append(self.warning_table_intdups)
+            self.warning_table_intdups.frozen_columns = []
+            self.warning_table_intdups.visible = True
+
+        # overall success
         if (
             validation_status["required_keys"]["status"]
             and validation_status["str"]["status"]

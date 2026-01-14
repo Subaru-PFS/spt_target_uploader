@@ -210,6 +210,7 @@ The repository includes a GitHub Actions workflow that automatically updates the
 ### Key Modules
 
 - **`utils/checker.py`**: Target list validation logic with astronomical constraints
+- **`utils/internal_duplication.py`**: Internal duplicate detection using coordinate-based clustering
 - **`utils/ppp.py`**: Pointing simulation engine using clustering and optimization algorithms
 - **`utils/io.py`**: File I/O operations for target lists and data persistence
 - **`utils/db.py`**: SQLite database operations for upload ID management
@@ -232,6 +233,7 @@ All UI components are modularized in the `widgets/` directory:
 - **Gurobi**: Optimization solver for pointing simulations (requires license)
 - **qplan**: Telescope scheduling and visibility calculations
 - **HDBSCAN/DBSCAN**: Target clustering algorithms
+- **scikit-learn**: AgglomerativeClustering for internal duplicate detection
 - **HoloViews/hvPlot**: Interactive data visualization
 
 ## Configuration
@@ -256,7 +258,8 @@ UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
 1. **Upload**: Users submit target lists (CSV format) via web interface
 2. **Validation**: `checker.py` validates format, coordinates, magnitudes, and observability
    - **HEALPix Optimization**: Visibility checking uses HEALPix tessellation (nside=32, ~110 arcmin pixels) to group spatially clustered targets, significantly improving performance for large target lists
-3. **Clustering**: `ppp.py` groups targets spatially using HDBSCAN/DBSCAN algorithms  
+   - **Internal Duplication Check**: Detects targets within 1.0 arcsec (PFS fiber diameter) using AgglomerativeClustering with complete linkage
+3. **Clustering**: `ppp.py` groups targets spatially using HDBSCAN/DBSCAN algorithms
 4. **Simulation**: Pointing patterns optimized using Gurobi solver with telescope constraints
 5. **Results**: Interactive plots and downloadable files generated
 6. **Storage**: All outputs saved to timestamped directories under `data/`
@@ -339,6 +342,56 @@ Three implementations available with varying performance characteristics:
 - **`check_visibility()`**: Wrapper function with automatic method selection
   - Defaults to HEALPix implementation
   - Provides consistent interface across all methods
+
+### Internal Duplication Detection
+
+The application detects duplicate targets within a single proposal using coordinate-based clustering:
+
+#### Algorithm Overview
+
+1. **Pre-filtering**: Uses `search_around_sky()` to find candidate neighbors within `max_cluster_diameter`
+2. **Connected Components**: Applies Breadth-First Search (BFS) to identify connected components
+3. **Agglomerative Clustering**: Uses scikit-learn's `AgglomerativeClustering` with complete linkage for strict diameter control
+4. **Nearest Neighbor Calculation**: Computes minimum separation for each clustered target
+
+#### Parameters
+
+- **`sep`**: Maximum separation for nearest neighbor search (default: 1.0 arcsec = PFS fiber diameter)
+- **`max_cluster_diameter`**: Maximum cluster diameter (default: explicitly set to 1.0 arcsec to match fiber diameter)
+- **`EXACT_DUPLICATE_TOLERANCE`**: Threshold for exact vs near duplicates (1e-5 arcsec ≈ 0.05 mas)
+
+#### Key Features
+
+- **Complete Linkage**: Ensures cluster diameter ≤ threshold (stricter than single/average linkage)
+- **Resolution Separation**: L-mode and M-mode targets are never clustered together
+- **Optimized Performance**: BFS-based connected component detection reduces memory usage
+- **Memory Safety**: Optional `max_points_for_agglomerative` parameter prevents excessive memory consumption
+
+#### Implementation
+
+- **Core Logic**: `internal_duplication.py`
+  - `_cluster_with_agglomerative()`: Main clustering algorithm with BFS optimization
+  - `_find_duplicates_with_separation()`: Handles coordinate validation and result mapping
+  - `dupcheck_internal()`: Public API returning isolated, exact duplicate, and near duplicate DataFrames
+- **Validation Integration**: `checker.py`
+  - `check_internal_duplicate()`: Called during validation pipeline
+  - Returns status flags and nearest neighbor separations for UI display
+- **UI Display**: `ValidationResultWidgets.py`
+  - Shows duplicate targets with separation distances in tabular format
+  - Displays: ob_code, obj_id, ra, dec, resolution, reference_arm, separation
+
+#### Performance Characteristics
+
+- **Best Case**: O(n) when most targets are isolated (no neighbors within threshold)
+- **Worst Case**: O(n²) for distance matrix computation within large connected components
+- **Memory**: O(k²) per connected component, where k = component size
+- **Typical**: Efficient for spatially distributed targets (typical astronomical surveys)
+
+#### Example Behavior
+
+- **Targets 0.5" apart**: Clustered together, flagged as duplicates, separation = 0.5"
+- **Targets 1.5" apart**: Not clustered (exceeds max_cluster_diameter = 1.0"), treated as isolated
+- **Different resolutions**: L-mode and M-mode targets at same position are treated as separate (not duplicates)
 
 ## Development Notes
 
