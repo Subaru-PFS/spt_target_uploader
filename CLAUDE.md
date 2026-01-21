@@ -117,14 +117,17 @@ pfs-uploader-cli validate target_list.csv
 # Validate with flux range check (AB magnitude limits)
 pfs-uploader-cli validate target_list.csv --min-mag 10.0 --max-mag 30.0
 
+# Validate queue targets with magnitude limits
+pfs-uploader-cli validate target_list.csv --obs-type queue --min-mag 10.0 --max-mag 30.0
+
 # Validate filler targets with different bright limit
-pfs-uploader-cli validate target_list.csv --obs-type filler --min-mag 10.0 --max-mag 30.0 --min-mag-filler 15.0
+pfs-uploader-cli validate target_list.csv --obs-type filler --min-mag 15.0 --max-mag 30.0
 
 # Run pointing simulation
-pfs-uploader-cli simulate target_list.csv --obstype queue --output-dir output/
+pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/
 
 # Run pointing simulation with flux range check
-pfs-uploader-cli simulate target_list.csv --obstype queue --min-mag 10.0 --max-mag 30.0
+pfs-uploader-cli simulate target_list.csv --obs-type queue --min-mag 10.0 --max-mag 30.0
 ```
 
 ### Docker and Deployment
