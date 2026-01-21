@@ -407,7 +407,13 @@ class ValidationResultWidgets:
 
         # Flux values
         if validation_status["flux_values"]["status"]:
-            # Note: info_text_flux is already appended to info_pane in flux_columns section
+            # Ensure info_text_flux is visible in the info pane before appending text
+            if self.info_text_flux not in self.info_pane:
+                self.append_title("info")
+                # Provide a basic header if none was set by the flux-columns section
+                if not getattr(self.info_text_flux, "object", None):
+                    self.info_text_flux.object = "<font size=4><u>Flux information</u></font>"
+                self.info_pane.append(self.info_text_flux)
             self.info_text_flux.object += "\n\n<font size=3>Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).</font>"
         else:
             self.append_title("warning")
