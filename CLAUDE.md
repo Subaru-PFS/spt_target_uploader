@@ -264,9 +264,10 @@ PPP_QUIET=1                         # Suppress verbose PPP output
 PPP_TIMING_VERBOSE=0                # PPP timing logs (0=off, 1=on)
 LOG_LEVEL="INFO"                    # Logging verbosity
 UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
-MIN_FLUXMAG=""                      # Minimum AB mag (bright limit, optional)
-MIN_FLUXMAG_FILLER=""               # Min AB mag for filler obs_type (optional, falls back to MIN_FLUXMAG)
-MAX_FLUXMAG=""                      # Maximum AB mag (faint limit, optional)
+MIN_FLUXMAG_QUEUE=""                # Min AB mag for queue obs_type (bright limit, optional)
+MIN_FLUXMAG_CLASSICAL=""            # Min AB mag for classical obs_type (bright limit, optional)
+MIN_FLUXMAG_FILLER=""               # Min AB mag for filler obs_type (bright limit, optional)
+MAX_FLUXMAG=""                      # Max AB mag (faint limit, optional, shared across all modes)
 ```
 
 ## Data Flow
@@ -275,7 +276,7 @@ MAX_FLUXMAG=""                      # Maximum AB mag (faint limit, optional)
 2. **Validation**: `checker.py` validates format, coordinates, magnitudes, and observability
    - **HEALPix Optimization**: Visibility checking uses HEALPix tessellation (nside=32, ~110 arcmin pixels) to group spatially clustered targets, significantly improving performance for large target lists
    - **Internal Duplication Check**: Detects targets within 1.0 arcsec (PFS fiber diameter) using AgglomerativeClustering with complete linkage
-   - **Flux Range Check**: Optional validation of flux values against AB magnitude limits (MIN_FLUXMAG/MAX_FLUXMAG) to identify targets that may be too bright or too faint
+   - **Flux Range Check**: Optional validation of flux values against AB magnitude limits (MIN_FLUXMAG_QUEUE/CLASSICAL/FILLER for bright limit, MAX_FLUXMAG for faint limit) to identify targets that may be too bright or too faint for the specified observation mode
 3. **Clustering**: `ppp.py` groups targets spatially using HDBSCAN/DBSCAN algorithms
 4. **Simulation**: Pointing patterns optimized using Gurobi solver with telescope constraints
 5. **Results**: Interactive plots and downloadable files generated

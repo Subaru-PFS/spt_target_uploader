@@ -39,16 +39,23 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
 
 
 def _get_min_fluxmag_for_obstype(
-    obs_type: str, min_fluxmag: float | None, min_fluxmag_filler: float | None
+    obs_type: str,
+    min_fluxmag_queue: float | None,
+    min_fluxmag_classical: float | None,
+    min_fluxmag_filler: float | None,
 ) -> float | None:
     """Select appropriate minimum flux magnitude based on observation type.
 
-    For 'filler' obs_type, returns min_fluxmag_filler (which may be None).
-    For other obs_types, returns min_fluxmag.
+    Returns the mode-specific minimum flux magnitude (brightest limit).
+    Returns None if the corresponding config is not set.
     """
-    if obs_type == "filler":
+    if obs_type == "queue":
+        return min_fluxmag_queue
+    elif obs_type == "classical":
+        return min_fluxmag_classical
+    elif obs_type == "filler":
         return min_fluxmag_filler
-    return min_fluxmag
+    return None
 
 
 def target_uploader_app(use_panel_cli=False):
@@ -107,21 +114,23 @@ def target_uploader_app(use_panel_cli=False):
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
 
     # Flux range check parameters (AB magnitude)
-    min_fluxmag = None
-    max_fluxmag = None
-    if "MIN_FLUXMAG" in config.keys() and config["MIN_FLUXMAG"] != "":
+    # Load mode-specific minimum flux magnitudes
+    min_fluxmag_queue = None
+    if "MIN_FLUXMAG_QUEUE" in config.keys() and config["MIN_FLUXMAG_QUEUE"] != "":
         try:
-            min_fluxmag = float(config["MIN_FLUXMAG"])
-            logger.info(f"MIN_FLUXMAG is set to {min_fluxmag}")
+            min_fluxmag_queue = float(config["MIN_FLUXMAG_QUEUE"])
+            logger.info(f"MIN_FLUXMAG_QUEUE is set to {min_fluxmag_queue}")
         except ValueError:
-            logger.warning(f"Invalid MIN_FLUXMAG value: {config['MIN_FLUXMAG']}")
-    if "MAX_FLUXMAG" in config.keys() and config["MAX_FLUXMAG"] != "":
+            logger.warning(f"Invalid MIN_FLUXMAG_QUEUE value: {config['MIN_FLUXMAG_QUEUE']}")
+
+    min_fluxmag_classical = None
+    if "MIN_FLUXMAG_CLASSICAL" in config.keys() and config["MIN_FLUXMAG_CLASSICAL"] != "":
         try:
-            max_fluxmag = float(config["MAX_FLUXMAG"])
-            logger.info(f"MAX_FLUXMAG is set to {max_fluxmag}")
+            min_fluxmag_classical = float(config["MIN_FLUXMAG_CLASSICAL"])
+            logger.info(f"MIN_FLUXMAG_CLASSICAL is set to {min_fluxmag_classical}")
         except ValueError:
-            logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
-    # Load MIN_FLUXMAG_FILLER (optional, falls back to MIN_FLUXMAG)
+            logger.warning(f"Invalid MIN_FLUXMAG_CLASSICAL value: {config['MIN_FLUXMAG_CLASSICAL']}")
+
     min_fluxmag_filler = None
     if "MIN_FLUXMAG_FILLER" in config.keys() and config["MIN_FLUXMAG_FILLER"] != "":
         try:
@@ -129,6 +138,15 @@ def target_uploader_app(use_panel_cli=False):
             logger.info(f"MIN_FLUXMAG_FILLER is set to {min_fluxmag_filler}")
         except ValueError:
             logger.warning(f"Invalid MIN_FLUXMAG_FILLER value: {config['MIN_FLUXMAG_FILLER']}")
+
+    # Maximum flux magnitude (shared across all observation types)
+    max_fluxmag = None
+    if "MAX_FLUXMAG" in config.keys() and config["MAX_FLUXMAG"] != "":
+        try:
+            max_fluxmag = float(config["MAX_FLUXMAG"])
+            logger.info(f"MAX_FLUXMAG is set to {max_fluxmag}")
+        except ValueError:
+            logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -371,7 +389,10 @@ def target_uploader_app(use_panel_cli=False):
 
         # Select min_mag based on observation type
         effective_min_mag = _get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
         )
 
         validation_status, df_input, df_validated = await asyncio.to_thread(
@@ -448,7 +469,10 @@ def target_uploader_app(use_panel_cli=False):
 
         # Select min_mag based on observation type
         effective_min_mag = _get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
         )
 
         validation_status, df_input_, df_validated = await asyncio.to_thread(
@@ -594,7 +618,10 @@ def target_uploader_app(use_panel_cli=False):
         # from callback to another function (sorry)
         # Select min_mag based on observation type
         effective_min_mag = _get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
         )
 
         validation_status, df_input, df_validated = await asyncio.to_thread(
