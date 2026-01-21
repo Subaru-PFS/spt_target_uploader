@@ -1397,7 +1397,7 @@ def validate_input(
     else:
         logger.info("[Flux range] Skipping flux range check (no limits specified)")
         validation_status["flux_range"] = {
-            "status": True,
+            "status": None,
             "min_mag": None,
             "max_mag": None,
             "min_flux_nJy": None,
