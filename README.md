@@ -127,6 +127,11 @@ ANN_FILE="user_announcement.md"
 # The file will be created under $OUTPUT_DIR
 UPLOADID_DB="upload_id.sqlite"
 
+# Flux range validation based on AB magnitude
+# Leave empty or comment out to disable range checking
+# MIN_FLUXMAG=10.0   # Brightest allowed magnitude
+# MAX_FLUXMAG=30.0   # Faintest allowed magnitude
+
 # loggging level
 # DEBUG, INFO (default), WARNING, ERROR, or CRITICAL
 LOG_LEVEL="INFO"

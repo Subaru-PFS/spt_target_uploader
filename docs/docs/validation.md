@@ -94,6 +94,22 @@ Flux values are checked to identify potential unit errors (magnitude vs. nano-Ja
 
     This validation does not prevent submission. It serves as a reminder to verify that flux values are provided in nJy, not in other units such as magnitudes, Jy (Jansky), or mJy (milli-Jansky).
 
+### Flux range (AB magnitude)
+
+Flux values will be checked against specified AB magnitude limits to identify targets that may be too bright or too faint for observations.
+
+!!! warning "Warning message is raised as follows"
+
+    `N/M` flux values are brighter than AB magnitude `XX.X` / fainter than AB magnitude `XX.X` / outside AB magnitude range [`XX.X`, `XX.X`]. Please verify that these targets are intended to be outside this range.
+
+!!! success "Info message is shown as follows"
+
+    All flux values are within AB magnitude range [`XX.X`, `XX.X`] / not brighter than AB magnitude `XX.X` / not fainter than AB magnitude `XX.X`.
+
+!!! note "This is a warning-only check"
+
+    This validation does not prevent submission. It serves as a reminder to verify that targets outside the specified magnitude range are intentional. However, targets with flux values outside the specified range may be removed during the observation planning process.
+
 ### Target visibility
 
 Target visibility is checked by comparing the requested exposure time is shorter than the time when the target elevation is more than 30 degrees above the horizon between 18:30 and 5:30+1day. The data range can be configured in the `config` tab in the sidebar. Only visible targets will be considered for the pointing simulation. Along with the error and warning messages, invalid rows will be displayed.

@@ -80,6 +80,8 @@ $ pfs-uploader-cli simulate [OPTIONS] INPUT_LIST
 * `--single-exptime INTEGER`: Single exposure time (s).  [default: 900]
 * `--max-exec-time INTEGER`: Max execution time (s). 0 means no limit.  [default: 0]
 * `--obs-type [queue|classical|filler]`: Observation type.  [default: queue]
+* `--min-mag FLOAT`: Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit.
+* `--max-mag FLOAT`: Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit.
 * `--log-level [DEBUG|INFO|WARNING|ERROR|CRITICAL]`: Set the log level.  [default: INFO]
 * `--help`: Show this message and exit.
 
@@ -163,5 +165,7 @@ $ pfs-uploader-cli validate [OPTIONS] INPUT_LIST
 * `--date-end TEXT`: End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.
 * `--save / --no-save`: Save the validated target list in the directory specified by "--dir".  [default: no-save]
 * `--obs-type [queue|classical|filler]`: Observation type.  [default: queue]
+* `--min-mag FLOAT`: Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit.
+* `--max-mag FLOAT`: Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit.
 * `--log-level [DEBUG|INFO|WARNING|ERROR|CRITICAL]`: Set the log level.  [default: INFO]
 * `--help`: Show this message and exit.
