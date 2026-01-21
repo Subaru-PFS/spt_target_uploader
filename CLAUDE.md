@@ -117,6 +117,9 @@ pfs-uploader-cli validate target_list.csv
 # Validate with flux range check (AB magnitude limits)
 pfs-uploader-cli validate target_list.csv --min-mag 10.0 --max-mag 30.0
 
+# Validate filler targets with different bright limit
+pfs-uploader-cli validate target_list.csv --obs-type filler --min-mag 10.0 --max-mag 30.0 --min-mag-filler 15.0
+
 # Run pointing simulation
 pfs-uploader-cli simulate target_list.csv --obstype queue --output-dir output/
 
@@ -262,6 +265,7 @@ PPP_TIMING_VERBOSE=0                # PPP timing logs (0=off, 1=on)
 LOG_LEVEL="INFO"                    # Logging verbosity
 UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
 MIN_FLUXMAG=""                      # Minimum AB mag (bright limit, optional)
+MIN_FLUXMAG_FILLER=""               # Min AB mag for filler obs_type (optional, falls back to MIN_FLUXMAG)
 MAX_FLUXMAG=""                      # Maximum AB mag (faint limit, optional)
 ```
 

@@ -89,6 +89,13 @@ def validate(
             help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
         ),
     ] = None,
+    min_mag_filler: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for filler observation type. "
+            "Overrides --min-mag when --obs-type is 'filler'. None means fall back to --min-mag."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -108,8 +115,15 @@ def validate(
 
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
+        # Select min_mag based on observation type
+        effective_min_mag = min_mag
+        if obs_type.value == "filler":
+            effective_min_mag = min_mag_filler
+            if effective_min_mag is not None:
+                logger.info(f"Using filler-specific min_mag: {effective_min_mag}")
+
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end, min_mag=min_mag, max_mag=max_mag
+            df_input, date_begin=date_begin, date_end=date_end, min_mag=effective_min_mag, max_mag=max_mag
         )
 
     if validation_status["status"] is False:
@@ -185,6 +199,13 @@ def simulate(
             help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
         ),
     ] = None,
+    min_mag_filler: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for filler observation type. "
+            "Overrides --min-mag when --obs-type is 'filler'. None means fall back to --min-mag."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -212,8 +233,15 @@ def simulate(
         date_begin = None if date_begin is None else date.fromisoformat(date_begin)
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
+        # Select min_mag based on observation type
+        effective_min_mag = min_mag
+        if obs_type.value == "filler":
+            effective_min_mag = min_mag_filler
+            if effective_min_mag is not None:
+                logger.info(f"Using filler-specific min_mag: {effective_min_mag}")
+
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end, min_mag=min_mag, max_mag=max_mag
+            df_input, date_begin=date_begin, date_end=date_end, min_mag=effective_min_mag, max_mag=max_mag
         )
 
         if validation_status["status"] is False:

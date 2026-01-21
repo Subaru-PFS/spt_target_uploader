@@ -56,6 +56,7 @@ $ pfs-uploader-cli validate [OPTIONS] INPUT_LIST
 - `--obs-type [queue|classical|filler]`: Observation type. [default: queue]
 - `--min-mag FLOAT`: Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit.
 - `--max-mag FLOAT`: Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit.
+- `--min-mag-filler FLOAT`: Minimum AB magnitude (brightest limit) for filler observation type. Overrides --min-mag when --obs-type is &#x27;filler&#x27;. None means fall back to --min-mag.
 - `--log-level [debug|info|warning|error|critical]`: Set the log level. [default: INFO]
 - `--help`: Show this message and exit.
 
@@ -87,6 +88,7 @@ $ pfs-uploader-cli simulate [OPTIONS] INPUT_LIST
 - `--obs-type [queue|classical|filler]`: Observation type. [default: queue]
 - `--min-mag FLOAT`: Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit.
 - `--max-mag FLOAT`: Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit.
+- `--min-mag-filler FLOAT`: Minimum AB magnitude (brightest limit) for filler observation type. Overrides --min-mag when --obs-type is &#x27;filler&#x27;. None means fall back to --min-mag.
 - `--log-level [debug|info|warning|error|critical]`: Set the log level. [default: INFO]
 - `--help`: Show this message and exit.
 

@@ -38,6 +38,19 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
         w.disabled = disabled
 
 
+def _get_min_fluxmag_for_obstype(
+    obs_type: str, min_fluxmag: float | None, min_fluxmag_filler: float | None
+) -> float | None:
+    """Select appropriate minimum flux magnitude based on observation type.
+
+    For 'filler' obs_type, returns min_fluxmag_filler (which may be None).
+    For other obs_types, returns min_fluxmag.
+    """
+    if obs_type == "filler":
+        return min_fluxmag_filler
+    return min_fluxmag
+
+
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
@@ -108,6 +121,14 @@ def target_uploader_app(use_panel_cli=False):
             logger.info(f"MAX_FLUXMAG is set to {max_fluxmag}")
         except ValueError:
             logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
+    # Load MIN_FLUXMAG_FILLER (optional, falls back to MIN_FLUXMAG)
+    min_fluxmag_filler = None
+    if "MIN_FLUXMAG_FILLER" in config.keys() and config["MIN_FLUXMAG_FILLER"] != "":
+        try:
+            min_fluxmag_filler = float(config["MIN_FLUXMAG_FILLER"])
+            logger.info(f"MIN_FLUXMAG_FILLER is set to {min_fluxmag_filler}")
+        except ValueError:
+            logger.warning(f"Invalid MIN_FLUXMAG_FILLER value: {config['MIN_FLUXMAG_FILLER']}")
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -348,12 +369,17 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=min_fluxmag,
+            min_mag=effective_min_mag,
             max_mag=max_fluxmag,
         )
 
@@ -420,12 +446,17 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+        )
+
         validation_status, df_input_, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=min_fluxmag,
+            min_mag=effective_min_mag,
             max_mag=max_fluxmag,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
@@ -561,11 +592,16 @@ def target_uploader_app(use_panel_cli=False):
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
         # from callback to another function (sorry)
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value, min_fluxmag, min_fluxmag_filler
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
-            min_mag=min_fluxmag,
+            min_mag=effective_min_mag,
             max_mag=max_fluxmag,
         )
 
