@@ -148,6 +148,22 @@ def target_uploader_app(use_panel_cli=False):
         except ValueError:
             logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
 
+    # Validate magnitude range consistency for each observation mode
+    for mode_name, min_mag in [
+        ("queue", min_fluxmag_queue),
+        ("classical", min_fluxmag_classical),
+        ("filler", min_fluxmag_filler),
+    ]:
+        if min_mag is not None and max_fluxmag is not None:
+            if min_mag > max_fluxmag:
+                error_msg = (
+                    f"Configuration error for {mode_name} mode: "
+                    f"MIN_FLUXMAG_{mode_name.upper()} ({min_mag}) > MAX_FLUXMAG ({max_fluxmag}). "
+                    f"MIN_FLUXMAG should be brighter (smaller value) than MAX_FLUXMAG."
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
     logger.info(f"config params from dotenv: {config}")
 
     if os.path.exists(config["OUTPUT_DIR"]):

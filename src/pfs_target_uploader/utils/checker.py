@@ -989,6 +989,14 @@ def check_fluxrange(
     """
     bands = filter_category.keys()
 
+    # Validate magnitude range consistency
+    if min_mag is not None and max_mag is not None:
+        if min_mag > max_mag:
+            raise ValueError(
+                f"Invalid magnitude range: min_mag ({min_mag}) > max_mag ({max_mag}). "
+                f"min_mag should be brighter (smaller value) than max_mag."
+            )
+
     # Convert AB magnitude limits to nJy using astropy.units
     # Note: brighter mag (smaller number) = higher flux
     min_flux_nJy = None
