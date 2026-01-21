@@ -93,6 +93,22 @@ def target_uploader_app(use_panel_cli=False):
 
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
 
+    # Flux range check parameters (AB magnitude)
+    min_fluxmag = None
+    max_fluxmag = None
+    if "MIN_FLUXMAG" in config.keys() and config["MIN_FLUXMAG"] != "":
+        try:
+            min_fluxmag = float(config["MIN_FLUXMAG"])
+            logger.info(f"MIN_FLUXMAG is set to {min_fluxmag}")
+        except ValueError:
+            logger.warning(f"Invalid MIN_FLUXMAG value: {config['MIN_FLUXMAG']}")
+    if "MAX_FLUXMAG" in config.keys() and config["MAX_FLUXMAG"] != "":
+        try:
+            max_fluxmag = float(config["MAX_FLUXMAG"])
+            logger.info(f"MAX_FLUXMAG is set to {max_fluxmag}")
+        except ValueError:
+            logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
+
     logger.info(f"config params from dotenv: {config}")
 
     if os.path.exists(config["OUTPUT_DIR"]):
@@ -337,6 +353,8 @@ def target_uploader_app(use_panel_cli=False):
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=min_fluxmag,
+            max_mag=max_fluxmag,
         )
 
         _toggle_widgets(widget_set, disabled=False)
@@ -407,6 +425,8 @@ def target_uploader_app(use_panel_cli=False):
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=min_fluxmag,
+            max_mag=max_fluxmag,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
@@ -545,6 +565,8 @@ def target_uploader_app(use_panel_cli=False):
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            min_mag=min_fluxmag,
+            max_mag=max_fluxmag,
         )
 
         if (validation_status is None) or (not validation_status["status"]):

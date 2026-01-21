@@ -70,6 +70,8 @@ class FileInputWidgets(param.Parameterized):
         date_begin=None,
         date_end=None,
         single_exptime=900.0,
+        min_mag=None,
+        max_mag=None,
         warn_threshold=100000,
     ):
         t_start = time.time()
@@ -139,6 +141,8 @@ class FileInputWidgets(param.Parameterized):
             date_begin=date_begin,
             date_end=date_end,
             single_exptime=single_exptime,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
         t_stop = time.time()
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
