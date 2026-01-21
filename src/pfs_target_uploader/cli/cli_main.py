@@ -77,6 +77,18 @@ def validate(
         ),
     ] = False,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
+    min_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
+        ),
+    ] = None,
+    max_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -97,7 +109,11 @@ def validate(
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
+            df_input,
+            date_begin=date_begin,
+            date_end=date_end,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
 
     if validation_status["status"] is False:
@@ -161,6 +177,18 @@ def simulate(
         ),
     ] = 0,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
+    min_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
+        ),
+    ] = None,
+    max_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -189,7 +217,11 @@ def simulate(
         date_end = None if date_end is None else date.fromisoformat(date_end)
 
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
+            df_input,
+            date_begin=date_begin,
+            date_end=date_end,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
 
         if validation_status["status"] is False:

@@ -78,7 +78,7 @@ Flux columns are validated against conditions described in the [Flux Information
 
     All `ob_code`s have at least one flux information. The detected filters are the following: `<detected filter columns>`
 
-### Flux values
+### Suspicious flux values
 
 Flux values are checked to identify potential unit errors (magnitude vs. nano-Jansky). If a significant fraction (≥90%) of flux values fall in the range 10-30, a warning is issued as this range is typical for magnitudes but suspicious for nJy values.
 
@@ -93,6 +93,23 @@ Flux values are checked to identify potential unit errors (magnitude vs. nano-Ja
 !!! note "This is a warning-only check"
 
     This validation does not prevent submission. It serves as a reminder to verify that flux values are provided in nJy, not in other units such as magnitudes, Jy (Jansky), or mJy (milli-Jansky).
+
+### Flux range
+
+Flux values are additionally checked against flux/magnitude limits to identify targets that may be too bright or too faint for observations.
+The current bright magnitude limit is set to **16 AB mag for queue-mode** targets and **17 AB mag for filler-mode** targets in all provided filters.
+
+!!! warning "Warning message is raised as follows"
+
+    `N/M` flux values are brighter than AB magnitude `XX.X` / fainter than AB magnitude `XX.X` / outside AB magnitude range [`XX.X`, `XX.X`]. Please verify that these targets are intended to be outside this range.
+
+!!! success "Info message is shown as follows"
+
+    All flux values are within AB magnitude range [`XX.X`, `XX.X`] / not brighter than AB magnitude `XX.X` / not fainter than AB magnitude `XX.X`.
+
+!!! note "This is a warning-only check"
+
+    This validation does not prevent submission. It serves as a reminder to verify that targets outside the specified magnitude range are intentional. However, targets with flux values outside the specified range may be removed during the observation planning process.
 
 ### Target visibility
 

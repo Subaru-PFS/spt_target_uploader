@@ -114,8 +114,20 @@ pfs-uploader-cli clean-uid data/upload_id.sqlite
 # Validate a target list
 pfs-uploader-cli validate target_list.csv
 
+# Validate with flux range check (AB magnitude limits)
+pfs-uploader-cli validate target_list.csv --min-mag 10.0 --max-mag 30.0
+
+# Validate queue targets with magnitude limits
+pfs-uploader-cli validate target_list.csv --obs-type queue --min-mag 10.0 --max-mag 30.0
+
+# Validate filler targets with different bright limit
+pfs-uploader-cli validate target_list.csv --obs-type filler --min-mag 15.0 --max-mag 30.0
+
 # Run pointing simulation
-pfs-uploader-cli ppp target_list.csv --obstype queue --output-dir output/
+pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/
+
+# Run pointing simulation with flux range check
+pfs-uploader-cli simulate target_list.csv --obs-type queue --min-mag 10.0 --max-mag 30.0
 ```
 
 ### Docker and Deployment
@@ -210,6 +222,10 @@ The repository includes a GitHub Actions workflow that automatically updates the
 ### Key Modules
 
 - **`utils/checker.py`**: Target list validation logic with astronomical constraints
+  - Column validation, value range checks, flux validation
+  - Flux range validation against AB magnitude limits (`check_fluxrange()`)
+  - Visibility checking with HEALPix optimization
+  - Internal duplication detection
 - **`utils/internal_duplication.py`**: Internal duplicate detection using coordinate-based clustering
 - **`utils/ppp.py`**: Pointing simulation engine using clustering and optimization algorithms
 - **`utils/io.py`**: File I/O operations for target lists and data persistence
@@ -251,6 +267,10 @@ PPP_QUIET=1                         # Suppress verbose PPP output
 PPP_TIMING_VERBOSE=0                # PPP timing logs (0=off, 1=on)
 LOG_LEVEL="INFO"                    # Logging verbosity
 UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
+MIN_FLUXMAG_QUEUE=""                # Min AB mag for queue obs_type (bright limit, optional)
+MIN_FLUXMAG_CLASSICAL=""            # Min AB mag for classical obs_type (bright limit, optional)
+MIN_FLUXMAG_FILLER=""               # Min AB mag for filler obs_type (bright limit, optional)
+MAX_FLUXMAG=""                      # Max AB mag (faint limit, optional, shared across all modes)
 ```
 
 ## Data Flow
@@ -259,6 +279,7 @@ UPLOADID_DB="upload_id.sqlite"      # Upload deduplication database
 2. **Validation**: `checker.py` validates format, coordinates, magnitudes, and observability
    - **HEALPix Optimization**: Visibility checking uses HEALPix tessellation (nside=32, ~110 arcmin pixels) to group spatially clustered targets, significantly improving performance for large target lists
    - **Internal Duplication Check**: Detects targets within 1.0 arcsec (PFS fiber diameter) using AgglomerativeClustering with complete linkage
+   - **Flux Range Check**: Optional validation of flux values against AB magnitude limits (MIN_FLUXMAG_QUEUE/CLASSICAL/FILLER for bright limit, MAX_FLUXMAG for faint limit) to identify targets that may be too bright or too faint for the specified observation mode
 3. **Clustering**: `ppp.py` groups targets spatially using HDBSCAN/DBSCAN algorithms
 4. **Simulation**: Pointing patterns optimized using Gurobi solver with telescope constraints
 5. **Results**: Interactive plots and downloadable files generated

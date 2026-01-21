@@ -38,6 +38,26 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
         w.disabled = disabled
 
 
+def _get_min_fluxmag_for_obstype(
+    obs_type: str,
+    min_fluxmag_queue: float | None,
+    min_fluxmag_classical: float | None,
+    min_fluxmag_filler: float | None,
+) -> float | None:
+    """Select appropriate minimum flux magnitude based on observation type.
+
+    Returns the mode-specific minimum flux magnitude (brightest limit).
+    Returns None if the corresponding config is not set.
+    """
+    if obs_type == "queue":
+        return min_fluxmag_queue
+    elif obs_type == "classical":
+        return min_fluxmag_classical
+    elif obs_type == "filler":
+        return min_fluxmag_filler
+    return None
+
+
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
@@ -92,6 +112,57 @@ def target_uploader_app(use_panel_cli=False):
         logger.info("No upload ID database is used. Scan output directories directly.")
 
     logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
+
+    # Flux range check parameters (AB magnitude)
+    # Load mode-specific minimum flux magnitudes
+    min_fluxmag_queue = None
+    if "MIN_FLUXMAG_QUEUE" in config.keys() and config["MIN_FLUXMAG_QUEUE"] != "":
+        try:
+            min_fluxmag_queue = float(config["MIN_FLUXMAG_QUEUE"])
+            logger.info(f"MIN_FLUXMAG_QUEUE is set to {min_fluxmag_queue}")
+        except ValueError:
+            logger.warning(f"Invalid MIN_FLUXMAG_QUEUE value: {config['MIN_FLUXMAG_QUEUE']}")
+
+    min_fluxmag_classical = None
+    if "MIN_FLUXMAG_CLASSICAL" in config.keys() and config["MIN_FLUXMAG_CLASSICAL"] != "":
+        try:
+            min_fluxmag_classical = float(config["MIN_FLUXMAG_CLASSICAL"])
+            logger.info(f"MIN_FLUXMAG_CLASSICAL is set to {min_fluxmag_classical}")
+        except ValueError:
+            logger.warning(f"Invalid MIN_FLUXMAG_CLASSICAL value: {config['MIN_FLUXMAG_CLASSICAL']}")
+
+    min_fluxmag_filler = None
+    if "MIN_FLUXMAG_FILLER" in config.keys() and config["MIN_FLUXMAG_FILLER"] != "":
+        try:
+            min_fluxmag_filler = float(config["MIN_FLUXMAG_FILLER"])
+            logger.info(f"MIN_FLUXMAG_FILLER is set to {min_fluxmag_filler}")
+        except ValueError:
+            logger.warning(f"Invalid MIN_FLUXMAG_FILLER value: {config['MIN_FLUXMAG_FILLER']}")
+
+    # Maximum flux magnitude (shared across all observation types)
+    max_fluxmag = None
+    if "MAX_FLUXMAG" in config.keys() and config["MAX_FLUXMAG"] != "":
+        try:
+            max_fluxmag = float(config["MAX_FLUXMAG"])
+            logger.info(f"MAX_FLUXMAG is set to {max_fluxmag}")
+        except ValueError:
+            logger.warning(f"Invalid MAX_FLUXMAG value: {config['MAX_FLUXMAG']}")
+
+    # Validate magnitude range consistency for each observation mode
+    for mode_name, min_mag in [
+        ("queue", min_fluxmag_queue),
+        ("classical", min_fluxmag_classical),
+        ("filler", min_fluxmag_filler),
+    ]:
+        if min_mag is not None and max_fluxmag is not None:
+            if min_mag > max_fluxmag:
+                error_msg = (
+                    f"Configuration error for {mode_name} mode: "
+                    f"MIN_FLUXMAG_{mode_name.upper()} ({min_mag}) > MAX_FLUXMAG ({max_fluxmag}). "
+                    f"MIN_FLUXMAG should be brighter (smaller value) than MAX_FLUXMAG."
+                )
+                logger.error(error_msg)
+                raise ValueError(error_msg)
 
     logger.info(f"config params from dotenv: {config}")
 
@@ -332,11 +403,21 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=max_fluxmag,
         )
 
         _toggle_widgets(widget_set, disabled=False)
@@ -402,11 +483,21 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
+        )
+
         validation_status, df_input_, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=max_fluxmag,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
@@ -541,10 +632,20 @@ def target_uploader_app(use_panel_cli=False):
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
         # from callback to another function (sorry)
+        # Select min_mag based on observation type
+        effective_min_mag = _get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            min_fluxmag_queue,
+            min_fluxmag_classical,
+            min_fluxmag_filler,
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            min_mag=effective_min_mag,
+            max_mag=max_fluxmag,
         )
 
         if (validation_status is None) or (not validation_status["status"]):

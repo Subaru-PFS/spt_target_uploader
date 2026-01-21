@@ -115,7 +115,9 @@ Flux columns must conform to the following requirements.
   the value of the first column (the left-most one in the input CSV file) will be used.
 - Flux values are in the unit of <font size=5>**nJy**</font> (nano-Jansky).
 - Flux values are assumed to be total flux.
-- Errors can be provided by using column names by adding `_error` following the filter names.
+- Flux errors can be provided by using column names by adding `_error` following the filter names.
+- All **queue-mode** targets must be fainter than **16 AB mag** in all provided filters.
+- All **filler-mode** targets must be fainter than **17 AB mag** in all provided filters.
 
 ##### Example of flux information
 

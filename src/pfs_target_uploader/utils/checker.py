@@ -940,6 +940,164 @@ def check_fluxvalues(
     return dict_flux_values
 
 
+def check_fluxrange(
+    df: pd.DataFrame,
+    filter_category: dict = filter_category,
+    min_mag: float | None = None,
+    max_mag: float | None = None,
+    logger=logger,
+):
+    """
+    Check if flux values are within specified AB magnitude range.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target dataframe with flux_{band} columns (values in nJy)
+    filter_category : dict
+        Dictionary of filter bands (default from __init__.py)
+    min_mag : float or None
+        Minimum AB magnitude (brightest allowed limit).
+        None means no bright limit.
+    max_mag : float or None
+        Maximum AB magnitude (faintest allowed limit).
+        None means no faint limit.
+    logger : loguru.Logger
+        Logger instance
+
+    Returns
+    -------
+    dict
+        Dictionary with validation results:
+        - status: bool (True if all in range, False if any out of range)
+        - min_mag, max_mag: input magnitude limits
+        - min_flux_nJy, max_flux_nJy: converted flux limits
+        - success_flux_{band}: per-row boolean arrays
+        - status_flux_{band}: per-band overall status
+        - num_total_flux_{band}, num_out_of_range_flux_{band}: counts
+        - success: overall per-row boolean array
+        - num_total_flux, num_out_of_range_flux: overall counts
+
+    Notes
+    -----
+    AB magnitude to nJy conversion uses astropy.units for accuracy.
+
+    A brighter magnitude (lower number) corresponds to higher flux in nJy.
+    Therefore:
+    - min_mag (bright limit) -> max_flux_nJy (upper flux bound)
+    - max_mag (faint limit) -> min_flux_nJy (lower flux bound)
+    """
+    bands = filter_category.keys()
+
+    # Validate magnitude range consistency
+    if min_mag is not None and max_mag is not None:
+        if min_mag > max_mag:
+            raise ValueError(
+                f"Invalid magnitude range: min_mag ({min_mag}) > max_mag ({max_mag}). "
+                f"min_mag should be brighter (smaller value) than max_mag."
+            )
+
+    # Convert AB magnitude limits to nJy using astropy.units
+    # Note: brighter mag (smaller number) = higher flux
+    min_flux_nJy = None
+    max_flux_nJy = None
+
+    if max_mag is not None:
+        # Faint limit -> lower flux bound
+        min_flux_nJy = (max_mag * u.ABmag).to_value(u.nJy)
+
+    if min_mag is not None:
+        # Bright limit -> upper flux bound
+        max_flux_nJy = (min_mag * u.ABmag).to_value(u.nJy)
+
+    dict_fluxval = {
+        "min_mag": min_mag,
+        "max_mag": max_mag,
+        "min_flux_nJy": min_flux_nJy,
+        "max_flux_nJy": max_flux_nJy,
+    }
+
+    # Track overall success per row
+    success_all = np.ones(df.index.size, dtype=bool)
+    num_total_flux = 0
+    num_out_of_range_flux = 0
+
+    for band in bands:
+        col_name = f"flux_{band}"
+        if col_name not in df.columns:
+            continue
+
+        is_flux_finite = np.isfinite(df[col_name])
+        num_total = np.sum(is_flux_finite)
+
+        # Initialize per-row success as True for finite values
+        is_in_range = is_flux_finite.copy()
+
+        # Apply lower bound (faint limit)
+        if min_flux_nJy is not None:
+            is_in_range = is_in_range & (
+                (df[col_name] >= min_flux_nJy) | ~is_flux_finite
+            )
+
+        # Apply upper bound (bright limit)
+        if max_flux_nJy is not None:
+            is_in_range = is_in_range & (
+                (df[col_name] <= max_flux_nJy) | ~is_flux_finite
+            )
+
+        # For non-finite values, mark as True (not checked)
+        is_in_range = is_in_range | ~is_flux_finite
+
+        num_out_of_range = np.sum(is_flux_finite & ~is_in_range)
+        status_band = num_out_of_range == 0
+
+        dict_fluxval[f"success_flux_{band}"] = is_in_range
+        dict_fluxval[f"status_flux_{band}"] = status_band
+        dict_fluxval[f"num_total_flux_{band}"] = int(num_total)
+        dict_fluxval[f"num_out_of_range_flux_{band}"] = int(num_out_of_range)
+
+        # Update overall tracking
+        success_all = success_all & is_in_range
+        num_total_flux += num_total
+        num_out_of_range_flux += num_out_of_range
+
+        # Log results for each band
+        if num_total > 0:
+            if status_band:
+                logger.info(
+                    f"[Flux {band}] All {num_total} values within magnitude range - OK"
+                )
+            else:
+                logger.warning(
+                    f"[Flux {band}] {num_out_of_range}/{num_total} values out of range "
+                    f"(AB mag {min_mag} to {max_mag}) - WARNING"
+                )
+
+    # Overall status
+    status_overall = num_out_of_range_flux == 0
+    dict_fluxval["status"] = status_overall
+    dict_fluxval["success"] = success_all
+    dict_fluxval["num_total_flux"] = int(num_total_flux)
+    dict_fluxval["num_out_of_range_flux"] = int(num_out_of_range_flux)
+
+    # Log overall summary
+    if num_total_flux > 0:
+        if status_overall:
+            logger.info(
+                f"[Flux range check] All {num_total_flux} flux values within "
+                f"AB magnitude range [{min_mag}, {max_mag}] - OK"
+            )
+        else:
+            logger.warning(
+                f"[Flux range check] {num_out_of_range_flux}/{num_total_flux} flux values "
+                f"out of AB magnitude range [{min_mag}, {max_mag}] - WARNING"
+            )
+    else:
+        logger.warning("[Flux range check] No flux values found to check")
+
+    return dict_fluxval
+
+
 def check_visibility(
     df,
     date_begin=None,
@@ -1153,6 +1311,8 @@ def validate_input(
     single_exptime=900,
     healpix=True,
     nside=32,
+    min_mag=None,
+    max_mag=None,
     logger=logger,
 ):
     logger.info("Validation of the input list starts")
@@ -1177,6 +1337,7 @@ def validate_input(
     validation_status["values"] = {"status": None}
     validation_status["flux_columns"] = {"status": None}
     validation_status["flux_values"] = {"status": None}
+    validation_status["flux_range"] = {"status": None}
     validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
 
@@ -1226,6 +1387,25 @@ def validate_input(
     dict_flux_values = check_fluxvalues(df)
     validation_status["flux_values"] = dict_flux_values
     logger.info(f"[Flux values] status: {dict_flux_values['status']} (Success if True)")
+
+    # check flux value range (AB magnitude based)
+    if min_mag is not None or max_mag is not None:
+        logger.info("[Flux range] Checking flux values against AB magnitude range")
+        dict_flux_range = check_fluxrange(df, min_mag=min_mag, max_mag=max_mag)
+        validation_status["flux_range"] = dict_flux_range
+        logger.info(f"[Flux range] status: {dict_flux_range['status']} (Success if True)")
+    else:
+        logger.info("[Flux range] Skipping flux range check (no limits specified)")
+        validation_status["flux_range"] = {
+            "status": None,
+            "min_mag": None,
+            "max_mag": None,
+            "min_flux_nJy": None,
+            "max_flux_nJy": None,
+            "success": np.ones(len(df), dtype=bool),
+            "num_total_flux": 0,
+            "num_out_of_range_flux": 0,
+        }
 
     # check columns for visibility
     logger.info("[Visibility] Checking target visibility")

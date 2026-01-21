@@ -127,6 +127,15 @@ ANN_FILE="user_announcement.md"
 # The file will be created under $OUTPUT_DIR
 UPLOADID_DB="upload_id.sqlite"
 
+# Flux range validation based on AB magnitude
+# Leave empty or comment out to disable range checking
+# Minimum AB magnitude (brightest limit) - observation mode specific
+# MIN_FLUXMAG_QUEUE=10.0      # For queue observation type
+# MIN_FLUXMAG_CLASSICAL=12.0  # For classical observation type
+# MIN_FLUXMAG_FILLER=15.0     # For filler observation type
+# Maximum AB magnitude (faintest limit) - shared across all modes
+# MAX_FLUXMAG=30.0
+
 # loggging level
 # DEBUG, INFO (default), WARNING, ERROR, or CRITICAL
 LOG_LEVEL="INFO"
