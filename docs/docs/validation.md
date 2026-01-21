@@ -97,6 +97,7 @@ Flux values are checked to identify potential unit errors (magnitude vs. nano-Ja
 ### Flux range
 
 Flux values are additionally checked against flux/magnitude limits to identify targets that may be too bright or too faint for observations.
+The current bright magnitude limit is set to **16 AB mag for queue-mode** targets and **17 AB mag for filler-mode** targets in all provided filters.
 
 !!! warning "Warning message is raised as follows"
 
