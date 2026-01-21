@@ -1394,6 +1394,9 @@ def validate_input(
             "max_mag": None,
             "min_flux_nJy": None,
             "max_flux_nJy": None,
+            "success": np.ones(len(df), dtype=bool),
+            "num_total_flux": 0,
+            "num_out_of_range_flux": 0,
         }
 
     # check columns for visibility

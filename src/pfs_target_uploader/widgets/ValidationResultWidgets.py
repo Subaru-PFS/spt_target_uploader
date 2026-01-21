@@ -431,7 +431,6 @@ class ValidationResultWidgets:
         ):
             if validation_status["flux_range"]["status"]:
                 # Success case: all flux values within range
-                # Note: info_text_flux is already appended to info_pane, just add to existing text
                 min_mag = validation_status["flux_range"]["min_mag"]
                 max_mag = validation_status["flux_range"]["max_mag"]
 
@@ -444,6 +443,11 @@ class ValidationResultWidgets:
                     range_desc = f"not fainter than AB magnitude {max_mag}"
                 else:
                     range_desc = "within expected range"
+
+                # Ensure info_text_flux is in info_pane before appending
+                if self.info_text_flux not in self.info_pane:
+                    self.append_title("info")
+                    self.info_pane.append(self.info_text_flux)
 
                 self.info_text_flux.object += (
                     f"\n\n<font size=3>All flux values are {range_desc}.</font>"

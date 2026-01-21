@@ -78,13 +78,13 @@ def validate(
     ] = False,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
     min_mag: Annotated[
-        float,
+        float | None,
         typer.Option(
             help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
         ),
     ] = None,
     max_mag: Annotated[
-        float,
+        float | None,
         typer.Option(
             help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
         ),
@@ -174,13 +174,13 @@ def simulate(
     ] = 0,
     obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
     min_mag: Annotated[
-        float,
+        float | None,
         typer.Option(
             help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
         ),
     ] = None,
     max_mag: Annotated[
-        float,
+        float | None,
         typer.Option(
             help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
         ),
