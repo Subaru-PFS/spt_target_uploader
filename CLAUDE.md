@@ -221,6 +221,12 @@ The repository includes a GitHub Actions workflow that automatically updates the
 
 ### Key Modules
 
+- **`utils/config.py`**: Configuration management with dataclass-based approach
+  - `AppConfig` dataclass for type-safe configuration storage
+  - `load_app_config()` for full validation and initialization
+  - `load_minimal_config()` for lightweight loading (admin app)
+  - `get_min_fluxmag_for_obstype()` helper for observation-type-specific flux limits
+  - `format_for_logging()` for pretty-printed configuration display
 - **`utils/checker.py`**: Target list validation logic with astronomical constraints
   - Column validation, value range checks, flux validation
   - Flux range validation against AB magnitude limits (`check_fluxrange()`)

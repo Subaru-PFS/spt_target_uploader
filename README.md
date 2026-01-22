@@ -97,7 +97,7 @@ OUTPUT_DIR="data"
 
 ## Configuration
 
-The following parameters can be set in the `.env.shared` file to configure the app.
+The following parameters can be set in the `.env.shared` file to configure the app. Configuration is loaded and validated through the `utils/config.py` module, which provides type-safe access to all settings with appropriate defaults and validation.
 
 ```bash
 # Output directory for the submitted files
