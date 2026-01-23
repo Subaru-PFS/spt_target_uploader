@@ -1374,8 +1374,8 @@ def PPPrunStart(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime_PPP"]) / 3600.0] + [
-            sum(sample[sample["priority"] == ll]["exptime_PPP"]) / 3600.0
+        count_sub_fh = [sum(sample["exptime"]) / 3600.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0
             for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
@@ -1391,6 +1391,7 @@ def PPPrunStart(
         for ppc in point_l_pri:
             lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
+            sample["exptime_assign"] = np.minimum(sample["exptime_assign"], sample["exptime"])
 
             # achieved fiber hours (in total, in P[0-9])
             comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
@@ -1398,7 +1399,7 @@ def PPPrunStart(
                 for ll in sub_l
             ]
 
-            comp_s = np.where(sample["exptime_PPP"] <= sample["exptime_assign"])[0]
+            comp_s = np.where(sample["exptime"] <= sample["exptime_assign"])[0]
             comT_t_n = [len(comp_s)] + [
                 sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
             ]
@@ -1449,7 +1450,7 @@ def PPPrunStart(
             # if targets can not be successfully assigned with fibers in >5 iterations, then directly stop
         """
 
-        if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
+        if sum(uS["exptime_assign"] >= uS["exptime"]) == len(uS):
             # remove ppc with no fiber assignment
             logger.info("Remove PPCs with no fiber assignment")
             obj_allo.remove_rows(
@@ -1461,14 +1462,14 @@ def PPPrunStart(
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
-            while any(uS["exptime_assign"] < uS["exptime_PPP"]) and (
+            while any(uS["exptime_assign"] < uS["exptime"]) and (
                 iter_m2 < max_iter
             ):
                 ppp_timer.start(f"Netflow_Iteration_{iter_m2+1}")
                 logger.info(f"Netflow iterations {iter_m2+1}/{max_iter}")
-                uS_t1 = uS[uS["exptime_assign"] < uS["exptime_PPP"]]
+                uS_t1 = uS[uS["exptime_assign"] < uS["exptime"]]
                 uS_t1["exptime_PPP"] = (
-                    uS_t1["exptime_PPP"] - uS_t1["exptime_assign"]
+                    uS_t1["exptime_PPP"] - np.ceil(uS_t1["exptime_assign"]/single_exptime) * single_exptime
                 )  # remained exposure time
 
                 uS_t2, status = PPP_centers(uS_t1, [], True, weight_para)
@@ -1483,7 +1484,7 @@ def PPPrunStart(
                 ppp_timer.stop(f"Netflow_Iteration_{iter_m2+1}")
                 iter_m2 += 1
 
-            if sum(uS["exptime_assign"] == uS["exptime_PPP"]) == len(uS):
+            if sum(uS["exptime_assign"] >= uS["exptime"]) == len(uS):
                 logger.info(
                     f"All targets are assigned with fibers in {iter_m2} iterations"
                 )
@@ -1756,6 +1757,9 @@ def ppp_result(
         # obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
 
+        # Total requested fiber-hours (used to convert completion-rate % -> achieved fiber-hours)
+        total_requested_fiberhours = float(np.sum(uS["exptime"])) / 3600.0
+
         # add a column to indicate the color for the scatter plot
         uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
 
@@ -1982,11 +1986,10 @@ def ppp_result(
         # @pn.io.profile("ppp_res_tab1")
         def ppp_res_tab1(nppc_fin):
             hour_tot = nppc_fin * single_exptime / 3600.0  # hour
+            # Achieved fiber-hours (counts real exposure time, not quantized to single_exptime)
             Fhour_tot = (
-                sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
-                * single_exptime
-                / 3600.0
-            )  # fiber_count*hour
+                float(cR[0][nppc_fin - 1][0]) / 100.0 * total_requested_fiberhours
+            )
             Ttot_best = calc_total_obstime(nppc_fin, single_exptime)
             fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
             fib_eff_small = (
@@ -2219,8 +2222,8 @@ def ppp_result_reproduce(
         ]  # sort ppc by its total priority == sum(weights of the assigned targets in ppc)
 
         # sub-groups of the input sample, catagarized by the user defined priority
-        count_sub_fh = [sum(sample["exptime_PPP"]) / 3600.0] + [
-            sum(sample[sample["priority"] == ll]["exptime_PPP"]) / 3600.0
+        count_sub_fh = [sum(sample["exptime"]) / 3600.0] + [
+            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0
             for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
@@ -2236,6 +2239,7 @@ def ppp_result_reproduce(
         for ppc in point_l_pri:
             lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
+            sample["exptime_assign"] = np.minimum(sample["exptime_assign"], sample["exptime"])
 
             # achieved fiber hours (in total, in P[0-9])
             comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
@@ -2243,7 +2247,7 @@ def ppp_result_reproduce(
                 for ll in sub_l
             ]
 
-            comp_s = np.where(sample["exptime_PPP"] <= sample["exptime_assign"])[0]
+            comp_s = np.where(sample["exptime"] <= sample["exptime_assign"])[0]
             comT_t_n = [len(comp_s)] + [
                 sum(sample["priority"].data[comp_s] == ll) for ll in sub_l
             ]
@@ -2308,6 +2312,9 @@ def ppp_result_reproduce(
         obj_allo1["PPC_id"] = np.arange(0, len(obj_allo), 1) + 1
         obj_allo2 = Table.to_pandas(obj_allo1)
         uS_ = Table.to_pandas(uS)
+
+        # Total requested fiber-hours (used to convert completion-rate % -> achieved fiber-hours)
+        total_requested_fiberhours = float(np.sum(uS["exptime"])) / 3600.0
 
         # add a column to indicate the color for the scatter plot
         uS_["ppc_color"] = [colors_all[i] for i in uS_["priority"]]
@@ -2555,11 +2562,10 @@ def ppp_result_reproduce(
             Ttot_best = calc_total_obstime(nppc_fin, single_exptime)
 
             if nppc_fin > 0:
+                # Achieved fiber-hours (counts real exposure time, not quantized to single_exptime)
                 Fhour_tot = (
-                    sum([len(tt) for tt in obj_allo1[:nppc_fin]["allocated_targets"]])
-                    * single_exptime
-                    / 3600.0
-                )  # fiber_count*hour
+                    float(cR[0][nppc_fin - 1][0]) / 100.0 * total_requested_fiberhours
+                )
                 fib_eff_mean = np.mean(obj_allo1["Fiber usage fraction (%)"][:nppc_fin])
                 fib_eff_small = (
                     sum(obj_allo1["Fiber usage fraction (%)"][:nppc_fin] < 30)
