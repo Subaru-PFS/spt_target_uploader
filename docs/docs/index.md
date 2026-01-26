@@ -4,13 +4,16 @@ The [PFS Target Uploader](https://pfs-etc.naoj.hawaii.edu/uploader/) is a web ap
 supplied by users with an observing time estimate by a pointing simulation.
 
 !!! info
-**August 10, 2024 (HST)**
 
-    In the examples of [input target lists](inputs.md), column names for fluxes are found to be incorrect
-    for the initial version released together with S25A CfP on August 5, 2024 (HST).
-    The `r`- (`i`-) band filters for HSC need to be either `r_old_hsc` or `r2_hsc` (`i_old_hsc` or `i2_hsc`).
-    We have updated the examples with correct information for the correct examples.
-    Please see the [Filters section](inputs.md#filters) for the details.
+    **January 26, 2026 (HST)**
+
+    Update for S26B Call for Proposals on Subaru Telescope includes the following changes:
+
+    - The last 7 characters of the `Upload ID` are appended to `ob_code` automatically when the target list is loaded.
+    - Flux values are checked against the bright magnitude limits.
+    - Flux values are checked to detect potential unit mismatches.
+    - Target duplication within the target list is added to remind users to verify their target list.
+    - Pointing simulations is updated to use a realistic focal plane configuration.
 
 ## Table of Contents
 
@@ -100,8 +103,6 @@ graph TD
 
 ![type:video](videos/demo_v2.mp4){: style='width: 100%'}
 
-## Last Update
+## Release Notes
 
-August 10, 2024 (HST)
-
-See the [Releases on GitHub repository](https://github.com/Subaru-PFS/spt_target_uploader/releases) for the details.
+See the [Releases on GitHub repository](https://github.com/Subaru-PFS/spt_target_uploader/releases) for the latest updates and changes.
