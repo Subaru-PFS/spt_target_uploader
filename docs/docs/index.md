@@ -7,13 +7,13 @@ supplied by users with an observing time estimate by a pointing simulation.
 
     **January 26, 2026 (HST)**
 
-    Update for S26B Call for Proposals on Subaru Telescope includes the following changes:
+    Updates for S26B Call for Proposals include the following changes:
 
     - The last 7 characters of the `Upload ID` are appended to `ob_code` automatically when the target list is loaded.
     - Flux values are checked against the bright magnitude limits.
     - Flux values are checked to detect potential unit mismatches.
-    - Target duplication within the target list is added to remind users to verify their target list.
-    - Pointing simulations is updated to use a realistic focal plane configuration.
+    - Target duplication checking within the target list has been added to remind users to verify their target list.
+    - Pointing simulations are updated to use a realistic focal plane configuration.
 
 ## Table of Contents
 
