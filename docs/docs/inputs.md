@@ -116,8 +116,18 @@ Flux columns must conform to the following requirements.
 - Flux values are in the unit of <font size=5>**nJy**</font> (nano-Jansky).
 - Flux values are assumed to be total flux.
 - Flux errors can be provided by using column names by adding `_error` following the filter names.
-- All **queue-mode** targets must be fainter than **16 AB mag** in all provided filters.
-- All **filler-mode** targets must be fainter than **17 AB mag** in all provided filters.
+- All **queue-mode** targets are required to be fainter than **16 AB mag** in all provided filters.
+- All **filler-mode** targets are required to be fainter than **17 AB mag** in all provided filters.
+
+!!! note
+
+    The bright magnitude limits above are applied to avoid detector saturation and
+    to reduce near infrared persistency effects.
+    Users can still submit targets brighter than these limits,
+    but additional validation and checks will be performed
+    at the time of fiber assignment processing.
+    See the [Observation](https://www.naoj.org/Instruments/PFS/observations.html)
+    page of the PFS web site for details.
 
 ##### Example of flux information
 

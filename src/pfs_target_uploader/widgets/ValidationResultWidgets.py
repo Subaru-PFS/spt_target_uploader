@@ -412,7 +412,9 @@ class ValidationResultWidgets:
                 self.append_title("info")
                 # Provide a basic header if none was set by the flux-columns section
                 if not getattr(self.info_text_flux, "object", None):
-                    self.info_text_flux.object = "<font size=4><u>Flux information</u></font>"
+                    self.info_text_flux.object = (
+                        "<font size=4><u>Flux information</u></font>"
+                    )
                 self.info_pane.append(self.info_text_flux)
             self.info_text_flux.object += "\n\n<font size=3>Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).</font>"
         else:
@@ -478,7 +480,8 @@ class ValidationResultWidgets:
                 self.warning_text_fluxrange.object = "<font size=4><u>Flux values out of AB magnitude range</u></font>\n\n"
                 self.warning_text_fluxrange.object += (
                     f"<font size=3>{num_out}/{num_total} flux values are {range_desc}. "
-                    "Please verify that these targets are intended to be outside this range.</font>"
+                    "Please verify that these targets are intended to be outside this range. "
+                    "See the <a href='https://www.naoj.org/Instruments/PFS/observations.html' target='_blank'>Observations</a> section of the PFS instrument documentation for more details.</font>"
                 )
 
                 # Show table of out-of-range targets with flux and magnitude columns
@@ -552,12 +555,24 @@ class ValidationResultWidgets:
                             mag_col = f"mag_{band}"
 
                             # Add warning symbol to out-of-range values
-                            if flux_col in available_cols and pd.notna(df_display.at[row_idx, flux_col]):
-                                df_display.at[row_idx, flux_col] = f"⚠ {df_display.at[row_idx, flux_col]}"
-                            if mag_col in available_cols and pd.notna(df_display.at[row_idx, mag_col]):
-                                df_display.at[row_idx, mag_col] = f"⚠ {df_display.at[row_idx, mag_col]}"
-                            if filter_col in available_cols and pd.notna(df_display.at[row_idx, filter_col]):
-                                df_display.at[row_idx, filter_col] = f"⚠ {df_display.at[row_idx, filter_col]}"
+                            if flux_col in available_cols and pd.notna(
+                                df_display.at[row_idx, flux_col]
+                            ):
+                                df_display.at[row_idx, flux_col] = (
+                                    f"⚠ {df_display.at[row_idx, flux_col]}"
+                                )
+                            if mag_col in available_cols and pd.notna(
+                                df_display.at[row_idx, mag_col]
+                            ):
+                                df_display.at[row_idx, mag_col] = (
+                                    f"⚠ {df_display.at[row_idx, mag_col]}"
+                                )
+                            if filter_col in available_cols and pd.notna(
+                                df_display.at[row_idx, filter_col]
+                            ):
+                                df_display.at[row_idx, filter_col] = (
+                                    f"⚠ {df_display.at[row_idx, filter_col]}"
+                                )
 
                 self.warning_table_fluxrange.frozen_columns = []
                 if self.warning_table_fluxrange.value is not None:

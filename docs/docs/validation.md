@@ -97,7 +97,7 @@ Flux values are checked to identify potential unit errors (magnitude vs. nano-Ja
 ### Flux range
 
 Flux values are additionally checked against flux/magnitude limits to identify targets that may be too bright or too faint for observations.
-The current bright magnitude limit is set to **16 AB mag for queue-mode** targets and **17 AB mag for filler-mode** targets in all provided filters.
+The current bright magnitude limits are set to **16 AB mag for queue-mode** targets and **17 AB mag for filler-mode** targets in all provided filters.
 
 !!! warning "Warning message is raised as follows"
 
@@ -109,7 +109,10 @@ The current bright magnitude limit is set to **16 AB mag for queue-mode** target
 
 !!! note "This is a warning-only check"
 
-    This validation does not prevent submission. It serves as a reminder to verify that targets outside the specified magnitude range are intentional. However, targets with flux values outside the specified range may be removed during the observation planning process.
+    This validation does not prevent submission.
+    It serves as a reminder to verify that targets outside the specified magnitude range are intentional.
+    However, targets with flux values outside the specified range may be removed during the observation planning process.
+    See the [Observation](https://www.naoj.org/Instruments/PFS/observations.html) page of the PFS web site for details.
 
 ### Target visibility
 
