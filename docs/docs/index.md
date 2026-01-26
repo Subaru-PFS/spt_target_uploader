@@ -14,45 +14,51 @@ supplied by users with an observing time estimate by a pointing simulation.
 
 ## Table of Contents
 
+<!-- markdownlint-disable -->
+<!-- prettier-ignore-start -->
+
 <div class="grid cards" markdown>
 
-- :material-list-box-outline:{ .lg .middle } [**Prepare Your Target List**](inputs.md)
+- :material-list-box-outline:{ .lg .middle } [__Prepare Your Target List__](inputs.md)
 
-  ***
+    ---
 
-  Understand the file format and contents of your input target list required for PFS observation.
+    Understand the file format and contents of your input target list required for PFS observation.
 
-- :material-stethoscope:{ .lg .middle } [**Validate Your Target List**](validation.md)
+- :material-stethoscope:{ .lg .middle } [__Validate Your Target List__](validation.md)
 
-  ***
+    ---
 
-  Check if your input target list meets the requirements and understand errors and warnings.
+    Check if your input target list meets the requirements and understand errors and warnings.
 
-- :material-calculator:{ .lg .middle } [**Simulate PFS Pointings**](PPP.md)
+- :material-calculator:{ .lg .middle } [__Simulate PFS Pointings__](PPP.md)
 
-  ***
+    ---
 
-  Estimate required observing time to complete your targets by using the PFS pointing planner.
+    Estimate required observing time to complete your targets by using the PFS pointing planner.
 
-- :material-file-send-outline:{ .lg .middle } [**Submit Your Targets**](submission.md)
+- :material-file-send-outline:{ .lg .middle } [__Submit Your Targets__](submission.md)
 
-  ***
+    ---
 
-  Submit the target list and receive a `Upload ID`.
+    Submit the target list and receive a `Upload ID`.
 
-- :material-chat-question-outline:{ .lg .middle } [**FAQ & Known Issues**](issues.md)
+- :material-chat-question-outline:{ .lg .middle } [__FAQ & Known Issues__](issues.md)
 
-  ***
+    ---
 
-  Check frequently asked questions and known issues first when you have any troubles with the app.
+    Check frequently asked questions and known issues first when you have any troubles with the app.
 
-- :material-account-box-outline:{ .lg .middle } [**About Us**](about.md)
+- :material-account-box-outline:{ .lg .middle } [__About Us__](about.md)
 
-  ***
+    ---
 
-  Contact information and the privacy policy of the app and documationation are available.
+    Contact information and the privacy policy of the app and documationation are available.
 
 </div>
+
+<!-- markdownlint-enable -->
+<!-- prettier-ignore-end -->
 
 ## Workflow
 
@@ -96,6 +102,6 @@ graph TD
 
 ## Last Update
 
-January, 2026 (HST)
+August 10, 2024 (HST)
 
 See the [Releases on GitHub repository](https://github.com/Subaru-PFS/spt_target_uploader/releases) for the details.
