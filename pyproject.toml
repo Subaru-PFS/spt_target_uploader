@@ -17,7 +17,7 @@ dependencies = [
   "dask>=2023.10.1",
   "datashader>=0.16.0",
   "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git",
-  "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/master.zip",
+  "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/5feb14118d963312d52bb1fdb4c7eefa4da19880.zip",
   "gurobipy>=12,<13",
   "hdbscan>=0.8.40",
   "holoviews>=1.17.1",
