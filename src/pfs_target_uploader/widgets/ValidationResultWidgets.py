@@ -405,8 +405,8 @@ class ValidationResultWidgets:
             self.error_pane.append(self.error_table_flux)
             self.error_table_flux.visible = True
 
-        # Flux values
-        if validation_status["flux_values"]["status"]:
+        # Flux values (only check if flux columns were successfully detected)
+        if validation_status["flux_columns"]["status"] and validation_status["flux_values"]["status"]:
             # Ensure info_text_flux is visible in the info pane before appending text
             if self.info_text_flux not in self.info_pane:
                 self.append_title("info")
@@ -417,7 +417,7 @@ class ValidationResultWidgets:
                     )
                 self.info_pane.append(self.info_text_flux)
             self.info_text_flux.object += "\n\n<font size=3>Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).</font>"
-        else:
+        elif validation_status["flux_columns"]["status"]:
             self.append_title("warning")
             self.warning_text_flux.object = (
                 "<font size=4><u>Suspicious flux values</u></font>\n\n"
@@ -432,9 +432,10 @@ class ValidationResultWidgets:
 
             self.warning_pane.append(self.warning_text_flux)
 
-        # Flux range (AB magnitude based)
+        # Flux range (AB magnitude based - only check if flux columns were successfully detected)
         if (
-            "flux_range" in validation_status
+            validation_status["flux_columns"]["status"]
+            and "flux_range" in validation_status
             and validation_status["flux_range"]["status"] is not None
         ):
             if validation_status["flux_range"]["status"]:
