@@ -70,13 +70,14 @@ All scripts in `scripts/` directory support automatic detection of uv/pdm/venv, 
 ./scripts/gen-requirements.sh   # Auto-detect runner (uv > pdm)
 ```
 
-**Alternative: Using PDM scripts** (legacy method, still supported):
+**Deprecated: PDM scripts** (commented out in pyproject.toml, use shell scripts instead):
 ```bash
-pdm run serve-app        # Start main uploader app
-pdm run serve-app-admin  # Start admin app
-pdm run serve-doc        # Serve documentation
-pdm run build-doc        # Build documentation
-pdm run gen-requirements # Generate requirements.txt
+# PDM scripts are no longer active - use scripts/ directory instead
+# pdm run serve-app        # Start main uploader app
+# pdm run serve-app-admin  # Start admin app
+# pdm run serve-doc        # Serve documentation
+# pdm run build-doc        # Build documentation
+# pdm run gen-requirements # Generate requirements.txt
 ```
 
 ### Code Quality and Linting
@@ -164,7 +165,7 @@ DOCKER_PUSH=true DOCKER_USER=your-dockerhub-username ./scripts/build-container.s
 - `DOCKER_IMAGE` - Image name (default: pfs_target_uploader)
 - `DOCKER_TAG` - Image tag (default: latest)
 - `DOCKER_PUSH` - Set to "true" to push (default: false)
-- `DOCKER_PLATFORMS` - Build platforms (default: linux/amd64,linux/arm64)
+- `DOCKER_PLATFORMS` - Build platforms (default: linux/amd64; arm64 disabled due to PyQt5 build issues)
 
 **Priority**: Command-line environment variables > `.env.docker` > script defaults
 
@@ -211,6 +212,21 @@ The repository includes a GitHub Actions workflow that automatically updates the
 - If already up-to-date: Workflow completes without creating PR
 - PR includes summary of changes and can be reviewed before merging
 
+#### Documentation Builds
+
+**Workflow files**: `.github/workflows/build_docs_dev.yml`, `.github/workflows/build_docs_prod.yml`
+
+- **`build_docs_dev.yml`**: Builds MkDocs documentation on push to `dev-main` branch
+- **`build_docs_prod.yml`**: Builds MkDocs documentation on push to `main` branch
+- Both use self-hosted runner (`pfs-etc`) with Python 3.11.9
+
+#### Security Scanning
+
+**Workflow files**: `.github/workflows/codacy.yml`, `.github/workflows/codeql.yml`
+
+- **Codacy**: Runs on push/PR to `main` or `dev-main`, plus weekly schedule (Mondays at 06:38 UTC)
+- **CodeQL**: GitHub's code scanning for Python, runs on push/PR to `main` or `dev-main`, plus weekly schedule (Thursdays at 04:43 UTC)
+
 ## Architecture Overview
 
 ### Core Components
@@ -246,6 +262,7 @@ All UI components are modularized in the `widgets/` directory:
 - **User input**: `ObsTypeWidgets.py`, `DatePickerWidgets.py`, `PPCInputWidgets.py`
 - **Results display**: `PppResultWidgets.py`, `StatusWidgets.py`, `TargetWidgets.py`
 - **UI controls**: `buttons.py`, `TimerWidgets.py`
+- **Notifications**: `AnnouncementNoteWidgets.py`, `UploadNoteWidgets.py`, `DocLinkWidgets.py`
 
 ## Key Dependencies
 
@@ -257,17 +274,22 @@ All UI components are modularized in the `widgets/` directory:
 - **HDBSCAN/DBSCAN**: Target clustering algorithms
 - **scikit-learn**: AgglomerativeClustering for internal duplicate detection
 - **HoloViews/hvPlot**: Interactive data visualization
+- **loguru**: Structured logging (replaces stdlib logging)
+- **psutil**: Process and system monitoring
+- **skyfield**: High-precision astronomical calculations
 
 ## Configuration
 
 ### Environment Files
 - **`.env.shared`**: Main configuration (output directories, timeouts, email settings)
-- **`.env.private`**: Private settings (not tracked in git)
+- **`.env.private`**: Sensitive credentials (not tracked in git)
+  - `ADMIN_USERNAME`: Admin panel username
+  - `ADMIN_PASSWORD`: Admin panel password
 
 ### Important Settings
 ```bash
 OUTPUT_DIR="data"                    # Data storage location
-MAX_EXETIME=0                       # PPP timeout (0 = no limit)
+MAX_EXETIME=1800                    # PPP timeout in seconds (default: 1800 = 30min, 0 = no limit)
 CLUSTERING_ALGORITHM=FAST_HDBSCAN   # Target clustering method
 PPP_QUIET=1                         # Suppress verbose PPP output
 PPP_TIMING_VERBOSE=0                # PPP timing logs (0=off, 1=on)
@@ -277,6 +299,9 @@ MIN_FLUXMAG_QUEUE=""                # Min AB mag for queue obs_type (bright limi
 MIN_FLUXMAG_CLASSICAL=""            # Min AB mag for classical obs_type (bright limit, optional)
 MIN_FLUXMAG_FILLER=""               # Min AB mag for filler obs_type (bright limit, optional)
 MAX_FLUXMAG=""                      # Max AB mag (faint limit, optional, shared across all modes)
+EMAIL_FROM=""                       # Optional: sender email for notifications
+EMAIL_TO=""                         # Optional: recipient email for notifications
+SMTP_SERVER=""                      # Optional: SMTP server for email
 ```
 
 ## Data Flow
@@ -505,71 +530,20 @@ with suppress_loggers(("gurobipy",), level=logging.WARNING, include_root=False):
 
 ## TODOs
 
-### pyproject.toml Cleanup and Optimization (Medium Priority)
+### pyproject.toml Remaining Improvements (Low Priority)
 
-**Issue**: The `pyproject.toml` file has accumulated technical debt that could be improved for better maintainability and clarity.
+Minor technical debt items for the next dependency update cycle:
 
-**Problems Identified**:
+**Completed Items** (no action needed):
+- ✅ License field updated to PEP 639 format
+- ✅ `ruff>=0.5.0` version constraint added
+- ✅ Build dependencies moved to build-system only (removed from main dependencies)
+- ✅ `ics-cobraOps` now uses main repo instead of feature branch
+- ✅ PDM scripts marked as deprecated in pyproject.toml
 
-1. **Missing Version Constraints**:
-   - `astroplan` (line 10): No version specified
-   - `ruff` (line 65): No version specified
+**Remaining Low-Priority Items**:
+1. Add version constraint to `astroplan` dependency (currently has no version specified)
+2. Consider enabling commented Ruff `select` rules for better code quality (optional)
+3. Verify if `mkdocs-material[imaging]` extras are actually used; simplify if not needed
 
-2. **Potentially Unnecessary Dependencies**:
-   - Lines 32-35: `pip`, `pybind11`, `setuptools`, `wheel` in main dependencies
-     - These are typically auto-managed by PDM/uv
-     - `pybind11` already in build-system (line 51), causing duplication
-     - Need to verify if actually required at runtime
-
-3. **Complex Dependency Resolution**:
-   - Line 21: `mkdocs-material[imaging]>=9.5.4` includes extras that require Pillow/CairoSVG
-   - Verify if `[imaging]` feature is actually used; if not, simplify to `mkdocs-material>=9.5.4`
-
-4. **Commented Code Cleanup**:
-   - Line 15: Old gurobipy version comment
-   - Line 63: Commented development dependency
-   - Lines 126-128, 143-151, 157-167: Multiple blocks of commented configuration
-   - These should be removed for clarity
-
-5. **Dependency Organization**:
-   - Dependencies are not grouped or categorized
-   - Would benefit from organization by purpose (web framework, scientific computing, visualization, etc.)
-
-6. **Git Branch Dependencies**:
-   - Line 38: `ics-cobraOps@u/monodera/refactoring-hotfix` uses feature branch
-   - Should track when this branch gets merged to main
-   - Consider adding TODO comment
-
-7. **Development Dependency Versions**:
-   - Line 64: `black>=23.7.0` (consider updating to >=24.0.0)
-   - Line 66: `flake8>=6.1.0` (consider updating to >=7.0.0)
-   - Line 67: `ipython>=8.14.0` (consider updating to >=8.20.0)
-
-8. **Ruff Configuration**:
-   - Lines 143-151: Useful `select` rules are commented out
-   - Consider enabling for better code quality
-
-9. **Project Metadata**:
-   - Missing optional but useful fields: `keywords`, `classifiers`
-   - Would improve discoverability if published to PyPI
-
-**Recommended Actions**:
-
-**Phase 1: Cleanup (Low Risk)**
-- ✅ **COMPLETED**: License field updated to PEP 639 format (`license = "MIT"` + `license-files = ["LICENSE"]`)
-- Add version constraints to `astroplan>=0.10` and `ruff>=0.1.0`
-- Remove all commented-out code blocks
-- Add TODO comment for feature branch dependency
-
-**Phase 2: Organization (Medium Risk)**
-- Group dependencies by category with comments
-- Verify and remove unnecessary build dependencies from main dependencies
-- Simplify `mkdocs-material[imaging]` if extras not needed
-
-**Phase 3: Enhancement (Optional)**
-- Update development dependency versions
-- Enable commented Ruff rules
-- Add project metadata (keywords, classifiers)
-- Optimize PDM scripts to avoid nested calls
-
-**Priority**: This is lower priority than logging configuration but should be addressed during next major dependency update cycle to improve maintainability.
+**Priority**: Address during next major dependency update cycle.
