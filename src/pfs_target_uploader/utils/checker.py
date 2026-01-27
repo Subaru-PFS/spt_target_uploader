@@ -1074,7 +1074,10 @@ def check_fluxrange(
                 )
 
     # Overall status
-    status_overall = num_out_of_range_flux == 0
+    if num_total_flux == 0:
+        status_overall = None  # No flux values to check
+    else:
+        status_overall = num_out_of_range_flux == 0
     dict_fluxval["status"] = status_overall
     dict_fluxval["success"] = success_all
     dict_fluxval["num_total_flux"] = int(num_total_flux)
