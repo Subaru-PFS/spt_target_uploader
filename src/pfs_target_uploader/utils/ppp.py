@@ -46,12 +46,6 @@ from ics.cobraOps.Bench import Bench
 from ics.cobraOps.BlackDotsCalibrationProduct import BlackDotsCalibrationProduct
 from pfs.instdata import setup_envvar as instdata_setup_envvar
 
-# check bokeh version
-# ref: https://discourse.holoviz.org/t/strange-behavior-in-legend-when-curve-line-dash-not-solid/5547/2
-# isort: split
-import bokeh
-from packaging.version import Version
-
 # Disable WebGL for Firefox compatibility
 # Root cause: Firefox WebGL raises "invalid width" error during image texture creation
 # Error: (regl) invalid width in _set_image → texture → create2D (bokeh-gl.min.js)
