@@ -1171,7 +1171,9 @@ def PPPrunStart(
                 Tel_t[index, 1] = Tel[index, 1] + shift_ra
                 Tel_t[index, 2] = Tel[index, 2] + shift_dec
 
-                res, telescope, tgt = netflowRun_single(Tel_t, sample, bench, otime_, for_ppc)
+                res, telescope, tgt = netflowRun_single(
+                    Tel_t, sample, bench, otime_, for_ppc
+                )
                 index = np.where(np.array([len(tt) for tt in res]) == 0)[0]
 
                 logger.debug(f"{sample=}")
@@ -1369,8 +1371,7 @@ def PPPrunStart(
 
         # sub-groups of the input sample, catagarized by the user defined priority
         count_sub_fh = [sum(sample["exptime"]) / 3600.0] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0
-            for ll in sub_l
+            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0 for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
             sum(sample["priority"] == ll) for ll in sub_l
@@ -1385,7 +1386,9 @@ def PPPrunStart(
         for ppc in point_l_pri:
             lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
-            sample["exptime_assign"] = np.minimum(sample["exptime_assign"], sample["exptime"])
+            sample["exptime_assign"] = np.minimum(
+                sample["exptime_assign"], sample["exptime"]
+            )
 
             # achieved fiber hours (in total, in P[0-9])
             comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
@@ -1456,14 +1459,13 @@ def PPPrunStart(
             #  select non-assigned targets --> PPC determination --> netflow --> if no fibre assigned: shift PPC
             iter_m2 = 0
 
-            while any(uS["exptime_assign"] < uS["exptime"]) and (
-                iter_m2 < max_iter
-            ):
+            while any(uS["exptime_assign"] < uS["exptime"]) and (iter_m2 < max_iter):
                 ppp_timer.start(f"Netflow_Iteration_{iter_m2+1}")
                 logger.info(f"Netflow iterations {iter_m2+1}/{max_iter}")
                 uS_t1 = uS[uS["exptime_assign"] < uS["exptime"]]
                 uS_t1["exptime_PPP"] = (
-                    uS_t1["exptime_PPP"] - np.ceil(uS_t1["exptime_assign"]/single_exptime) * single_exptime
+                    uS_t1["exptime_PPP"]
+                    - np.ceil(uS_t1["exptime_assign"] / single_exptime) * single_exptime
                 )  # remained exposure time
 
                 uS_t2, status = PPP_centers(uS_t1, [], True, weight_para)
@@ -2217,8 +2219,7 @@ def ppp_result_reproduce(
 
         # sub-groups of the input sample, catagarized by the user defined priority
         count_sub_fh = [sum(sample["exptime"]) / 3600.0] + [
-            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0
-            for ll in sub_l
+            sum(sample[sample["priority"] == ll]["exptime"]) / 3600.0 for ll in sub_l
         ]  # fiber hours
         count_sub_n = [len(sample)] + [
             sum(sample["priority"] == ll) for ll in sub_l
@@ -2233,7 +2234,9 @@ def ppp_result_reproduce(
         for ppc in point_l_pri:
             lst = np.where(np.isin(sample["ob_code"], ppc["allocated_targets"]))[0]
             sample["exptime_assign"].data[lst] += single_exptime
-            sample["exptime_assign"] = np.minimum(sample["exptime_assign"], sample["exptime"])
+            sample["exptime_assign"] = np.minimum(
+                sample["exptime_assign"], sample["exptime"]
+            )
 
             # achieved fiber hours (in total, in P[0-9])
             comT_t_fh = [sum(sample["exptime_assign"]) / 3600.0] + [
