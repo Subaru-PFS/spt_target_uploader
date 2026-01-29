@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import panel as pn
+from astropy import units as u
 
 
 class ValidationResultWidgets:
@@ -74,7 +75,10 @@ class ValidationResultWidgets:
         self.warning_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_str = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_vals = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_flux = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_fluxrange = pn.pane.Markdown("", max_width=self.box_width)
         self.warning_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
+        self.warning_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.info_text_keys = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_str = pn.pane.Markdown("", max_width=self.box_width)
@@ -82,6 +86,7 @@ class ValidationResultWidgets:
         self.info_text_flux = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_visibility = pn.pane.Markdown("", max_width=self.box_width)
         self.info_text_dups = pn.pane.Markdown("", max_width=self.box_width)
+        self.info_text_intdups = pn.pane.Markdown("", max_width=self.box_width)
 
         self.error_table_str = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
@@ -101,6 +106,10 @@ class ValidationResultWidgets:
             pd.DataFrame(), **self.tabulator_kwargs
         )
 
+        self.warning_table_fluxrange = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+
         self.error_table_visibility = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
         )
@@ -109,6 +118,10 @@ class ValidationResultWidgets:
         )
 
         self.error_table_dups = pn.widgets.Tabulator(
+            pd.DataFrame(), **self.tabulator_kwargs
+        )
+
+        self.warning_table_intdups = pn.widgets.Tabulator(
             pd.DataFrame(), **self.tabulator_kwargs
         )
 
@@ -139,13 +152,17 @@ class ValidationResultWidgets:
             self.warning_text_keys,
             self.warning_text_str,
             self.warning_text_vals,
+            self.warning_text_flux,
+            self.warning_text_fluxrange,
             self.warning_text_visibility,
+            self.warning_text_intdups,
             self.info_text_keys,
             self.info_text_str,
             self.info_text_vals,
             self.info_text_flux,
             self.info_text_visibility,
             self.info_text_dups,
+            self.info_text_intdups,
         ]:
             t.object = ""
 
@@ -155,9 +172,11 @@ class ValidationResultWidgets:
             self.error_table_vals,
             self.warning_table_vals,
             self.error_table_flux,
+            self.warning_table_fluxrange,
             self.error_table_visibility,
             self.warning_table_visibility,
             self.error_table_dups,
+            self.warning_table_intdups,
         ]:
             if t.value is not None:
                 t.value[0:0]
@@ -187,6 +206,48 @@ class ValidationResultWidgets:
                 self.info_pane.append(self.info_title)
                 self.is_info = True
                 self.info_title.visible = True
+
+    def _identify_out_of_range_bands(self, df, min_flux_nJy, max_flux_nJy):
+        """
+        Identify which flux bands are out of range for each row (vectorized).
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame with flux columns
+        min_flux_nJy : float or None
+            Minimum flux in nJy (lower bound)
+        max_flux_nJy : float or None
+            Maximum flux in nJy (upper bound)
+
+        Returns
+        -------
+        dict
+            Dictionary mapping row index to list of out-of-range bands
+        """
+        out_of_range_bands = {idx: [] for idx in df.index}
+
+        for band in ["g", "r", "i", "z", "y", "j"]:
+            flux_col = f"flux_{band}"
+            if flux_col not in df.columns:
+                continue
+
+            # Vectorized check
+            flux_vals = df[flux_col]
+            is_finite = np.isfinite(flux_vals)
+            is_out = np.zeros(len(flux_vals), dtype=bool)
+
+            if min_flux_nJy is not None:
+                is_out |= (flux_vals < min_flux_nJy) & is_finite
+            if max_flux_nJy is not None:
+                is_out |= (flux_vals > max_flux_nJy) & is_finite
+
+            # Store band name for out-of-range rows
+            out_indices = df.index[is_out]
+            for idx in out_indices:
+                out_of_range_bands[idx].append(band)
+
+        return out_of_range_bands
 
     def show_results(self, df, validation_status):
         # reset title panes
@@ -315,10 +376,10 @@ class ValidationResultWidgets:
 
         # flux columns
         # TODO: show a list of detected/undetected flux columns
-        if validation_status["flux"]["status"]:
+        if validation_status["flux_columns"]["status"]:
             self.append_title("info")
             self.info_text_flux.object = "<font size=4><u>Flux information</u></font>\n\n<font size=3>All `ob_code`s have at least one flux information. The detected filters are the following: </font>"
-            for f in validation_status["flux"]["filters"]:
+            for f in validation_status["flux_columns"]["filters"]:
                 self.info_text_flux.object += f"<font size=3>`{f}`</font>, "
             self.info_text_flux.object = self.info_text_flux.object[:-2]
 
@@ -328,21 +389,201 @@ class ValidationResultWidgets:
             self.append_title("error")
             # add an error message and data table for duplicates
             self.error_text_flux.object = "<font size=4><u>Missing flux information</u></font>\n\n<font size=3>No flux information found in the following `ob_code`s. Detected filters are the following: </font>"
-            for f in validation_status["flux"]["filters"]:
+            for f in validation_status["flux_columns"]["filters"]:
                 self.error_text_flux.object += f"<font size=3>`{f}`</font>, "
-            if len(validation_status["flux"]["filters"]) > 0:
+            if len(validation_status["flux_columns"]["filters"]) > 0:
                 self.error_text_flux.object = self.error_text_flux.object[:-2]
 
             self.error_table_flux.frozen_columns = []
             if self.error_table_flux.value is not None:
                 self.error_table_flux.value[0:0]
             self.error_table_flux.value = df.loc[
-                ~validation_status["flux"]["success"], :
+                ~validation_status["flux_columns"]["success"], :
             ]
             self.error_table_flux.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_flux)
             self.error_pane.append(self.error_table_flux)
             self.error_table_flux.visible = True
+
+        # Flux values (only check if flux columns were successfully detected)
+        if validation_status["flux_columns"]["status"] and validation_status["flux_values"]["status"]:
+            # Ensure info_text_flux is visible in the info pane before appending text
+            if self.info_text_flux not in self.info_pane:
+                self.append_title("info")
+                # Provide a basic header if none was set by the flux-columns section
+                if not getattr(self.info_text_flux, "object", None):
+                    self.info_text_flux.object = (
+                        "<font size=4><u>Flux information</u></font>"
+                    )
+                self.info_pane.append(self.info_text_flux)
+            self.info_text_flux.object += "\n\n<font size=3>Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).</font>"
+        elif validation_status["flux_columns"]["status"]:
+            self.append_title("warning")
+            self.warning_text_flux.object = (
+                "<font size=4><u>Suspicious flux values</u></font>\n\n"
+            )
+            self.warning_text_flux.object += (
+                "<font size=3>Significant fraction "
+                f"({validation_status['flux_values']['frac_suspicious_flux_all']:.2%}) "
+                "of flux values are in the suspicious range "
+                f"({validation_status['flux_values']['min_flux']} and {validation_status['flux_values']['max_flux']}). "
+                "Please verify that the flux values are in the unit of nano Jansky (nJy), not, e.g., magnitude.</font>"
+            )
+
+            self.warning_pane.append(self.warning_text_flux)
+
+        # Flux range (AB magnitude based - only check if flux columns were successfully detected)
+        if (
+            validation_status["flux_columns"]["status"]
+            and "flux_range" in validation_status
+            and validation_status["flux_range"]["status"] is not None
+        ):
+            if validation_status["flux_range"]["status"]:
+                # Success case: all flux values within range
+                min_mag = validation_status["flux_range"]["min_mag"]
+                max_mag = validation_status["flux_range"]["max_mag"]
+
+                # Create range description
+                if min_mag is not None and max_mag is not None:
+                    range_desc = f"AB magnitude range [{min_mag}, {max_mag}]"
+                elif min_mag is not None:
+                    range_desc = f"not brighter than AB magnitude {min_mag}"
+                elif max_mag is not None:
+                    range_desc = f"not fainter than AB magnitude {max_mag}"
+                else:
+                    range_desc = "within expected range"
+
+                # Ensure info_text_flux is in info_pane before appending
+                if self.info_text_flux not in self.info_pane:
+                    self.append_title("info")
+                    self.info_pane.append(self.info_text_flux)
+
+                self.info_text_flux.object += (
+                    f"\n\n<font size=3>All flux values are {range_desc}.</font>"
+                )
+            else:
+                self.append_title("warning")
+                min_mag = validation_status["flux_range"]["min_mag"]
+                max_mag = validation_status["flux_range"]["max_mag"]
+                num_out = validation_status["flux_range"]["num_out_of_range_flux"]
+                num_total = validation_status["flux_range"]["num_total_flux"]
+
+                # Create range description
+                if min_mag is not None and max_mag is not None:
+                    range_desc = f"AB magnitude range [{min_mag}, {max_mag}]"
+                elif min_mag is not None:
+                    range_desc = f"brighter than AB magnitude {min_mag}"
+                elif max_mag is not None:
+                    range_desc = f"fainter than AB magnitude {max_mag}"
+                else:
+                    range_desc = "specified range"
+
+                self.warning_text_fluxrange.object = "<font size=4><u>Flux values out of AB magnitude range</u></font>\n\n"
+                self.warning_text_fluxrange.object += (
+                    f"<font size=3>{num_out}/{num_total} flux values are {range_desc}. "
+                    "Please verify that these targets are intended to be outside this range. "
+                    "See the <a href='https://www.naoj.org/Instruments/PFS/observations.html' target='_blank'>Observations</a> section of the PFS instrument documentation for more details.</font>"
+                )
+
+                # Show table of out-of-range targets with flux and magnitude columns
+                success_all = validation_status["flux_range"]["success"]
+                df_out_of_range = df.loc[~success_all, :].copy()
+
+                # Get flux limits for identifying out-of-range bands
+                min_flux_nJy = validation_status["flux_range"]["min_flux_nJy"]
+                max_flux_nJy = validation_status["flux_range"]["max_flux_nJy"]
+
+                # Identify which bands are out of range for each row
+                out_of_range_bands = self._identify_out_of_range_bands(
+                    df_out_of_range, min_flux_nJy, max_flux_nJy
+                )
+
+                # Add magnitude columns for each flux band
+                for band in ["g", "r", "i", "z", "y", "j"]:
+                    flux_col = f"flux_{band}"
+                    mag_col = f"mag_{band}"
+                    if flux_col in df_out_of_range.columns:
+                        # Convert flux (nJy) to AB magnitude
+                        flux_vals = df_out_of_range[flux_col].values
+                        mag_vals = np.full_like(flux_vals, np.nan, dtype=float)
+                        finite_mask = np.isfinite(flux_vals) & (flux_vals > 0)
+                        if np.any(finite_mask):
+                            mag_vals[finite_mask] = (
+                                flux_vals[finite_mask] * u.nJy
+                            ).to_value(u.ABmag)
+                        df_out_of_range[mag_col] = mag_vals
+
+                # Select columns to display
+                base_cols = ["ob_code", "obj_id_str", "ra", "dec"]
+                flux_mag_cols = []
+                for band in ["g", "r", "i", "z", "y", "j"]:
+                    flux_col = f"flux_{band}"
+                    filter_col = f"filter_{band}"
+                    mag_col = f"mag_{band}"
+                    if flux_col in df_out_of_range.columns:
+                        if filter_col in df_out_of_range.columns:
+                            flux_mag_cols.extend([filter_col, flux_col, mag_col])
+                        else:
+                            flux_mag_cols.extend([flux_col, mag_col])
+
+                display_cols = base_cols + flux_mag_cols
+                available_cols = [
+                    col for col in display_cols if col in df_out_of_range.columns
+                ]
+
+                # Format flux and mag columns to 2 decimal places
+                df_display = df_out_of_range[available_cols].copy()
+
+                # Format all flux and mag columns to 2 decimal places
+                for band in ["g", "r", "i", "z", "y", "j"]:
+                    flux_col = f"flux_{band}"
+                    mag_col = f"mag_{band}"
+                    if flux_col in available_cols:
+                        df_display[flux_col] = df_display[flux_col].apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else x
+                        )
+                    if mag_col in available_cols:
+                        df_display[mag_col] = df_display[mag_col].apply(
+                            lambda x: f"{x:.2f}" if pd.notna(x) else x
+                        )
+
+                # Mark out-of-range cells with a warning symbol
+                for row_idx, bands in out_of_range_bands.items():
+                    if bands:  # Only if there are out-of-range bands
+                        for band in bands:
+                            flux_col = f"flux_{band}"
+                            filter_col = f"filter_{band}"
+                            mag_col = f"mag_{band}"
+
+                            # Add warning symbol to out-of-range values
+                            if flux_col in available_cols and pd.notna(
+                                df_display.at[row_idx, flux_col]
+                            ):
+                                df_display.at[row_idx, flux_col] = (
+                                    f"⚠ {df_display.at[row_idx, flux_col]}"
+                                )
+                            if mag_col in available_cols and pd.notna(
+                                df_display.at[row_idx, mag_col]
+                            ):
+                                df_display.at[row_idx, mag_col] = (
+                                    f"⚠ {df_display.at[row_idx, mag_col]}"
+                                )
+                            if filter_col in available_cols and pd.notna(
+                                df_display.at[row_idx, filter_col]
+                            ):
+                                df_display.at[row_idx, filter_col] = (
+                                    f"⚠ {df_display.at[row_idx, filter_col]}"
+                                )
+
+                self.warning_table_fluxrange.frozen_columns = []
+                if self.warning_table_fluxrange.value is not None:
+                    self.warning_table_fluxrange.value[0:0]
+
+                self.warning_table_fluxrange.value = df_display
+                self.warning_table_fluxrange.frozen_columns = ["index"]
+                self.warning_pane.append(self.warning_text_fluxrange)
+                self.warning_pane.append(self.warning_table_fluxrange)
+                self.warning_table_fluxrange.visible = True
 
         # Visibility
         # TODO: add begin_date and end_date in the message
@@ -416,11 +657,72 @@ class ValidationResultWidgets:
             self.error_table_dups.frozen_columns = ["index"]
             self.error_table_dups.visible = True
 
+        # internal duplication
+        if validation_status["internal_duplication"]["status"]:
+            self.append_title("info")
+            self.info_text_intdups.object = (
+                "<font size=4><u>Internal duplication by coordinate</u></font>"
+                "\n\n<font size=3>No internal duplication is detected.</font>"
+            )
+            self.info_pane.append(self.info_text_intdups)
+            self.warning_table_intdups.visible = False
+        else:
+            self.append_title("warning")
+            # add a warning message and data table for internal duplicates
+            self.warning_text_intdups.object = (
+                "<font size=4><u>Internal duplication</u></font>\n\n"
+                "<font size=3>Targets with identical coordinates or with nearby coordinates with the same resolution mode are detected in the following targets. "
+                "Please verify if these targets are not duplicates.</font>"
+            )
+            self.warning_table_intdups.frozen_columns = []
+            if self.warning_table_intdups.value is not None:
+                self.warning_table_intdups.value[0:0]
+
+            # Add nn_sep column to duplicated targets
+            df_intdups = df.loc[
+                validation_status["internal_duplication"]["flags"], :
+            ].copy()
+
+            # Add nearest neighbor separation in arcsec
+            # Use a Series indexed like df to ensure correct alignment even if df
+            # has a non-sequential or non-zero-based index.
+            nn_sep_array = validation_status["internal_duplication"]["nn_sep"]
+            nn_sep_series = pd.Series(nn_sep_array, index=df.index)
+            df_intdups["separation"] = nn_sep_series.loc[df_intdups.index].values
+
+            # Sort by ra and dec for easier visual inspection of spatial clustering
+            df_intdups = df_intdups.sort_values(by=["ra", "dec"])
+
+            # Select and reorder columns for display
+            display_columns = [
+                "ob_code",
+                "obj_id_str",
+                "ra",
+                "dec",
+                "resolution",
+                "reference_arm",
+                "exptime",
+                "separation",
+            ]
+            # Only include columns that exist in the dataframe
+            available_columns = [
+                col for col in display_columns if col in df_intdups.columns
+            ]
+            df_intdups_display = df_intdups[available_columns]
+
+            self.warning_table_intdups.value = df_intdups_display
+            self.warning_pane.append(self.warning_text_intdups)
+            self.warning_pane.append(self.warning_table_intdups)
+            self.warning_table_intdups.frozen_columns = []
+            self.warning_table_intdups.visible = True
+
+        # overall success
         if (
             validation_status["required_keys"]["status"]
             and validation_status["str"]["status"]
             and validation_status["values"]["status"]
-            and validation_status["flux"]["status"]
+            and validation_status["flux_columns"]["status"]
+            # flux_values is warning-only, not included in success criteria
             and validation_status["visibility"]["status"]
             and validation_status["unique"]["status"]
         ):

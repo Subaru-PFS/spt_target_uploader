@@ -70,6 +70,8 @@ class FileInputWidgets(param.Parameterized):
         date_begin=None,
         date_end=None,
         single_exptime=900.0,
+        min_mag=None,
+        max_mag=None,
         warn_threshold=100000,
     ):
         t_start = time.time()
@@ -139,6 +141,8 @@ class FileInputWidgets(param.Parameterized):
             date_begin=date_begin,
             date_end=date_end,
             single_exptime=single_exptime,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
         t_stop = time.time()
         logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
@@ -147,5 +151,10 @@ class FileInputWidgets(param.Parameterized):
         logger.debug(f"{validation_status=}")
         if validation_status["required_keys"]["status"]:
             df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
+
+        # append first 7 characters of secret_token to ob_codes
+        df_output["ob_code"] = df_output["ob_code"].apply(
+            lambda x: f"{x}_{self.secret_token[:7]}"
+        )
 
         return validation_status, df_input, df_output

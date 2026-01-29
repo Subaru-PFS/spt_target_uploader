@@ -78,6 +78,41 @@ Flux columns are validated against conditions described in the [Flux Information
 
     All `ob_code`s have at least one flux information. The detected filters are the following: `<detected filter columns>`
 
+### Suspicious flux values
+
+Flux values are checked to identify potential unit errors (magnitude vs. nano-Jansky). If a significant fraction (≥90%) of flux values fall in the range 10-30, a warning is issued as this range is typical for magnitudes but suspicious for nJy values.
+
+!!! warning "Warning message is raised as follows"
+
+    Significant fraction (`XX.X%`) of flux values are in the suspicious range (10 and 30). Please verify that the flux values are in the unit of nano Jansky (nJy), not, e.g., magnitude.
+
+!!! success "Info message is shown as follows"
+
+    Flux values can be regarded as properly provided with the unit of nano Jansky (nJy).
+
+!!! note "This is a warning-only check"
+
+    This validation does not prevent submission. It serves as a reminder to verify that flux values are provided in nJy, not in other units such as magnitudes, Jy (Jansky), or mJy (milli-Jansky).
+
+### Flux range
+
+Flux values are additionally checked against flux/magnitude limits to identify targets that may be too bright or too faint for observations.
+The current bright magnitude limits are set to **16 AB mag for queue-mode** targets and **17 AB mag for filler-mode** targets in all provided filters.
+
+!!! warning "Warning message is raised as follows"
+
+    `N/M` flux values are brighter than AB magnitude `XX.X` / fainter than AB magnitude `XX.X` / outside AB magnitude range [`XX.X`, `XX.X`]. Please verify that these targets are intended to be outside this range.
+
+!!! success "Info message is shown as follows"
+
+    All flux values are within AB magnitude range [`XX.X`, `XX.X`] / not brighter than AB magnitude `XX.X` / not fainter than AB magnitude `XX.X`.
+
+!!! note "This is a warning-only check"
+
+    This validation does not prevent submission.
+    It serves as a reminder to verify that targets outside the specified magnitude range are intentional.
+    However, targets with flux values outside the specified range may be removed during the observation planning process.
+    See the [Observation](https://www.naoj.org/Instruments/PFS/observations.html) page of the PFS web site for details.
 
 ### Target visibility
 
@@ -107,8 +142,20 @@ Duplication of ob_code and obj_id
     are detected in the following targets.
 
 !!! success "Info message is raised for successful validation"
+
     All `ob_code` and `(obj_id, resolution)` are unique.
 
+### Duplication by coordinates
+
+Duplication within the target list is checked by comparing coordinates (ra, dec) of targets with the same resolution mode. If two or more targets are found within 1 arcsecond, they are considered as potential duplicates. If internal duplicates are detected, a warning message will be displayed along with invalid rows.
+
+!!! warning "Warning message is raised in the following case"
+
+    Targets with identical coordinates or with nearby coordinates are detected in the following entries. Please verify if these targets are not duplicates.
+
+!!! success "Info message is shown for successful validation"
+
+    No internal duplication is detected.
 
 ## Validation Results
 

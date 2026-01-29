@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 import asyncio
-import os
 import sys
 from datetime import datetime, timedelta, timezone
+from pprint import pformat
 
 import gurobipy
 import panel as pn
-from dotenv import dotenv_values
 from loguru import logger
 
+from . import __version__ as pfs_target_uploader_version
+from .utils.config import get_min_fluxmag_for_obstype, load_app_config
 from .utils.db import single_insert_uid_db
 from .utils.mail import send_email
 from .utils.session import assign_secret_token
@@ -40,65 +41,27 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
-    config = dotenv_values(".env.shared")
+    # Load and validate configuration
+    config = load_app_config(
+        create_output_dir=True,
+        validate_db=True,
+        validate_ann_file=True,
+    )
 
-    # configure logger to be multiprocessing-safe
-    log_level = config["LOG_LEVEL"] if "LOG_LEVEL" in config.keys() else "INFO"
-    logger.info(f"Log level is set to {log_level}")
+    # Configure logger to be multiprocessing-safe
     logger.remove()
-    logger.add(sys.stderr, level=log_level, enqueue=True)
+    logger.add(sys.stderr, level=config.log_level, enqueue=True)
 
-    logger.info(f"{pn.state.headers=}")
-    logger.info(f"{pn.state.location.href=}")
+    # Log request headers
+    if pn.state.headers:
+        logger.info(f"Request headers:\n{pformat(dict(pn.state.headers), width=100)}")
 
-    if "MAX_EXETIME" not in config.keys():
-        max_exetime: int = 900
-    else:
-        max_exetime = int(config["MAX_EXETIME"])
+    # Log request URL
+    if pn.state.location and pn.state.location.href:
+        logger.info(f"Request URL: {pn.state.location.href}")
 
-    if "PPP_QUIET" not in config.keys():
-        ppp_quiet: bool = True
-    else:
-        ppp_quiet: bool = bool(int(config["PPP_QUIET"]))
-
-    if "CLUSTERING_ALGORITHM" not in config.keys():
-        clustering_algorithm = "HDBSCAN"
-    else:
-        clustering_algorithm = config["CLUSTERING_ALGORITHM"]
-
-    if "ANN_FILE" not in config.keys():
-        ann_file = None
-    elif config["ANN_FILE"] == "":
-        ann_file = None
-    elif not os.path.exists(config["ANN_FILE"]):
-        logger.error(f"{config['ANN_FILE']} not found")
-        ann_file = None
-    else:
-        logger.info(f"{config['ANN_FILE']} found")
-        ann_file = config["ANN_FILE"]
-
-    uid_db = config["UPLOADID_DB"] if "UPLOADID_DB" in config.keys() else None
-    use_uid_db = True if uid_db is not None else False
-
-    db_path = os.path.join(config["OUTPUT_DIR"], uid_db) if use_uid_db else None
-    if use_uid_db:
-        if os.path.exists(db_path):
-            logger.info(f"{db_path} found")
-        else:
-            logger.error(f"{db_path} not found")
-            raise FileNotFoundError(f"{db_path} not found")
-    else:
-        logger.info("No upload ID database is used. Scan output directories directly.")
-
-    logger.info(f"Maximum execution time for the PPP is set to {max_exetime} sec.")
-
-    logger.info(f"config params from dotenv: {config}")
-
-    if os.path.exists(config["OUTPUT_DIR"]):
-        logger.info(f"{config['OUTPUT_DIR']} already exists.")
-    else:
-        os.makedirs(config["OUTPUT_DIR"])
-        logger.info(f"{config['OUTPUT_DIR']} created.")
+    # Log application configuration
+    logger.info(f"\n{config.format_for_logging()}")
 
     template = pn.template.MaterialTemplate(
         # template = pn.template.BootstrapTemplate(
@@ -124,16 +87,16 @@ def target_uploader_app(use_panel_cli=False):
     panel_dates = DatePickerWidgets()
     panel_ppcinput = PPCInputWidgets()
 
-    panel_timer = TimerWidgets(total_seconds=max_exetime)
+    panel_timer = TimerWidgets(total_seconds=config.max_exetime)
 
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
     panel_ppp = PppResultWidgets()
 
     panel_input.reset()
-    panel_input.db_path = db_path
-    panel_input.output_dir = config["OUTPUT_DIR"]
-    panel_input.use_db = use_uid_db
+    panel_input.db_path = config.db_path
+    panel_input.output_dir = config.output_dir
+    panel_input.use_db = config.use_uid_db
 
     button_set = [
         panel_input.file_input,
@@ -151,8 +114,8 @@ def target_uploader_app(use_panel_cli=False):
     placeholder_floatpanel = pn.Column(height=0, width=0)
     placeholder_announcement = pn.Column(height=0, width=0)
 
-    if ann_file is not None:
-        panel_annoucement = AnnouncementNoteWidgets(ann_file)
+    if config.ann_file is not None:
+        panel_annoucement = AnnouncementNoteWidgets(config.ann_file)
         placeholder_announcement[:] = [panel_annoucement.floatpanel]
 
     # if no file is uploaded, disable the buttons
@@ -262,9 +225,27 @@ def target_uploader_app(use_panel_cli=False):
         ppcinput_watcher,
     )
 
+    sidebar_about = pn.Column(
+        pn.Column(
+            pn.pane.Markdown(
+                "<font size=4><i class='fas fa-tag'></i>  **Version**</font>",
+                sizing_mode="stretch_width",
+            ),
+        ),
+        pn.Column(
+            pn.pane.Markdown(
+                f"{pfs_target_uploader_version}",
+                sizing_mode="stretch_width",
+            ),
+            margin=(-20, 0, 0, 0),
+        ),
+        margin=(10, 0, 0, 0),
+    )
+
     tab_sidebar = pn.Tabs(
         ("Home", sidebar_column),
         ("Config", sidebar_configs),
+        ("About", sidebar_about),
     )
     # tab_sidebar.active = 1
 
@@ -313,11 +294,19 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            config,
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=config.max_fluxmag,
         )
 
         _toggle_widgets(widget_set, disabled=False)
@@ -383,11 +372,19 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
+        # Select min_mag based on observation type
+        effective_min_mag = get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            config,
+        )
+
         validation_status, df_input_, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
             single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=config.max_fluxmag,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
@@ -444,9 +441,9 @@ def target_uploader_app(use_panel_cli=False):
                 return
 
             dt_now = datetime.now()
-            if max_exetime > 0:
+            if config.max_exetime > 0:
                 pn.state.notifications.info(
-                    f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')} and last up for about {int(max_exetime/60)} minutes",
+                    f"Pointing simulation started at {dt_now.strftime('%H:%M:%S')} and last up for about {int(config.max_exetime/60)} minutes",
                     duration=0,
                 )
             else:
@@ -461,9 +458,9 @@ def target_uploader_app(use_panel_cli=False):
                 df_ppc,
                 validation_status,
                 single_exptime=panel_obs_type.single_exptime.value,
-                clustering_algorithm=clustering_algorithm,
-                quiet=ppp_quiet,
-                max_exetime=max_exetime,
+                clustering_algorithm=config.clustering_algorithm,
+                quiet=config.ppp_quiet,
+                max_exetime=config.max_exetime,
                 logger=logger,
             )
 
@@ -522,10 +519,18 @@ def target_uploader_app(use_panel_cli=False):
         # do the validation again and again (input file can be different)
         # and I don't know how to implement to return value
         # from callback to another function (sorry)
+        # Select min_mag based on observation type
+        effective_min_mag = get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            config,
+        )
+
         validation_status, df_input, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            min_mag=effective_min_mag,
+            max_mag=config.max_fluxmag,
         )
 
         if (validation_status is None) or (not validation_status["status"]):
@@ -570,7 +575,7 @@ def target_uploader_app(use_panel_cli=False):
 
         outdir, outfile_zip, _ = await asyncio.to_thread(
             panel_ppp.upload,
-            outdir_prefix=config["OUTPUT_DIR"],
+            outdir_prefix=config.output_dir,
             single_exptime=panel_obs_type.single_exptime.value,
             observation_type=panel_obs_type.obs_type.value,
             ppc_status=ppc_status_,
@@ -578,9 +583,9 @@ def target_uploader_app(use_panel_cli=False):
 
         try:
             if (
-                ("EMAIL_FROM" not in config.keys() or "EMAIL_FROM" == "")
-                or ("EMAIL_TO" not in config.keys() or "EMAIL_TO" == "")
-                or ("SMTP_SERVER" not in config.keys() or "SMTP_SERVER" == "")
+                ("EMAIL_FROM" not in config.raw_config.keys() or config.raw_config["EMAIL_FROM"] == "")
+                or ("EMAIL_TO" not in config.raw_config.keys() or config.raw_config["EMAIL_TO"] == "")
+                or ("SMTP_SERVER" not in config.raw_config.keys() or config.raw_config["SMTP_SERVER"] == "")
             ):
                 logger.warning(
                     "Email configuration is not found. No email will be sent."
@@ -588,7 +593,7 @@ def target_uploader_app(use_panel_cli=False):
             else:
                 await asyncio.to_thread(
                     send_email,
-                    config,
+                    config.raw_config,
                     outdir=outdir,
                     outfile=outfile_zip,
                     upload_id=panel_ppp.secret_token,
@@ -602,7 +607,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_ppp.secret_token,
             panel_ppp.upload_time,
             panel_ppp.ppp_status,
-            outdir.replace(config["OUTPUT_DIR"], "data/", 1).replace("//", "/"),
+            outdir.replace(config.output_dir, "data/", 1).replace("//", "/"),
             outfile_zip,
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
@@ -625,16 +630,16 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
-        if use_uid_db:
+        if config.use_uid_db:
             await asyncio.to_thread(
-                single_insert_uid_db, panel_ppp.secret_token, db_path
+                single_insert_uid_db, panel_ppp.secret_token, config.db_path
             )
 
         panel_input.secret_token = await asyncio.to_thread(
             assign_secret_token,
-            db_path=db_path,
-            output_dir=config["OUTPUT_DIR"],
-            use_db=use_uid_db,
+            db_path=config.db_path,
+            output_dir=config.output_dir,
+            use_db=config.use_uid_db,
         )
 
         panel_timer.timer(on=False, time_limit=False)

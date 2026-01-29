@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 import panel as pn
 from astropy.table import Table
-from dotenv import dotenv_values
 from loguru import logger
 
+from .utils.config import load_minimal_config
 from .utils.io import load_file_properties, load_input
 from .utils.ppp import ppp_result_reproduce
 from .widgets import TargetWidgets
@@ -23,14 +23,14 @@ from .widgets import TargetWidgets
 def list_files_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
-    config = dotenv_values(".env.shared")
+    config = load_minimal_config()
 
-    logger.info(f"config params from dotenv: {config}")
+    logger.info(f"\n{config.format_for_logging()}")
 
     panel_targets = TargetWidgets()
 
-    if not os.path.exists(config["OUTPUT_DIR"]):
-        logger.error(f"{config['OUTPUT_DIR']} not found")
+    if not os.path.exists(config.output_dir):
+        logger.error(f"{config.output_dir} not found")
         raise ValueError
 
     template = pn.template.VanillaTemplate(
@@ -45,7 +45,7 @@ def list_files_app(use_panel_cli=False):
     )
 
     df_files_tgt_psl = load_file_properties(
-        config["OUTPUT_DIR"],
+        config.output_dir,
         ext="ecsv",
     )
 
@@ -130,10 +130,10 @@ def list_files_app(use_panel_cli=False):
         row_select = _table_files_tgt_psl.selection
 
         if len(row_select) > 0:
-            tmpdir = os.path.join(config["OUTPUT_DIR"], "tmp")
+            tmpdir = os.path.join(config.output_dir, "tmp")
             filepath_zip = os.path.join(tmpdir, f"{prefix_}_selected.zip")
             filepath_zip_href = os.path.join(
-                tmpdir.replace(config["OUTPUT_DIR"], "data/", 1),
+                tmpdir.replace(config.output_dir, "data/", 1),
                 f"{prefix_}_selected.zip",
             ).replace("//", "/")
 
@@ -225,7 +225,7 @@ def list_files_app(use_panel_cli=False):
         )
 
         """
-        dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/*"))
+        dirs = glob.glob(os.path.join(config.output_dir, "????/??/*/*"))
         upload_id_tacFin = [
             tt[tt.find("TAC_psl_") + 8 : tt.rfind(".ecsv")]
             for tt in dirs
@@ -258,8 +258,8 @@ def list_files_app(use_panel_cli=False):
                 href_tgt = _df_files_tgt_psl["fullpath_tgt"].iloc[event.row]
                 href_ppc = _df_files_tgt_psl["fullpath_ppc"].iloc[event.row]
                 # need to fix the path for the download
-                href_mod_tgt = href_tgt.replace(config["OUTPUT_DIR"], "data", 1)
-                href_mod_ppc = href_ppc.replace(config["OUTPUT_DIR"], "data", 1)
+                href_mod_tgt = href_tgt.replace(config.output_dir, "data", 1)
+                href_mod_ppc = href_ppc.replace(config.output_dir, "data", 1)
                 logger.info(f"{href_tgt=}")
                 logger.info(f"{href_mod_tgt=}")
                 # c.f. https://www.w3schools.com/jsref/met_win_open.asp
@@ -304,7 +304,7 @@ def list_files_app(use_panel_cli=False):
                     table_ppc_t, table_tgt_t, table_psl_t, table_tac_t
                 )
 
-                dirs2 = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*/"))
+                dirs2 = glob.glob(os.path.join(config.output_dir, "????/??/*/"))
                 path_t_all = [tt for tt in dirs2 if u_id in tt]
                 if len(path_t_all) == 0:
                     logger.error(f"Path not found for {u_id}")
@@ -317,7 +317,7 @@ def list_files_app(use_panel_cli=False):
 
                 path_t_server = path_t_all[0]
 
-                path_t = path_t_server.replace(config["OUTPUT_DIR"], "data", 1)
+                path_t = path_t_server.replace(config.output_dir, "data", 1)
                 tac_ppc_list_file = f"{path_t}/TAC_ppc_{u_id}.ecsv"
 
                 logger.info(f"{row_target=}")
@@ -331,7 +331,7 @@ def list_files_app(use_panel_cli=False):
 
                 def tab_ppc_save(event):
                     # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
-                    # dirs = glob.glob(os.path.join(config["OUTPUT_DIR"], "????/??/*"))
+                    # dirs = glob.glob(os.path.join(config.output_dir, "????/??/*"))
 
                     Table.from_pandas(p_result_ppc_fin.value).write(
                         f"{path_t_server}/TAC_ppc_{u_id}.ecsv",

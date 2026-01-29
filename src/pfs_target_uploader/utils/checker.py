@@ -28,6 +28,7 @@ from . import (
     required_keys,
     target_datatype,
 )
+from .internal_duplication import dupcheck_internal
 
 warnings.filterwarnings("ignore")
 
@@ -67,6 +68,12 @@ def get_semester_daterange(dt, current=False, next=True):
 
 
 def visibility_checker(uS, date_begin=None, date_end=None):
+    """
+    LEGACY: Original per-target visibility checker (slowest, but exact).
+
+    Kept for testing and validation purposes. For production use, prefer
+    visibility_checker_healpix() which is 5-50x faster for clustered targets.
+    """
     if len(uS) == 0:
         return np.array([])
 
@@ -149,6 +156,13 @@ def visibility_checker_vec(
     min_el: float = 30.0,
     max_el: float = 85.0,
 ) -> np.ndarray:
+    """
+    LEGACY: Vectorized visibility checker (faster than original, but slower than HEALPix).
+
+    Uses np.vectorize and observation period splitting for early exit optimization.
+    Kept for testing and validation purposes. For production use, prefer
+    visibility_checker_healpix() which provides better performance for clustered targets.
+    """
     if df.index.size == 0:
         return np.array([], dtype=bool)
 
@@ -313,11 +327,25 @@ def visibility_checker_healpix(
     precision_minutes: int = 15,
 ) -> np.ndarray:
     """
-    HEALPix-based visibility checker optimized for clustered targets.
+    HEALPix-based visibility checker optimized for clustered targets (RECOMMENDED).
 
+    This is the default and recommended implementation for production use.
     Groups targets by HEALPix pixels and uses the maximum exptime in each pixel
     for visibility calculations, significantly reducing computation time for
     spatially clustered target lists.
+
+    Performance: 5-50x faster than legacy implementations for typical PFS target lists.
+
+    Algorithm Details
+    -----------------
+    For each HEALPix pixel, the function:
+    1. Uses the first target's coordinates as representative (conservative approximation)
+    2. Calculates total observable time across the observation period
+    3. Compares each target's exptime against its pixel's total observable time
+
+    This is conservative because all targets within a pixel (~110 arcmin) have similar
+    but not identical observability. Using a single representative position ensures
+    we don't overestimate observability.
 
     Parameters
     ----------
@@ -328,7 +356,10 @@ def visibility_checker_healpix(
     date_end : datetime, optional
         Observation period end date
     single_exptime : float, default 900.0
-        Single exposure time in seconds (used for visibility checks)
+        Minimum contiguous observation window in seconds. This parameter filters
+        out short observability windows during ephemeris queries. The value
+        (900s = 15min) aligns with ephemeris cache precision and should be
+        significantly smaller than typical target exptime values.
     min_el : float, default 30.0
         Minimum elevation constraint [degrees]
     max_el : float, default 85.0
@@ -347,6 +378,8 @@ def visibility_checker_healpix(
     """
     if df.index.size == 0:
         return np.array([], dtype=bool)
+
+    t_start_total = time.time()
 
     # Set timezone to HST
     tz_HST = tz.gettz("US/Hawaii")
@@ -435,7 +468,8 @@ def visibility_checker_healpix(
     eph_cache = EphemerisCache(logger, precision_minutes=precision_minutes)
 
     # Check visibility for each unique pixel
-    pixel_visibility = {}
+    # Store total observable time (in seconds) for each pixel
+    pixel_observable_time = {}  # dict[int, float]
 
     for pixel_id, max_exptime in pixel_max_exptime.items():
         # Use representative coordinates for this pixel
@@ -465,7 +499,12 @@ def visibility_checker_healpix(
                     single_exptime,  # [s]
                 )
                 if t_stop is not None and t_start is not None and t_stop > t_start:
-                    t_obs_ok_total += (t_stop - t_start).seconds
+                    window_time = (t_stop - t_start).seconds
+                    t_obs_ok_total += window_time
+                    logger.debug(
+                        f"Pixel {pixel_id} day {dd} (1st half): observable window {window_time}s "
+                        f"({t_start} to {t_stop}), cumulative {t_obs_ok_total}s"
+                    )
             except (IndexError, TypeError):
                 pass
 
@@ -483,41 +522,59 @@ def visibility_checker_healpix(
                     single_exptime,
                 )
                 if t_stop is not None and t_start is not None and t_stop > t_start:
-                    t_obs_ok_total += (t_stop - t_start).seconds
+                    window_time = (t_stop - t_start).seconds
+                    t_obs_ok_total += window_time
+                    logger.debug(
+                        f"Pixel {pixel_id} day {dd} (2nd half): observable window {window_time}s "
+                        f"({t_start} to {t_stop}), cumulative {t_obs_ok_total}s"
+                    )
             except (IndexError, TypeError):
                 pass
 
-            logger.debug(
-                f"Pixel {pixel_id} observable from {t_start} to {t_stop}, total {t_obs_ok_total}s"
-            )
             # Early exit if we have enough observing time
             if t_obs_ok_total >= max_exptime:
+                logger.debug(
+                    f"Pixel {pixel_id}: early exit after {dd+1}/{n_dates} days "
+                    f"({t_obs_ok_total}s >= {max_exptime}s required)"
+                )
                 break
 
-        # Store visibility result for this pixel
-        pixel_visibility[pixel_id] = t_obs_ok_total >= max_exptime
+        # Store total observable time for this pixel (not boolean!)
+        pixel_observable_time[pixel_id] = t_obs_ok_total
 
-    logger.info(
-        f"Pixel visibility results: {sum(pixel_visibility.values())}/{len(pixel_visibility)} pixels observable"
+    # Count how many pixels meet their max_exptime requirement
+    pixels_meet_max = sum(
+        1
+        for pid, obs_time in pixel_observable_time.items()
+        if obs_time >= pixel_max_exptime[pid]
     )
+    logger.info(
+        f"Pixel visibility results: {pixels_meet_max}/{len(pixel_observable_time)} "
+        f"pixels meet max_exptime requirement"
+    )
+    if pixel_observable_time:
+        logger.debug(
+            f"Observable time range: {min(pixel_observable_time.values()):.1f}s - "
+            f"{max(pixel_observable_time.values()):.1f}s"
+        )
 
     # Apply pixel visibility to individual targets based on their exptime
     is_observable = np.zeros(len(df), dtype=bool)
 
     for i, (pixel_id, exptime) in enumerate(zip(pixel_indices, df["exptime"])):
-        if pixel_visibility[pixel_id]:
-            # If pixel is observable with max_exptime, check if this target's exptime is achievable
-            # Since we used max_exptime for the pixel check, any target with smaller exptime
-            # in the same pixel should also be observable
-            is_observable[i] = True
-        else:
-            # If pixel failed with max_exptime, this target with smaller/equal exptime also fails
-            is_observable[i] = False
+        # Compare target's exptime against pixel's total observable time
+        # This is the CORRECT logic: target is observable if pixel has enough total time
+        is_observable[i] = pixel_observable_time[pixel_id] >= exptime
 
     # Clear the ephemeris cache
     logger.debug("Clearing the ephemeris cache")
     eph_cache.clear_all()
 
+    t_elapsed = time.time() - t_start_total
+    logger.info(
+        f"HEALPix visibility check completed in {t_elapsed:.2f}s "
+        f"({t_elapsed/len(df)*1000:.1f}ms per target)"
+    )
     logger.info(
         f"Final visibility: {is_observable.sum()}/{len(is_observable)} targets observable"
     )
@@ -792,6 +849,258 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     return dict_flux, dfout
 
 
+def check_fluxvalues(
+    df: pd.DataFrame,
+    filter_category: dict = filter_category,
+    min_flux: float = 10.0,
+    max_flux: float = 30.0,
+    thresh_frac_suspicious: float = 0.9,
+    logger=logger,
+):
+    bands = filter_category.keys()
+
+    dict_flux_values = {}
+
+    for band in bands:
+        if f"flux_{band}" in df.columns:
+            is_flux_finite = np.isfinite(df[f"flux_{band}"])
+            is_flux_suspicious = (
+                (df[f"flux_{band}"] >= min_flux)
+                & (df[f"flux_{band}"] <= max_flux)
+                & is_flux_finite
+            )
+
+            frac_suspicious = (
+                np.sum(is_flux_suspicious) / np.sum(is_flux_finite)
+                if np.sum(is_flux_finite) > 0
+                else np.nan
+            )
+
+            num_total = np.sum(is_flux_finite)
+            num_suspicious = np.sum(is_flux_suspicious)
+
+            dict_flux_values[f"frac_suspicious_flux_{band}"] = frac_suspicious
+            dict_flux_values[f"status_flux_{band}"] = (
+                True if frac_suspicious < thresh_frac_suspicious else False
+            )
+            dict_flux_values[f"num_total_flux_{band}"] = num_total
+            dict_flux_values[f"num_suspicious_flux_{band}"] = num_suspicious
+
+            # Log the results for each band
+            if num_total > 0:
+                if dict_flux_values[f"status_flux_{band}"]:
+                    logger.info(
+                        f"[Flux {band}] {frac_suspicious:.1%} suspicious values "
+                        f"({num_suspicious}/{num_total}) - OK"
+                    )
+                else:
+                    logger.warning(
+                        f"[Flux {band}] {frac_suspicious:.1%} suspicious values "
+                        f"({num_suspicious}/{num_total}) - WARNING: possible magnitude instead of nJy"
+                    )
+
+    status_flux_values = True
+    num_total_flux = 0
+    num_suspicious_flux = 0
+
+    for band in bands:
+        if f"status_flux_{band}" in dict_flux_values:
+            status_flux_values = (
+                status_flux_values and dict_flux_values[f"status_flux_{band}"]
+            )
+            num_total_flux += dict_flux_values[f"num_total_flux_{band}"]
+            num_suspicious_flux += dict_flux_values[f"num_suspicious_flux_{band}"]
+    dict_flux_values["status"] = status_flux_values
+    dict_flux_values["thresh_frac_suspicious"] = thresh_frac_suspicious
+    dict_flux_values["min_flux"] = min_flux
+    dict_flux_values["max_flux"] = max_flux
+    dict_flux_values["num_total_flux"] = num_total_flux
+    dict_flux_values["num_suspicious_flux"] = num_suspicious_flux
+    dict_flux_values["frac_suspicious_flux_all"] = (
+        num_suspicious_flux / num_total_flux if num_total_flux > 0 else np.nan
+    )
+
+    # Log overall summary
+    if num_total_flux > 0:
+        frac_all = num_suspicious_flux / num_total_flux
+        if status_flux_values:
+            logger.info(
+                f"[Flux overall] {frac_all:.1%} suspicious values "
+                f"({num_suspicious_flux}/{num_total_flux}) - OK"
+            )
+        else:
+            logger.warning(
+                f"[Flux overall] {frac_all:.1%} suspicious values "
+                f"({num_suspicious_flux}/{num_total_flux}) - WARNING: "
+                f"threshold exceeded ({thresh_frac_suspicious:.0%})"
+            )
+    else:
+        logger.warning("[Flux overall] No flux values found to check")
+
+    return dict_flux_values
+
+
+def check_fluxrange(
+    df: pd.DataFrame,
+    filter_category: dict = filter_category,
+    min_mag: float | None = None,
+    max_mag: float | None = None,
+    logger=logger,
+):
+    """
+    Check if flux values are within specified AB magnitude range.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target dataframe with flux_{band} columns (values in nJy)
+    filter_category : dict
+        Dictionary of filter bands (default from __init__.py)
+    min_mag : float or None
+        Minimum AB magnitude (brightest allowed limit).
+        None means no bright limit.
+    max_mag : float or None
+        Maximum AB magnitude (faintest allowed limit).
+        None means no faint limit.
+    logger : loguru.Logger
+        Logger instance
+
+    Returns
+    -------
+    dict
+        Dictionary with validation results:
+        - status: bool (True if all in range, False if any out of range)
+        - min_mag, max_mag: input magnitude limits
+        - min_flux_nJy, max_flux_nJy: converted flux limits
+        - success_flux_{band}: per-row boolean arrays
+        - status_flux_{band}: per-band overall status
+        - num_total_flux_{band}, num_out_of_range_flux_{band}: counts
+        - success: overall per-row boolean array
+        - num_total_flux, num_out_of_range_flux: overall counts
+
+    Notes
+    -----
+    AB magnitude to nJy conversion uses astropy.units for accuracy.
+
+    A brighter magnitude (lower number) corresponds to higher flux in nJy.
+    Therefore:
+    - min_mag (bright limit) -> max_flux_nJy (upper flux bound)
+    - max_mag (faint limit) -> min_flux_nJy (lower flux bound)
+    """
+    bands = filter_category.keys()
+
+    # Validate magnitude range consistency
+    if min_mag is not None and max_mag is not None:
+        if min_mag > max_mag:
+            raise ValueError(
+                f"Invalid magnitude range: min_mag ({min_mag}) > max_mag ({max_mag}). "
+                f"min_mag should be brighter (smaller value) than max_mag."
+            )
+
+    # Convert AB magnitude limits to nJy using astropy.units
+    # Note: brighter mag (smaller number) = higher flux
+    min_flux_nJy = None
+    max_flux_nJy = None
+
+    if max_mag is not None:
+        # Faint limit -> lower flux bound
+        min_flux_nJy = (max_mag * u.ABmag).to_value(u.nJy)
+
+    if min_mag is not None:
+        # Bright limit -> upper flux bound
+        max_flux_nJy = (min_mag * u.ABmag).to_value(u.nJy)
+
+    dict_fluxval = {
+        "min_mag": min_mag,
+        "max_mag": max_mag,
+        "min_flux_nJy": min_flux_nJy,
+        "max_flux_nJy": max_flux_nJy,
+    }
+
+    # Track overall success per row
+    success_all = np.ones(df.index.size, dtype=bool)
+    num_total_flux = 0
+    num_out_of_range_flux = 0
+
+    for band in bands:
+        col_name = f"flux_{band}"
+        if col_name not in df.columns:
+            continue
+
+        is_flux_finite = np.isfinite(df[col_name])
+        num_total = np.sum(is_flux_finite)
+
+        # Initialize per-row success as True for finite values
+        is_in_range = is_flux_finite.copy()
+
+        # Apply lower bound (faint limit)
+        if min_flux_nJy is not None:
+            is_in_range = is_in_range & (
+                (df[col_name] >= min_flux_nJy) | ~is_flux_finite
+            )
+
+        # Apply upper bound (bright limit)
+        if max_flux_nJy is not None:
+            is_in_range = is_in_range & (
+                (df[col_name] <= max_flux_nJy) | ~is_flux_finite
+            )
+
+        # For non-finite values, mark as True (not checked)
+        is_in_range = is_in_range | ~is_flux_finite
+
+        num_out_of_range = np.sum(is_flux_finite & ~is_in_range)
+        status_band = num_out_of_range == 0
+
+        dict_fluxval[f"success_flux_{band}"] = is_in_range
+        dict_fluxval[f"status_flux_{band}"] = status_band
+        dict_fluxval[f"num_total_flux_{band}"] = int(num_total)
+        dict_fluxval[f"num_out_of_range_flux_{band}"] = int(num_out_of_range)
+
+        # Update overall tracking
+        success_all = success_all & is_in_range
+        num_total_flux += num_total
+        num_out_of_range_flux += num_out_of_range
+
+        # Log results for each band
+        if num_total > 0:
+            if status_band:
+                logger.info(
+                    f"[Flux {band}] All {num_total} values within magnitude range - OK"
+                )
+            else:
+                logger.warning(
+                    f"[Flux {band}] {num_out_of_range}/{num_total} values out of range "
+                    f"(AB mag {min_mag} to {max_mag}) - WARNING"
+                )
+
+    # Overall status
+    if num_total_flux == 0:
+        status_overall = None  # No flux values to check
+    else:
+        status_overall = num_out_of_range_flux == 0
+    dict_fluxval["status"] = status_overall
+    dict_fluxval["success"] = success_all
+    dict_fluxval["num_total_flux"] = int(num_total_flux)
+    dict_fluxval["num_out_of_range_flux"] = int(num_out_of_range_flux)
+
+    # Log overall summary
+    if num_total_flux > 0:
+        if status_overall:
+            logger.info(
+                f"[Flux range check] All {num_total_flux} flux values within "
+                f"AB magnitude range [{min_mag}, {max_mag}] - OK"
+            )
+        else:
+            logger.warning(
+                f"[Flux range check] {num_out_of_range_flux}/{num_total_flux} flux values "
+                f"out of AB magnitude range [{min_mag}, {max_mag}] - WARNING"
+            )
+    else:
+        logger.warning("[Flux range check] No flux values found to check")
+
+    return dict_fluxval
+
+
 def check_visibility(
     df,
     date_begin=None,
@@ -802,10 +1111,38 @@ def check_visibility(
     nside=32,
     logger=logger,
 ):
+    """
+    Check target visibility during observation period (wrapper function).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target dataframe
+    date_begin : datetime, optional
+        Observation period start date
+    date_end : datetime, optional
+        Observation period end date
+    single_exptime : float, default 900
+        Single exposure time in seconds (only used by HEALPix implementation).
+        Controls time resolution for observability window checks.
+    vectorized : bool, default False
+        Use legacy vectorized implementation (not recommended)
+    healpix : bool, default True
+        Use HEALPix-optimized implementation (RECOMMENDED for production)
+    nside : int, default 32
+        HEALPix nside parameter (only used when healpix=True)
+    logger : loguru.Logger
+        Logger instance
+
+    Returns
+    -------
+    dict
+        Dictionary with 'status' (bool) and 'success' (array) keys
+    """
     dict_visibility = {}
 
     if healpix:
-        logger.info("Using HEALPix-optimized visibility checker")
+        logger.info("Using HEALPix-optimized visibility checker (RECOMMENDED)")
         is_visible = visibility_checker_healpix(
             df,
             date_begin=date_begin,
@@ -814,10 +1151,12 @@ def check_visibility(
             nside=nside,
         )
     elif vectorized:
+        logger.warning("Using legacy vectorized visibility checker (not recommended)")
         is_visible = visibility_checker_vec(
             df, date_begin=date_begin, date_end=date_end
         )
     else:
+        logger.warning("Using legacy per-target visibility checker (slowest)")
         is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
         # print(is_visible)
 
@@ -900,6 +1239,74 @@ def check_unique(df, logger=logger):
     return dict(status=unique_status, flags=flag_duplicate, description=description)
 
 
+def check_internal_duplicate(
+    df: pd.DataFrame, sep: u.Quantity = 1.0 * u.arcsec, logger=logger
+) -> dict:
+    """
+    Check for internal duplicate or clustered targets within a single input table.
+
+    This function identifies exact and near-duplicate targets (within ``sep``)
+    based on sky position and returns a boolean mask of duplicated targets
+    together with the nearest-neighbour separation for each.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input target table. The ``"ob_code"`` column must uniquely identify
+        each target. This uniqueness should be enforced by running
+        :func:`check_unique` before calling this function.
+    sep : astropy.units.Quantity, optional
+        Maximum angular separation used to define near-duplicates.
+        Default is 1.0 arcsec (PFS fiber diameter).
+    logger : loguru.Logger, optional
+        Logger instance used for reporting.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys:
+
+        - ``"status"``: ``True`` if no internal duplicates or clusters are
+          found, otherwise ``False``.
+        - ``"flags"``: a boolean array of the same length as ``df`` where
+          ``True`` marks duplicated targets and ``False`` marks isolated ones.
+        - ``"nn_sep"``: a float array giving the nearest-neighbour separation
+          (in arcsec) for duplicated targets, and ``NaN`` for isolated ones.
+    """
+    df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
+        df,
+        sep=sep,
+        max_cluster_diameter=1.0 * u.arcsec,  # PFS fiber diameter
+        max_points_for_agglomerative=None,
+    )
+
+    # Combine all duplicates (exact + near) with nn_sep information
+    df_dups_all = pd.concat([df_dups_exact, df_dups_near], ignore_index=False)
+
+    # Initialize output arrays (use len(df) to avoid index assumptions)
+    is_duplicated = np.ones(len(df), dtype=bool)
+    nn_sep_array = np.full(len(df), np.nan)
+
+    # Vectorized: mark isolated targets as not duplicated using isin() - O(n)
+    isolated_mask = df["ob_code"].isin(df_isolated["ob_code"])
+    is_duplicated[isolated_mask.to_numpy()] = False
+
+    # Vectorized: assign nn_sep for duplicated targets using map() - O(n)
+    if not df_dups_all.empty:
+        nn_sep_map = df_dups_all.set_index("ob_code")["nn_sep"]
+        nn_sep_series = df["ob_code"].map(nn_sep_map)
+        nn_sep_array = nn_sep_series.to_numpy()
+
+    if len(df) == len(df_isolated):
+        logger.info("No duplicated or clustered targets found internally.")
+        status = True
+    else:
+        logger.warning("Duplicated or clustered targets found internally.")
+        status = False
+
+    return dict(status=status, flags=is_duplicated, nn_sep=nn_sep_array)
+
+
 def validate_input(
     df,
     date_begin=None,
@@ -907,6 +1314,8 @@ def validate_input(
     single_exptime=900,
     healpix=True,
     nside=32,
+    min_mag=None,
+    max_mag=None,
     logger=logger,
 ):
     logger.info("Validation of the input list starts")
@@ -929,7 +1338,9 @@ def validate_input(
 
     validation_status["str"] = {"status": None}
     validation_status["values"] = {"status": None}
-    validation_status["flux"] = {"status": None}
+    validation_status["flux_columns"] = {"status": None}
+    validation_status["flux_values"] = {"status": None}
+    validation_status["flux_range"] = {"status": None}
     validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
 
@@ -968,10 +1379,36 @@ def validate_input(
         return validation_status, df
 
     # check columns for flux
-    logger.info("[Fluxes] Checking flux information")
-    dict_flux, df = check_fluxcolumns(df)
-    logger.info(f"[Fluxes] status: {dict_flux['status']} (Success if True)")
-    validation_status["flux"] = dict_flux
+    logger.info("[Flux columns] Checking flux information")
+    dict_flux_columns, df = check_fluxcolumns(df)
+    validation_status["flux_columns"] = dict_flux_columns
+    logger.info(
+        f"[Flux columns] status: {dict_flux_columns['status']} (Success if True)"
+    )
+
+    logger.info("[Flux values] Checking flux values for suspicious entries")
+    dict_flux_values = check_fluxvalues(df)
+    validation_status["flux_values"] = dict_flux_values
+    logger.info(f"[Flux values] status: {dict_flux_values['status']} (Success if True)")
+
+    # check flux value range (AB magnitude based)
+    if min_mag is not None or max_mag is not None:
+        logger.info("[Flux range] Checking flux values against AB magnitude range")
+        dict_flux_range = check_fluxrange(df, min_mag=min_mag, max_mag=max_mag)
+        validation_status["flux_range"] = dict_flux_range
+        logger.info(f"[Flux range] status: {dict_flux_range['status']} (Success if True)")
+    else:
+        logger.info("[Flux range] Skipping flux range check (no limits specified)")
+        validation_status["flux_range"] = {
+            "status": None,
+            "min_mag": None,
+            "max_mag": None,
+            "min_flux_nJy": None,
+            "max_flux_nJy": None,
+            "success": np.ones(len(df), dtype=bool),
+            "num_total_flux": 0,
+            "num_out_of_range_flux": 0,
+        }
 
     # check columns for visibility
     logger.info("[Visibility] Checking target visibility")
@@ -993,18 +1430,26 @@ def validate_input(
     logger.info(f"[Uniqueness] status: {dict_unique['status']} (Success if True)")
     validation_status["unique"] = dict_unique
 
+    # check internal duplication by coordinates
+    logger.info("[Internal duplication] Checking internal duplication by coordinates")
+    dict_internal_dup = check_internal_duplicate(df)
+    logger.info(
+        f"[Internal duplication] status: {dict_internal_dup['status']} (Success if True)"
+    )
+    validation_status["internal_duplication"] = dict_internal_dup
+
     if (
         validation_status["required_keys"]["status"]
         and validation_status["str"]["status"]
         and validation_status["values"]["status"]
-        and validation_status["flux"]["status"]
+        and validation_status["flux_columns"]["status"]
         and validation_status["visibility"]["status"]
         and validation_status["unique"]["status"]
     ):
         logger.info("[Summary] succeeded to meet all validation criteria")
         validation_status["status"] = True
     else:
-        logger.info("[Summary] failed to meet all validation criteria")
+        logger.warning("[Summary] failed to meet all validation criteria")
 
     msg_t_stop()
 

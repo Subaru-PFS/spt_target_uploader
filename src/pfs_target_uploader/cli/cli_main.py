@@ -6,13 +6,14 @@ import sys
 from datetime import date
 from enum import Enum
 from pathlib import Path
-from typing import Annotated, List
+from typing import Annotated, Any
 
 import pandas as pd
 import panel as pn
 import psutil
 import typer
 from astropy.table import Table
+from dotenv import load_dotenv
 from loguru import logger
 
 from ..utils.checker import validate_input
@@ -56,14 +57,14 @@ def validate(
         str, typer.Option("-d", "--dir", help="Output directory to save the results.")
     ] = ".",
     date_begin: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--date-begin",
             help="Begin date (e.g., 2023-02-01). The default is the first date of the next Subaru semester.",
         ),
     ] = None,
     date_end: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--date-end",
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
@@ -75,7 +76,19 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
-    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
+    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = ObsType.queue,
+    min_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
+        ),
+    ] = None,
+    max_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
@@ -91,12 +104,16 @@ def validate(
         )
         return
     else:
-        date_begin = None if date_begin is None else date.fromisoformat(date_begin)
+        date_begin_parsed = None if date_begin is None else date.fromisoformat(date_begin)
 
-        date_end = None if date_end is None else date.fromisoformat(date_end)
+        date_end_parsed = None if date_end is None else date.fromisoformat(date_end)
 
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
+            df_input,
+            date_begin=date_begin_parsed,
+            date_end=date_end_parsed,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
 
     if validation_status["status"] is False:
@@ -137,14 +154,14 @@ def simulate(
         str, typer.Option("-d", "--dir", help="Output directory to save the results.")
     ] = ".",
     date_begin: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--date-begin",
             help="Begin date (e.g., 2023-02-01). The default is the first date of the next Subaru semester.",
         ),
     ] = None,
     date_end: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--date-end",
             help="End date (e.g., 2023-07-31). The default is the last date of the next Subaru semester.",
@@ -159,15 +176,30 @@ def simulate(
             "--max-exec-time", help="Max execution time (s). 0 means no limit."
         ),
     ] = 0,
-    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = "queue",
+    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = ObsType.queue,
+    min_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit."
+        ),
+    ] = None,
+    max_mag: Annotated[
+        float | None,
+        typer.Option(
+            help="Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit."
+        ),
+    ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
 ):
+    # Load environment variables from .env.shared file
+    load_dotenv(".env.shared")
+
     logger.remove(0)
     logger.add(sys.stderr, level=log_level.value, enqueue=True)
 
-    if obs_type != "classical":
+    if obs_type != ObsType.classical:
         logger.warning(
             f'Force to set the single exposure time as 900s for the observation type "{obs_type.value}".'
         )
@@ -181,11 +213,15 @@ def simulate(
         )
         return
     else:
-        date_begin = None if date_begin is None else date.fromisoformat(date_begin)
-        date_end = None if date_end is None else date.fromisoformat(date_end)
+        date_begin_parsed = None if date_begin is None else date.fromisoformat(date_begin)
+        date_end_parsed = None if date_end is None else date.fromisoformat(date_end)
 
         validation_status, df_validated = validate_input(
-            df_input, date_begin=date_begin, date_end=date_end
+            df_input,
+            date_begin=date_begin_parsed,
+            date_end=date_end_parsed,
+            min_mag=min_mag,
+            max_mag=max_mag,
         )
 
         if validation_status["status"] is False:
@@ -198,6 +234,9 @@ def simulate(
     logger.info("Running the online PPP to simulate pointings")
 
     #########################################################################
+
+    # Load PPP performance settings from environment
+    ppp_timing_verbose = bool(int(os.getenv("PPP_TIMING_VERBOSE", "0")))
 
     ppp_run_results = mp.Manager().Queue()
 
@@ -214,6 +253,7 @@ def simulate(
             "HDBSCAN",  # clustering_algorithm
             ppp_run_results,
             logger,
+            ppp_timing_verbose,  # timing_verbose
         ),
     )
 
@@ -306,9 +346,9 @@ def start_app(
     ] = 5008,
     prefix: Annotated[str, typer.Option(help="URL prefix to serve the app.")] = "",
     allow_websocket_origin: Annotated[
-        List[str], typer.Option(help="Allow websocket origin.")
+        list[str] | None, typer.Option(help="Allow websocket origin.")
     ] = None,
-    static_dirs: Annotated[List[str], typer.Option(help="Static directories.")] = None,
+    static_dirs: Annotated[list[str] | None, typer.Option(help="Static directories.")] = None,
     use_xheaders: Annotated[
         bool, typer.Option(help="Set --use-xheaders option.")
     ] = False,
@@ -321,11 +361,11 @@ def start_app(
         int, typer.Option(help="Session token expiration time in seconds.")
     ] = 1800,
     basic_auth: Annotated[
-        str, typer.Option(help="Basic authentication config (.json).")
+        str | None, typer.Option(help="Basic authentication config (.json).")
     ] = None,
     # cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
     basic_login_template: Annotated[
-        str, typer.Option(help="Basic login template.")
+        str | None, typer.Option(help="Basic login template.")
     ] = None,
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
@@ -394,14 +434,14 @@ def start_app(
         if not os.path.exists(basic_auth):
             logger.error(f"Basic authentication file not found: {basic_auth}")
             return
-        admin_options = dict(
+        admin_options: dict[str, Any] = dict(
             basic_auth=basic_auth,
             # cookie_secret=cookie_secret,
             basic_login_template=basic_login_template,
         )
         kwargs = admin_options
     else:
-        kwargs = {}  # dict(cookie_secret=cookie_secret)
+        kwargs: dict[str, Any] = {}  # dict(cookie_secret=cookie_secret)
 
     # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
     pn.serve(
@@ -429,7 +469,7 @@ def start_app(
 @app.command(help="Generate a SQLite database of upload_id")
 def uid2sqlite(
     input_list: Annotated[
-        str, typer.Argument(show_default=False, help="Input CSV file.")
+        str | None, typer.Argument(show_default=False, help="Input CSV file.")
     ] = None,
     output_dir: Annotated[
         str, typer.Option("-d", "--dir", help="Output directory to save the results.")
@@ -442,7 +482,7 @@ def uid2sqlite(
         ),
     ] = "upload_id.sqlite",
     scan_dir: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--scan-dir",
             help="Directory to scan for the upload_id. Default is None (use input file)",

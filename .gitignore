@@ -125,6 +125,9 @@ celerybeat.pid
 
 # Environments
 .env
+.env.shared
+.env.private
+.env.docker
 .venv
 env/
 venv/
@@ -156,6 +159,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# setuptools-scm version file
+src/pfs_target_uploader/_version.py
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

@@ -1,0 +1,80 @@
+# Virtual environments
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+__pypackages__/
+
+# Data and temporary files
+data/
+tmp/
+!tmp/bak/
+!tmp/bak/app.py
+*.sqlite
+
+# Git and version control
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
+.hypothesis/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation build output (will rebuild inside container)
+docs/site/
+docs/.cache/
+
+# Environment files
+.env
+.env.shared
+.env.private
+.env.docker
+.env.*.example
+
+# PDM/UV lock files
+pdm.lock
+uv.lock
+.pdm.toml
+.pdm-python
+
+# CI/CD
+.claude/
+.github/
+
+# Logs
+*.log
+
+# Large video files (135MB - serve externally or link instead)
+docs/docs/videos/*.mp4
+docs/docs/videos/*.mov
+
+# Backup files
+*.bak
+*.orig
