@@ -93,5 +93,6 @@ exec ${RUNNER} start-app admin \
     --prefix=uploader-admin/ \
     --static-dirs doc=docs/site \
     --static-dirs data=data \
+    --basic-login-template ./templates/basic_login_admin_dev.html \
     --max-upload-size=100 \
     --autoreload
