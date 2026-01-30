@@ -180,3 +180,7 @@ pfs-uploader-cli clean-uid $OUTPUT_DIR/$UPLOADID_DB
 ```
 
 See [the CLI documentation](./docs/cli.md) for more options.
+
+## Production Deployment
+
+When deploying behind an nginx reverse proxy with authentication, additional configuration is required for the admin application's login page assets. See [CLAUDE.md](./CLAUDE.md#production-deployment-with-nginx) for detailed nginx configuration and template selection instructions.
