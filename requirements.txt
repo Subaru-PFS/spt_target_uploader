@@ -485,7 +485,7 @@ qtpy==2.4.3
     # via
     #   ginga
     #   qplan
-requests==2.32.5
+requests==2.33.0
     # via
     #   datashader
     #   mkdocs-macros-plugin
