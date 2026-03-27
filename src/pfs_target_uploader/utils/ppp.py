@@ -252,8 +252,8 @@ def set_observation_time(ra: float, dec: float = 0.0, offset_hour: float = 0.0) 
     """
     Set the observation time based on the given RA, Dec, and offset hour.
 
-    Starting from a seasonal base date (October for RA in [0, 90] and (270, 360),
-    April for RA in (90, 270]), the function searches in 15-minute steps over
+    Starting from a seasonal base date (October for 0° ≤ RA ≤ 90° or 270° < RA < 360°,
+    April for 90° < RA ≤ 270°), the function searches in 15-minute steps over
     24 hours to find a time when the field altitude from Subaru Telescope is
     between 32° and 75°. The offset_hour shifts the starting point of the search
     window, allowing different time windows to be explored.
@@ -288,25 +288,24 @@ def set_observation_time(ra: float, dec: float = 0.0, offset_hour: float = 0.0) 
     alt_min, alt_max = 32.0, 75.0
     base_time = Time(f"{base_date}T00:00:00Z", scale="utc") + offset_hour * u.hour
 
-    # Search in 15-minute steps over 24 hours for a valid altitude window
-    best_t = None
-    best_alt = -90.0
-    for i in range(96):
-        t = base_time + i * 0.25 * u.hour
-        altaz = field.transform_to(AltAz(obstime=t, location=_SUBARU_LOCATION))
-        alt = altaz.alt.deg
-        if alt_min <= alt <= alt_max:
-            return t.isot.split(".")[0] + "Z"
-        if alt > best_alt:
-            best_alt = alt
-            best_t = t
+    # Vectorized altitude calculation over 96 candidate times (15-minute steps, 24 hours)
+    times = base_time + np.arange(96) * 0.25 * u.hour
+    altaz = field.transform_to(AltAz(obstime=times, location=_SUBARU_LOCATION))
+    alt = altaz.alt.deg
+
+    in_range = (alt >= alt_min) & (alt <= alt_max)
+    if np.any(in_range):
+        first_idx = int(np.where(in_range)[0][0])
+        return times[first_idx].isot.split(".")[0] + "Z"
 
     # Fallback: return the time with the highest altitude found and warn
+    best_idx = int(np.argmax(alt))
+    best_alt = float(alt[best_idx])
     logger.warning(
         f"Could not find observation time with altitude in [{alt_min}°, {alt_max}°] "
         f"for RA={ra:.2f}°, Dec={dec:.2f}°. Using best altitude found ({best_alt:.1f}°) as fallback."
     )
-    return best_t.isot.split(".")[0] + "Z"
+    return times[best_idx].isot.split(".")[0] + "Z"
 
 
 def PPPrunStart(
