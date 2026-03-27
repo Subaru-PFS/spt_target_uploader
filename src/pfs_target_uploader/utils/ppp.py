@@ -61,6 +61,9 @@ warnings.filterwarnings("ignore")
 
 pn.extension(notifications=True)
 
+# Cached Subaru Telescope location to avoid repeated registry lookups
+_SUBARU_LOCATION = EarthLocation.of_site("Subaru Telescope")
+
 
 class PPPTimer:
     """PPP stage timing tracker utility"""
@@ -269,6 +272,9 @@ def set_observation_time(ra: float, dec: float = 0.0, offset_hour: float = 0.0) 
     str
         Observation time in ISO format (YYYY-MM-DDTHH:MM:SSZ).
     """
+    # Normalize RA to [0, 360) to handle any out-of-range values from callers
+    ra = ra % 360.0
+
     current_year = datetime.datetime.now().year
 
     # Choose observation season based on RA
@@ -277,25 +283,30 @@ def set_observation_time(ra: float, dec: float = 0.0, offset_hour: float = 0.0) 
     else:
         base_date = f"{current_year}-04-01"
 
-    subaru = EarthLocation.of_site("Subaru Telescope")
     field = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
 
     alt_min, alt_max = 32.0, 75.0
     base_time = Time(f"{base_date}T00:00:00Z", scale="utc") + offset_hour * u.hour
 
     # Search in 15-minute steps over 24 hours for a valid altitude window
+    best_t = None
+    best_alt = -90.0
     for i in range(96):
         t = base_time + i * 0.25 * u.hour
-        altaz = field.transform_to(AltAz(obstime=t, location=subaru))
-        if alt_min <= altaz.alt.deg <= alt_max:
+        altaz = field.transform_to(AltAz(obstime=t, location=_SUBARU_LOCATION))
+        alt = altaz.alt.deg
+        if alt_min <= alt <= alt_max:
             return t.isot.split(".")[0] + "Z"
+        if alt > best_alt:
+            best_alt = alt
+            best_t = t
 
-    # Fallback: return midpoint of search window with a warning
+    # Fallback: return the time with the highest altitude found and warn
     logger.warning(
         f"Could not find observation time with altitude in [{alt_min}°, {alt_max}°] "
-        f"for RA={ra:.2f}°, Dec={dec:.2f}°. Using base_date midpoint as fallback."
+        f"for RA={ra:.2f}°, Dec={dec:.2f}°. Using best altitude found ({best_alt:.1f}°) as fallback."
     )
-    return (base_time + 12.0 * u.hour).isot.split(".")[0] + "Z"
+    return best_t.isot.split(".")[0] + "Z"
 
 
 def PPPrunStart(
@@ -1204,12 +1215,16 @@ def PPPrunStart(
                 iter_1 += 1
 
                 if (iter_1 >= 4) and (iter_1 < 7):
-                    otime_ = set_observation_time(Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=6.0)
+                    otime_ = set_observation_time(
+                        Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=6.0
+                    )
                     logger.debug(
                         f"Change observation time to {otime_} with offset 6 hr at {iter_1=}"
                     )
                 elif iter_1 >= 7:
-                    otime_ = set_observation_time(Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=12.0)
+                    otime_ = set_observation_time(
+                        Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=12.0
+                    )
                     logger.debug(
                         f"Change observation time to {otime_} with offset 12 hr at {iter_1=}"
                     )
