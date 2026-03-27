@@ -2313,9 +2313,9 @@ def ppp_result_reproduce(
             return calc_nppc_from_obstime(rot, single_exptime)
 
         if nppc_tac > 0:
-            admin_slider_ini_value = nppc_tac.data[0]
+            admin_slider_ini_value = nppc_tac
         else:
-            admin_slider_ini_value = nppc_usr.data[0]
+            admin_slider_ini_value = nppc_usr
 
         legend_cols = 2 if len(sub) >= 6 else 1
 
@@ -2708,10 +2708,10 @@ def ppp_result_reproduce(
         uS_L_, cR_l_fh, cR_l_fh_, cR_l_n, cR_l_n_, sub_l = complete_ppc(
             uS_L, obj_allo_l
         )
-        nppc_usr_l = tab_psl[tab_psl["resolution"] == "low"]["N_ppc"]
+        nppc_usr_l = int(tab_psl[tab_psl["resolution"] == "low"]["N_ppc"][0])
 
         if len(tab_tac) > 0:
-            nppc_tac_l = tab_tac[tab_tac["resolution"] == "low"]["N_ppc"]
+            nppc_tac_l = int(tab_tac[tab_tac["resolution"] == "low"]["N_ppc"][0])
         else:
             nppc_tac_l = 0
 
@@ -2724,10 +2724,10 @@ def ppp_result_reproduce(
         uS_M_, cR_m_fh, cR_m_fh_, cR_m_n, cR_m_n_, sub_m = complete_ppc(
             uS_M, obj_allo_m
         )
-        nppc_usr_m = tab_psl[tab_psl["resolution"] == "medium"]["N_ppc"]
+        nppc_usr_m = int(tab_psl[tab_psl["resolution"] == "medium"]["N_ppc"][0])
 
         if len(tab_tac) > 0:
-            nppc_tac_m = tab_tac[tab_tac["resolution"] == "medium"]["N_ppc"]
+            nppc_tac_m = int(tab_tac[tab_tac["resolution"] == "medium"]["N_ppc"][0])
         else:
             nppc_tac_m = 0
 

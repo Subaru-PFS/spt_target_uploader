@@ -522,38 +522,38 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
             tb_m = tb_psl[tb_psl["resolution"] == "medium"]
 
             if len(tb_l) > 0:
-                exp_sci_l[i] = tb_l["Texp (h)"]
-                exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"]
+                exp_sci_l[i] = tb_l["Texp (h)"][0]
+                exp_sci_fh_l[i] = tb_l["Texp (fiberhour)"][0]
                 try:
-                    tot_time_l[i] = tb_l["Request time (h)"]
+                    tot_time_l[i] = tb_l["Request time (h)"][0]
                 except KeyError:
-                    tot_time_l[i] = tb_l["Request time 1 (h)"]
+                    tot_time_l[i] = tb_l["Request time 1 (h)"][0]
 
                 if len(tb_tac) > 0:
                     tac_fh_l[i] = tb_tac[tb_tac["resolution"] == "low"][
                         "Texp (fiberhour)"
-                    ]
-                    tac_nppc_l[i] = tb_tac[tb_tac["resolution"] == "low"]["N_ppc"]
+                    ][0]
+                    tac_nppc_l[i] = tb_tac[tb_tac["resolution"] == "low"]["N_ppc"][0]
                     tac_rot_l[i] = tb_tac[tb_tac["resolution"] == "low"][
                         "Request time (h)"
-                    ]
+                    ][0]
 
             if len(tb_m) > 0:
-                exp_sci_m[i] = tb_m["Texp (h)"]
-                exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"]
+                exp_sci_m[i] = tb_m["Texp (h)"][0]
+                exp_sci_fh_m[i] = tb_m["Texp (fiberhour)"][0]
                 try:
-                    tot_time_m[i] = tb_m["Request time (h)"]
+                    tot_time_m[i] = tb_m["Request time (h)"][0]
                 except KeyError:
-                    tot_time_m[i] = tb_m["Request time 1 (h)"]
+                    tot_time_m[i] = tb_m["Request time 1 (h)"][0]
 
                 if len(tb_tac) > 0:
                     tac_fh_m[i] = tb_tac[tb_tac["resolution"] == "medium"][
                         "Texp (fiberhour)"
-                    ]
-                    tac_nppc_m[i] = tb_tac[tb_tac["resolution"] == "medium"]["N_ppc"]
+                    ][0]
+                    tac_nppc_m[i] = tb_tac[tb_tac["resolution"] == "medium"]["N_ppc"][0]
                     tac_rot_m[i] = tb_tac[tb_tac["resolution"] == "medium"][
                         "Request time (h)"
-                    ]
+                    ][0]
 
     df_psl_tgt = pd.DataFrame(
         {
