@@ -21,7 +21,7 @@ import pandas as pd
 import panel as pn
 import spatialpandas as sp
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.table import Table, join, vstack
 from astropy.time import Time
 from bokeh.models.widgets.tables import NumberFormatter
@@ -245,37 +245,57 @@ def calc_nppc_from_obstime(
     return n_pointings
 
 
-def set_observation_time(ra: float, offset_hour: float = 0.0) -> str:
+def set_observation_time(ra: float, dec: float = 0.0, offset_hour: float = 0.0) -> str:
     """
-    Set the observation time based on the given RA and offset hour.
-    Observation time will be a corresponding equinox,
-    YYYY-09-20T10:00:00Z for 0<RA<90 and 270<RA<360,
-    and YYYY-03-20T10:00:00Z for 90<RA<270.
-    The time can be adjusted by offset_hour.
+    Set the observation time based on the given RA, Dec, and offset hour.
+
+    Starting from a seasonal base date (October for RA in [0, 90] and (270, 360),
+    April for RA in (90, 270]), the function searches in 15-minute steps over
+    24 hours to find a time when the field altitude from Subaru Telescope is
+    between 32° and 75°. The offset_hour shifts the starting point of the search
+    window, allowing different time windows to be explored.
 
     Parameters
     ----------
     ra : float
         Right Ascension in degrees.
+    dec : float, optional
+        Declination in degrees. Default is 0.0.
     offset_hour : float, optional
-        Offset hour to adjust the observation time. Default is 0.0 hours.
+        Offset in hours applied to the start of the search window. Default is 0.0.
 
     Returns
     -------
     str
         Observation time in ISO format (YYYY-MM-DDTHH:MM:SSZ).
     """
-    # Current year (not need to be precise)
     current_year = datetime.datetime.now().year
 
-    if (0.0 <= ra < 90.0) or (270.0 <= ra < 360.0):
-        observation_time = Time(f"{current_year}-09-20T10:00:00") + offset_hour * u.hour
+    # Choose observation season based on RA
+    if (0.0 <= ra <= 90.0) or (270.0 < ra < 360.0):
+        base_date = f"{current_year}-10-01"
     else:
-        observation_time = Time(f"{current_year}-03-20T10:00:00") + offset_hour * u.hour
+        base_date = f"{current_year}-04-01"
 
-    observation_time_out = observation_time.isot.split(".")[0] + "Z"
+    subaru = EarthLocation.of_site("Subaru Telescope")
+    field = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
 
-    return observation_time_out
+    alt_min, alt_max = 32.0, 75.0
+    base_time = Time(f"{base_date}T00:00:00Z", scale="utc") + offset_hour * u.hour
+
+    # Search in 15-minute steps over 24 hours for a valid altitude window
+    for i in range(96):
+        t = base_time + i * 0.25 * u.hour
+        altaz = field.transform_to(AltAz(obstime=t, location=subaru))
+        if alt_min <= altaz.alt.deg <= alt_max:
+            return t.isot.split(".")[0] + "Z"
+
+    # Fallback: return midpoint of search window with a warning
+    logger.warning(
+        f"Could not find observation time with altitude in [{alt_min}°, {alt_max}°] "
+        f"for RA={ra:.2f}°, Dec={dec:.2f}°. Using base_date midpoint as fallback."
+    )
+    return (base_time + 12.0 * u.hour).isot.split(".")[0] + "Z"
 
 
 def PPPrunStart(
@@ -769,7 +789,7 @@ def PPPrunStart(
 
                 # set observation time
                 if otime is None:
-                    otime = set_observation_time(ra_peak)
+                    otime = set_observation_time(ra_peak, dec=dec_peak)
                     logger.info(f"Set observation time to {otime}")
 
                 # run netflow once
@@ -1025,7 +1045,7 @@ def PPPrunStart(
 
         if otime is None:
             # set observation time based on the first PPC
-            otime = set_observation_time(Telra[0])
+            otime = set_observation_time(Telra[0], dec=Teldec[0])
             logger.debug(f"Set observation time to {otime}")
 
         tgt = sam2netflow(sample, for_ppc)
@@ -1130,7 +1150,7 @@ def PPPrunStart(
         """
 
         if otime is None:
-            otime = set_observation_time(Tel[0, 1])
+            otime = set_observation_time(Tel[0, 1], dec=Tel[0, 2])
             logger.debug(f"Set observation time to {otime}")
 
         res, telescope, tgt = netflowRun_single(
@@ -1184,12 +1204,12 @@ def PPPrunStart(
                 iter_1 += 1
 
                 if (iter_1 >= 4) and (iter_1 < 7):
-                    otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=6.0)
+                    otime_ = set_observation_time(Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=6.0)
                     logger.debug(
                         f"Change observation time to {otime_} with offset 6 hr at {iter_1=}"
                     )
                 elif iter_1 >= 7:
-                    otime_ = set_observation_time(Tel_t[:, 1][0], offset_hour=12.0)
+                    otime_ = set_observation_time(Tel_t[:, 1][0], dec=Tel_t[:, 2][0], offset_hour=12.0)
                     logger.debug(
                         f"Change observation time to {otime_} with offset 12 hr at {iter_1=}"
                     )
@@ -1208,7 +1228,7 @@ def PPPrunStart(
         otime=None,
     ):
         if otime is None:
-            otime = set_observation_time(ppc_x)
+            otime = set_observation_time(ppc_x, dec=ppc_y)
             logger.debug(f"Set observation time to {otime}")
 
         # run netflow (for PPP_centers)
