@@ -169,6 +169,69 @@ DOCKER_PUSH=true DOCKER_USER=your-dockerhub-username ./scripts/build-container.s
 
 **Priority**: Command-line environment variables > `.env.docker` > script defaults
 
+### Production Deployment with Nginx
+
+When deploying the admin application behind an nginx reverse proxy with the `--prefix` option, additional configuration is required for static assets (logo and favicon) on the login page.
+
+#### Admin Login Templates
+
+Environment-specific login templates are provided with appropriate asset paths:
+
+- **Development**: `templates/basic_login_admin_dev.html` (prefix: `/uploader-admin-dev/`)
+- **Production**: `templates/basic_login_admin.html` (prefix: `/uploader-admin/`)
+
+The development startup script (`scripts/serve-app-admin.sh`) automatically uses the development template. For production deployment, specify the production template in your startup command:
+
+```bash
+--basic-login-template ./templates/basic_login_admin.html
+```
+
+#### Nginx Configuration
+
+When using nginx as a reverse proxy with Panel's basic authentication, static assets must be served directly by nginx to bypass authentication. Add the following configuration **before** the main application location block:
+
+**Development**:
+
+```nginx
+# Static assets - serve directly from nginx (before authentication)
+location /uploader-admin-dev/assets/ {
+    alias /path/to/pfs_target_uploader/assets/;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# Admin app - proxy to Panel app with authentication
+location /uploader-admin-dev/ {
+    proxy_pass http://127.0.0.1:8091/uploader-admin-dev/;
+    include snippets/reverse_proxy_common.conf;
+}
+```
+
+**Production**:
+
+```nginx
+# Static assets - serve directly from nginx (before authentication)
+location /uploader-admin/assets/ {
+    alias /path/to/pfs_target_uploader/assets/;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# Admin app - proxy to Panel app with authentication
+location /uploader-admin/ {
+    proxy_pass http://127.0.0.1:8081/uploader-admin/;
+    include snippets/reverse_proxy_common.conf;
+}
+```
+
+**Important notes**:
+
+- Replace `/path/to/pfs_target_uploader/assets/` with the actual absolute path to the assets directory
+- The `/assets/` location block must appear **before** the main app location block
+- After updating nginx configuration, reload nginx: `sudo systemctl reload nginx` or `sudo nginx -s reload`
+
+**Why this is needed**: Panel's `static_dirs` parameter serves files at the root level (`/assets/`) without the prefix, but nginx only forwards requests matching the configured location pattern (e.g., `/uploader-admin-dev/`). Additionally, Panel's basic authentication blocks all unauthenticated requests, including static assets. By serving assets directly from nginx, we bypass both issues.
+
 ### Documentation Generation
 ```bash
 # Generate CLI documentation from typer docstrings
