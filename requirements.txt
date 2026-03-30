@@ -425,7 +425,7 @@ pyerfa==2.0.1.5
     # via
     #   astropy
     #   qplan
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   mkdocs-material
     #   rich
