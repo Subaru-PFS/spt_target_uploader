@@ -113,6 +113,16 @@ Flux columns must conform to the following requirements.
   An `ob_code` cannot have more than one flux in the same filter category.
 - If more than one flux columns with finite values are found for an `ob_code`,
   the value of the first column (the left-most one in the input CSV file) will be used.
+- For `ob_code`s with no measurement in a given filter column, use `NaN` (or `Inf`) as the placeholder. Do **not** use `0.0`, as it will be treated as a valid flux value.
+- Missing flux values are detected using Numpy's `isfinite()`. Please refer to the table
+  below to specify missing values correctly.
+
+  | Value | Result                            |
+  | ----- | --------------------------------- |
+  | `0.0` | ❌ Treated as a flux measurement  |
+  | `NaN` | ✅ Treated as missing and ignored |
+  | `Inf` | ✅ Treated as missing and ignored |
+
 - Flux values are in the unit of <font size=5>**nJy**</font> (nano-Jansky).
 - Flux values are assumed to be total flux.
 - Flux errors can be provided by using column names by adding `_error` following the filter names.
@@ -135,30 +145,38 @@ Flux columns must conform to the following requirements.
 
 | ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
 | ------- | ----- | ----------- | ------ | ------------ | ----- | ----------- |
-| 1       | 10000 | 100         |        |              |       |             |
-| 2       | 20000 | 200         | 20000  |              |       |             |
-| 3       |       |             |        |              | 30000 | 300         |
+| 1       | 10000 | 100         | NaN    | NaN          | NaN   | NaN         |
+| 2       | 20000 | 200         | 20000  | NaN          | NaN   | NaN         |
+| 3       | NaN   | NaN         | NaN    | NaN          | 30000 | 300         |
 
 ⚠️ OK
 
-- For the `ob_code 3`, `g_hsc` will be used and `g_ps1` will be ignored.
+- `ob_code 3` has both `g_hsc` and `g_ps1` fluxes, but only `g_hsc` will be used as the flux value, as it is the first column appeared and has a finite value.
 
-| ob_code | g_hsc | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
-| ------- | ----- | ----------- | ------ | ------------ | ----- | ----------- |
-| 1       | 10000 | 100         |        |              |       |             |
-| 2       | 20000 | 200         | 20000  |              |       |             |
-| 3       | 35000 | 350         |        |              | 30000 | 300         |
+| ob_code | g_hsc     | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1     | g_ps1_error |
+| ------- | --------- | ----------- | ------ | ------------ | --------- | ----------- |
+| 1       | 10000     | 100         | NaN    | NaN          | NaN       | NaN         |
+| 2       | 20000     | 200         | 20000  | NaN          | NaN       | NaN         |
+| **3**   | **35000** | **350**     | NaN    | NaN          | **30000** | **300**     |
 
 🚫 Bad
 
 - The `ob_code 1` does not have flux information at all.
 - The `i_hsc` must be either `i_old_hsc` or `i2_hsc`.
 
-| ob_code | g_hsc | g_hsc_error | i_hsc | i_hsc_error | g_ps1 | g_ps1_error |
-| ------- | ----- | ----------- | ----- | ----------- | ----- | ----------- |
-| 1       |       |             |       |             |       |             |
-| 2       | 20000 | 200         | 20000 |             |       |             |
-| 3       |       |             |       |             | 30000 | 300         |
+| ob_code | g_hsc   | g_hsc_error | **i_hsc** | **i_hsc_error** | g_ps1   | g_ps1_error |
+| ------- | ------- | ----------- | --------- | --------------- | ------- | ----------- |
+| **1**   | **NaN** | **NaN**     | **NaN**   | **NaN**         | **NaN** | **NaN**     |
+| 2       | 20000   | 200         | 20000     | NaN             | NaN     | NaN         |
+| 3       | NaN     | NaN         | NaN       | NaN             | 30000   | 300         |
+
+- `ob_code 3` has two flux measurements in the `g` category. The value `g_hsc=0.0` will be used as the flux value, because it is the first column appeared and has a finite value. This is likely not the intended behavior.
+
+| ob_code | g_hsc   | g_hsc_error | i2_hsc | i2_hsc_error | g_ps1 | g_ps1_error |
+| ------- | ------- | ----------- | ------ | ------------ | ----- | ----------- |
+| 1       | 10000   | 100         | NaN    | NaN          | NaN   | NaN         |
+| 2       | 20000   | 200         | 20000  | NaN          | NaN   | NaN         |
+| **3**   | **0.0** | **0.0**     | NaN    | NaN          | 30000 | 300         |
 
 ### Optional fields
 
