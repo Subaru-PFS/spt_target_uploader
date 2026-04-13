@@ -386,7 +386,7 @@ pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@8298935a6daee249c09d
     #   ics-cobraops
     #   ics-utils
     #   pfs-target-uploader
-pillow==11.3.0
+pillow==12.2.0
     # via
     #   bokeh
     #   cairosvg
