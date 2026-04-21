@@ -196,7 +196,7 @@ loguru==0.7.3
     # via pfs-target-uploader
 lsst-utils==29.2025.4900
     # via pfs-datamodel
-lxml==6.0.2
+lxml==6.1.0
     # via mkdocs-video
 markdown==3.10
     # via
