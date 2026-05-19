@@ -157,7 +157,7 @@ ics-utils @ git+https://github.com/Subaru-PFS/ics_utils.git@0b7e59169d1298f62f5f
     # via
     #   ics-cobracharmer
     #   ics-cobraops
-idna==3.11
+idna==3.15
     # via
     #   hyperlink
     #   requests
