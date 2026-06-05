@@ -413,7 +413,7 @@ psycopg2-binary==2.9.11
     #   opdb
 puremagic==1.30
     # via ginga
-pyarrow==22.0.0
+pyarrow==23.0.1
     # via spatialpandas
 pycparser==2.23 ; implementation_name != 'PyPy'
     # via cffi
