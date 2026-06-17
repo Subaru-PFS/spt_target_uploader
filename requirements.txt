@@ -581,7 +581,7 @@ toolz==1.1.0
     #   dask
     #   datashader
     #   partd
-tornado==6.5.4 ; sys_platform != 'emscripten'
+tornado==6.5.7 ; sys_platform != 'emscripten'
     # via bokeh
 tqdm==4.67.1
     # via panel
