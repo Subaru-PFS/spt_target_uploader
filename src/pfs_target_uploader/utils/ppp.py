@@ -27,7 +27,7 @@ from astropy.time import Time
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
-from sklearn.cluster import DBSCAN, HDBSCAN, AgglomerativeClustering
+from sklearn.cluster import DBSCAN, HDBSCAN
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
 
@@ -490,45 +490,7 @@ def PPPrunStart(
 
         return tgt_group
 
-    def target_collision(sample, sep=2 / 3600.0):
-        """check targets collide with each other
-
-        Parameters
-        ==========
-        sample:table
-        sep: float
-            angular separation set define collided targets, degree, default=2 arcsec
-        Print:boolean
-
-        Returns
-        =======
-        list of pointing centers in different group
-        """
-        # haversine uses (dec,ra) in radian;
-        # FIXME: `affinity` was deprecated in sklearn 1.2 and has been removed in 1.4.
-        # Use `metric` instead, but also check if "haversine" is supported.
-        # See https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
-        db = AgglomerativeClustering(
-            distance_threshold=np.radians(sep),
-            n_clusters=None,
-            affinity="haversine",
-            linkage="single",
-        ).fit(np.radians([sample["dec"], sample["ra"]]).T)
-
-        labels = db.labels_
-        unique_labels = set(labels)
-        labels_c = [lab for lab in unique_labels if list(labels).count(lab) > 1]
-
-        if len(labels_c) == 0:
-            index = np.arange(0, len(sample), 1)
-            return index
-        else:
-            index = list(np.where(~np.isin(labels, labels_c))[0]) + [
-                np.where(np.isin(labels, kk))[0][0] for kk in labels_c
-            ]
-            return sorted(index)
-
-    def PFS_FoV(ppc_ra, ppc_dec, PA, sample, mode=None):
+    def PFS_FoV(ppc_ra, ppc_dec, PA, sample):
         """pick up targets in the pointing
 
         Parameters
@@ -536,19 +498,12 @@ def PPPrunStart(
         ppc_ra,ppc_dec,PA : float
             ra,dec,PA of the pointing center
         sample : table
-        mode: default=None
-            if "KDE_collision", consider collision avoid in KDE part (separation=2 arcsec)
-
 
         Returns
         =======
         list of index of targets, which fall into the pointing, in the input sample
         """
-        if len(sample) > 1 and mode == "KDE_collision":
-            index = target_collision(sample)
-            point = np.vstack((sample[index]["ra"], sample[index]["dec"])).T
-        else:
-            point = np.vstack((sample["ra"], sample["dec"])).T
+        point = np.vstack((sample["ra"], sample["dec"])).T
         center = SkyCoord(ppc_ra * u.deg, ppc_dec * u.deg)
 
         # PA=0 along y-axis, PA=90 along x-axis, PA=180 along -y-axis...
