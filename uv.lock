@@ -2,6 +2,17 @@ version = 1
 revision = 3
 requires-python = "==3.12.*"
 
+[manifest]
+overrides = [
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=v3.4" },
+    { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3" },
+    { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.5" },
+    { name = "ics-utils", git = "https://github.com/Subaru-PFS/ics_utils.git?rev=34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" },
+    { name = "pfs-instdata", git = "https://github.com/Subaru-PFS/pfs_instdata.git?rev=1.8.71" },
+    { name = "pfs-utils", git = "https://github.com/Subaru-PFS/pfs_utils.git?rev=7.4.22" },
+    { name = "spt-operational-database", git = "https://github.com/Subaru-PFS/spt_operational_database.git?rev=cbcbd4b55346bd2abdd3eaa1b0038a04761c2f4a" },
+]
+
 [[package]]
 name = "alabaster"
 version = "1.0.0"
@@ -702,7 +713,7 @@ wheels = [
 [[package]]
 name = "ics-cobracharmer"
 version = "1.5.3"
-source = { git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git#c198f136615e42efa9d3f2be8317cb06b1d94e91" }
+source = { git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3#c198f136615e42efa9d3f2be8317cb06b1d94e91" }
 dependencies = [
     { name = "astropy" },
     { name = "bokeh" },
@@ -739,7 +750,7 @@ dependencies = [
 [[package]]
 name = "ics-utils"
 version = "1.7.55"
-source = { git = "https://github.com/Subaru-PFS/ics_utils.git#34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" }
+source = { git = "https://github.com/Subaru-PFS/ics_utils.git?rev=34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7#34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" }
 dependencies = [
     { name = "astropy" },
     { name = "astropy-iers-data" },
@@ -1528,7 +1539,7 @@ dependencies = [
 [[package]]
 name = "pfs-instdata"
 version = "1.8.71"
-source = { git = "https://github.com/Subaru-PFS/pfs_instdata.git#b3c924bb084df3ec306cac9d8c93b220f3e9d1f5" }
+source = { git = "https://github.com/Subaru-PFS/pfs_instdata.git?rev=1.8.71#b3c924bb084df3ec306cac9d8c93b220f3e9d1f5" }
 
 [[package]]
 name = "pfs-target-uploader"
@@ -1645,7 +1656,7 @@ dependencies = [
 [[package]]
 name = "pfs-utils"
 version = "7.4.22"
-source = { git = "https://github.com/Subaru-PFS/pfs_utils.git#b156d1f84eb0865b4ee5cf12fd68631a71e87d20" }
+source = { git = "https://github.com/Subaru-PFS/pfs_utils.git?rev=7.4.22#b156d1f84eb0865b4ee5cf12fd68631a71e87d20" }
 dependencies = [
     { name = "astroplan" },
     { name = "astropy" },
@@ -2276,6 +2287,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/40/50ecdc518edd3a85ad74bda7a2196b53d5901256e3d7ab34225c96e8edc8/sgp4-2.25-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:911460477f1c52dcda2b3eb20538435b89b0a43668bcb5edd1e7700b7a1a0225", size = 235729, upload-time = "2025-08-04T18:01:59.83Z" },
     { url = "https://files.pythonhosted.org/packages/1b/dd/c1ee8571828debfd3e0f2297379a2a2af75024062c70cf76bdc121e77623/sgp4-2.25-cp312-cp312-win32.whl", hash = "sha256:128edd3d6061e833600d93e77d4c08d1a5002293997e368256b0b777ea525dda", size = 161899, upload-time = "2025-08-04T18:02:00.882Z" },
     { url = "https://files.pythonhosted.org/packages/c8/f8/7dae15af520dfe5def1f8620c2817203cbbf1a1bf154b2079add1200acd3/sgp4-2.25-cp312-cp312-win_amd64.whl", hash = "sha256:979eb60e74aff5dc318cfe1a6c817db884486bdfc8496d2c5bc07b05fe833280", size = 164137, upload-time = "2025-08-04T18:02:01.817Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/47/8231e3d4a88341316ec8d0eb98d3a8a972477d8b038555259522735a8371/sgp4-2.25-py3-none-any.whl", hash = "sha256:4f39ecf6c2663109fed04adfe9982815ac83893271b521d92d5b186820f8c78e", size = 137376, upload-time = "2026-04-27T18:29:23.71Z" },
 ]
 
 [[package]]
