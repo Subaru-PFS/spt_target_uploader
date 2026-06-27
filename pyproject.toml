@@ -58,6 +58,30 @@ profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
 requires = ["pybind11", "setuptools>=64", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.uv]
+# Override-dependencies resolve conflicting git URLs that arise when transitive
+# PFS packages (ics-cobraCharmer, ics-cobraOps, …) require the same packages
+# (pfs-utils, pfs-instdata, ics-utils, …) via bare-master git URLs, while this
+# project pins them to specific tags.  uv treats different URLs for the same
+# package as a hard conflict; the overrides here tell uv which version wins.
+#
+# IMPORTANT: when updating a tag in [project].dependencies, update the
+# corresponding entry here too — otherwise the override silently wins and the
+# tag in [project].dependencies has no effect.
+override-dependencies = [
+    # --- Direct dependencies: keep in sync with [project].dependencies ---
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
+    "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1.8.71",
+    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.3",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.5",
+    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@v3.4",
+    # --- Transitive dependencies (no tag upstream): pinned to commits in uv.lock
+    #     for reproducibility when using `uv pip install -e .` (which bypasses the lock).
+    #     Update these hashes when running `uv lock --upgrade-package <name>`. ---
+    "ics-utils @ git+https://github.com/Subaru-PFS/ics_utils.git@34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7",
+    "spt-operational-database @ git+https://github.com/Subaru-PFS/spt_operational_database.git@cbcbd4b55346bd2abdd3eaa1b0038a04761c2f4a",
+]
+
 [tool.black]
 line-length = 88
 target-version = ["py312"]
