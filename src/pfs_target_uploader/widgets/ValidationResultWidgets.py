@@ -682,6 +682,7 @@ class ValidationResultWidgets:
                                         styles.at[row_idx, col] = (
                                             "background-color: #fff3cd;"
                                             " color: #856404;"
+                                            " font-weight: bold;"
                                         )
                     return styles
 
