@@ -9,26 +9,13 @@ from astropy import units as u
 from bokeh.models import NumberFormatter
 from pandas.io.formats.style import Styler as _PandasStyler
 
-_download_button_stylesheet = """
+# Shrink the label and icon (the icon scales with the inherited font-size)
+# so the Download CSV buttons sit closer to the surrounding body text size.
+# !important is required to win the cascade over Panel/Bokeh's own button
+# CSS, which otherwise keeps the default font-size.
+_download_button_size_stylesheet = """
     .bk-btn {
-        color: var(--success-text-color) !important;
-        background-color: #C7E2D6 !important;
-        border-color: var(--success-border-subtle) !important;
-        border-width: 1px;
-        font-weight: bold !important;
-    }
-
-    .bk-btn:hover {
-        color: #ffffff !important;
-        background-color: #008899 !important;
-        border-color: var(--success-border-subtle) !important;
-    }
-
-    .bk-btn a {
-        vertical-align: middle !important;
-        text-align: center !important;
-        padding-left: 0px !important;
-        padding-right: 8px !important;
+        font-size: 0.85rem !important;
     }
     """
 
@@ -197,13 +184,13 @@ class ValidationResultWidgets:
         # --- Download buttons (one per flagged table) ---
         _dl_kwargs = dict(
             label="Download CSV",
-            button_type="primary",
-            button_style="outline",
+            button_type="default",
+            button_style="solid",
             icon="download",
-            icon_size="1em",
+            icon_size="1.25em",
             visible=False,
             max_width=180,
-            stylesheets=[_download_button_stylesheet],
+            stylesheets=[_download_button_size_stylesheet],
         )
         self.download_button_str = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.error_table_str),
@@ -677,9 +664,10 @@ class ValidationResultWidgets:
                 # Display precision (2 d.p.) is handled by Tabulator formatters below.
                 df_display = df_out_of_range[available_cols].copy()
 
-                # Apply a Pandas Styler to highlight out-of-range cells with a red
-                # tint.  Using a Styler keeps float values in .value.data, which
-                # the download callback reads to produce a clean CSV.
+                # Apply a Pandas Styler to highlight out-of-range cells with an
+                # amber tint, matching the warning severity of this section.
+                # Using a Styler keeps float values in .value.data, which the
+                # download callback reads to produce a clean CSV.
                 def _highlight_out_of_range(df, bands_map=out_of_range_bands):
                     styles = pd.DataFrame("", index=df.index, columns=df.columns)
                     for row_idx, bands in bands_map.items():
@@ -692,8 +680,8 @@ class ValidationResultWidgets:
                                 ):
                                     if col in styles.columns:
                                         styles.at[row_idx, col] = (
-                                            "background-color: #ffe0e0;"
-                                            " color: #cc0000;"
+                                            "background-color: #fff3cd;"
+                                            " color: #856404;"
                                         )
                     return styles
 
