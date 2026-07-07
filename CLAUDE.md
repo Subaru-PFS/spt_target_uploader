@@ -6,6 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PFS Target Uploader is a web application for validating and submitting target lists for the Subaru Telescope's Prime Focus Spectrograph (PFS). The application performs validation, pointing simulation, and visualization of astronomical target lists.
 
+## Development Workflow and Branching Policy
+
+This repository uses a two-tier branching model:
+
+- **`main`**: Production/release branch. Only updated via PRs from `dev-main`.
+- **`dev-main`**: Integration branch for ongoing development. This is the default
+  base for everyday work.
+
+**Branching and PR rules**:
+
+1. Create feature branches off `dev-main` (e.g. `issue/<number>-<description>`,
+   `fix/<description>`).
+2. **Open PRs against `dev-main`, not `main`.** Feature branches must never target
+   `main` directly.
+3. Once all intended changes are merged into `dev-main`, open a single PR from
+   `dev-main` into `main` to cut a release.
+
+**For Claude Code**: When creating a PR (e.g. `gh pr create`), default to
+`--base dev-main`. Only target `main` when the user explicitly asks for a
+`dev-main` → `main` release PR.
+
 ## Development Commands
 
 ### Installation and Setup

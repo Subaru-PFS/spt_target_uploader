@@ -49,6 +49,36 @@ About the Enhanced Character-Separated Values (ECSV) format, visit https://docs.
         return readme_text
 
 
+def _strip_leading_comment_lines(byte_string, encoding="utf8"):
+    """Return CSV content with only genuine full-line comments removed.
+
+    pandas' ``comment="#"`` truncates a line from the *first* occurrence of
+    the comment character onward, even when it appears mid-field. That silently
+    drops the rest of a data row (e.g. ``obj_id``, ``ra``, ``dec``, ...) if a
+    value such as ``ob_code`` happens to contain a literal ``#``, which then
+    fails later with a confusing low-level error instead of the intended
+    "invalid character" validation message. Here, only lines whose first
+    non-whitespace character is ``#`` are dropped, so a leading comment/header
+    line is still supported but a ``#`` inside a data value is preserved and
+    reaches the string validation as expected.
+    """
+    if isinstance(byte_string, (str, os.PathLike)):
+        with open(byte_string, encoding=encoding) as f:
+            text = f.read()
+    else:
+        pos = byte_string.tell()
+        raw = byte_string.read()
+        byte_string.seek(pos)
+        text = raw.decode(encoding) if isinstance(raw, bytes) else raw
+
+    kept_lines = [
+        line
+        for line in text.splitlines(keepends=True)
+        if not line.lstrip().startswith("#")
+    ]
+    return StringIO("".join(kept_lines))
+
+
 def load_input(byte_string, format="csv", dtype=None, logger=logger):
     if dtype is None:
         dtype = target_datatype
@@ -103,9 +133,8 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
         try:
             if format == "csv":
                 df_input = pd.read_csv(
-                    byte_string,
+                    _strip_leading_comment_lines(byte_string),
                     encoding="utf8",
-                    comment="#",
                     dtype=dtype,
                     converters={
                         "ob_code": str,
@@ -122,6 +151,11 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                 load_error = None
             elif format == "ecsv":
                 # NOTE: Perhaps too redundant, but I'd like to use the `converters` options of pandas.read_csv()
+                # The ECSV's own "#"-prefixed YAML header is handled by astropy's
+                # Table.read() above, so the intermediate stream below is
+                # generated entirely by df_tmp.to_csv() and never contains
+                # genuine comment lines; `comment=` is intentionally omitted so
+                # a literal "#" inside a data value is not truncated.
                 df_tmp = Table.read(byte_string, format="ascii.ecsv").to_pandas()
                 string_stream = StringIO()
                 df_tmp.to_csv(string_stream, index=False)
@@ -129,7 +163,6 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                 df_input = pd.read_csv(
                     string_stream,
                     encoding="utf8",
-                    comment="#",
                     dtype=dtype,
                     converters={
                         "ob_code": str,
