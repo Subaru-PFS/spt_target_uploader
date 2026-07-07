@@ -101,6 +101,7 @@ Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
 
 - Running the CLI (`pfs-uploader-cli validate` / `simulate`) against example lists in `tmp/example_lists/`
 - Manual testing via the web interface (`./scripts/serve-app.sh`)
+- Browser-driven checks with Playwright without touching project deps: `uv run --no-project --with playwright python <script>` (Chromium is cached user-side; the `webapp-testing` skill provides the workflow)
 
 ## Gotchas and Conventions
 
