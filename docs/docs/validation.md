@@ -231,4 +231,4 @@ Clicking the button downloads the full contents of that table as a CSV file, reg
 
     The `pfs_validation_flux_out_of_range.csv` file includes an extra column `out_of_range_bands`
     that lists the filter bands (e.g., `g,r`) whose flux values fall outside the configured AB magnitude limits for each target.
-    This column is not shown in the on-screen table, where out-of-range cells are instead highlighted in red.
+    This column is not shown in the on-screen table, where out-of-range cells are instead highlighted with an amber/yellow background.
