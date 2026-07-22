@@ -7,6 +7,27 @@
 An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
 the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
 
+!!! note "Comment lines"
+
+    In a CSV file, a line whose first non-whitespace character is `#` is treated as a comment
+    and skipped. Comments are recognized on **whole lines only**; a `#` that appears after data
+    on the same line is **not** stripped and becomes part of the value. For example,
+
+    ```csv
+    # This whole line is a comment and is ignored
+    ob_code,obj_id,ra,dec
+    ob_00000000,0,278.6241774801468,56.29564017478978  # NOT a comment
+    ```
+
+    the `dec` value of the second row is read as `56.29564017478978  # NOT a comment`
+    and the file fails to load with an error such as
+    `could not convert string to float: '56.29564017478978  # NOT a comment'`.
+    In a string column such as `ob_code`, the `#` is kept in the value and is reported by the
+    invalid-character check instead.
+
+    This behavior is intentional: a literal `#` inside a value is preserved rather than
+    silently truncating the rest of the row.
+
 ### Content
 
 Here the word "target" is a combination of values of the fields described below. There are required and optional fields. String values must consist of `[A-Za-z0-9_-+.]`.
@@ -113,15 +134,18 @@ Flux columns must conform to the following requirements.
   An `ob_code` cannot have more than one flux in the same filter category.
 - If more than one flux columns with finite values are found for an `ob_code`,
   the value of the first column (the left-most one in the input CSV file) will be used.
-- For `ob_code`s with no measurement in a given filter column, use `NaN` (or `Inf`) as the placeholder. Do **not** use `0.0`, as it will be treated as a valid flux value.
+- For `ob_code`s with no measurement in a given filter column, leave the cell empty or use `NaN` (or `Inf`) as the placeholder. Do **not** use `0.0`, as it will be treated as a valid flux value.
 - Missing flux values are detected using Numpy's `isfinite()`. Please refer to the table
   below to specify missing values correctly.
 
-  | Value | Result                            |
-  | ----- | --------------------------------- |
-  | `0.0` | ❌ Treated as a flux measurement  |
-  | `NaN` | ✅ Treated as missing and ignored |
-  | `Inf` | ✅ Treated as missing and ignored |
+  | Value       | Result                            |
+  | ----------- | --------------------------------- |
+  | `0.0`       | ❌ Treated as a flux measurement  |
+  | (empty)     | ✅ Treated as missing and ignored |
+  | `NaN`       | ✅ Treated as missing and ignored |
+  | `Inf`       | ✅ Treated as missing and ignored |
+
+  The examples below write `NaN` explicitly for clarity, but leaving those cells empty is equivalent.
 
 - Flux values are in the unit of <font size=5>**nJy**</font> (nano-Jansky).
 - Flux values are assumed to be total flux.
@@ -255,6 +279,7 @@ For classical-mode observations, a user-defined pointing list can be provided.
 
 An input target list must be in the [Comma-separated values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) format (`.csv`) or
 the [Enhanced Character-Separated Values (ECSV)](https://docs.astropy.org/en/stable/io/ascii/ecsv.html) format (`.ecsv`).
+Comment lines are handled in the same way as for the target list (see the note in [File format](#file-format)).
 
 ### Quick example of the pointing list
 

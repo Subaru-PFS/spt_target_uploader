@@ -806,8 +806,8 @@ def PPPrunStart(
                     if res_ == "L":
                         uS_L2_ = sample_f.copy()
                         obj_allo_L_fin = obj_table.copy()
-                        (uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l) = (
-                            complete_ppc(uS_L2_, obj_allo_L_fin)
+                        uS_L2, cR_L_fh, cR_L_fh_, cR_L_n, cR_L_n_, sub_l = complete_ppc(
+                            uS_L2_, obj_allo_L_fin
                         )
 
                         queue.put(
@@ -829,8 +829,8 @@ def PPPrunStart(
                     elif res_ == "M":
                         uS_M2_ = sample_f.copy()
                         obj_allo_M_fin = obj_table.copy()
-                        (uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m) = (
-                            complete_ppc(uS_M2_, obj_allo_M_fin)
+                        uS_M2, cR_M_fh, cR_M_fh_, cR_M_n, cR_M_n_, sub_m = complete_ppc(
+                            uS_M2_, obj_allo_M_fin
                         )
 
                         queue.put(

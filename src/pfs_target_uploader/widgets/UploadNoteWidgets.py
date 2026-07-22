@@ -64,12 +64,10 @@ class UploadNoteWidgets:
                 pn.pane.Markdown(
                     f"<font size='4'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
                 ),
-                pn.pane.Markdown(
-                    """
+                pn.pane.Markdown("""
                 - Please keep the Upload ID for the observation planning.
                 - You can copy the Upload ID to the clipboard by clicking it.
-                """
-                ),
+                """),
             ]
 
         elif not ppp_status:
@@ -132,13 +130,11 @@ class UploadNoteWidgets:
                 pn.pane.Markdown(
                     f"<font size='4' color='#98741E'>Uploaded at {uploaded_time.isoformat(timespec='seconds')}</font>"
                 ),
-                pn.pane.Markdown(
-                    """
+                pn.pane.Markdown("""
                 - <font color='#98741E'>Please keep the Upload ID for the observation planning.</font>
                 - <font color='#98741E'>You can copy the Upload ID to the clipboard by clicking it.</font>
                 - <font color='#98741E'>**It is not recommended to submit a target list without a pointing simulation.**</font>
-                """
-                ),
+                """),
             ]
 
         self.floatpanel.objects = []

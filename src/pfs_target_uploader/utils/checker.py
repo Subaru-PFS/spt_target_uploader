@@ -1396,7 +1396,9 @@ def validate_input(
         logger.info("[Flux range] Checking flux values against AB magnitude range")
         dict_flux_range = check_fluxrange(df, min_mag=min_mag, max_mag=max_mag)
         validation_status["flux_range"] = dict_flux_range
-        logger.info(f"[Flux range] status: {dict_flux_range['status']} (Success if True)")
+        logger.info(
+            f"[Flux range] status: {dict_flux_range['status']} (Success if True)"
+        )
     else:
         logger.info("[Flux range] Skipping flux range check (no limits specified)")
         validation_status["flux_range"] = {

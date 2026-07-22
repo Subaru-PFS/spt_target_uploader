@@ -168,9 +168,7 @@ def _parse_bool_int(value: str | None, default: bool) -> bool:
     try:
         return bool(int(value))
     except (ValueError, TypeError):
-        logger.warning(
-            f"Invalid boolean value '{value}', using default: {default}"
-        )
+        logger.warning(f"Invalid boolean value '{value}', using default: {default}")
         return default
 
 
@@ -413,9 +411,7 @@ def load_app_config(
     min_fluxmag_filler = _parse_optional_float(
         config, "MIN_FLUXMAG_FILLER", "MIN_FLUXMAG_FILLER"
     )
-    max_fluxmag = _parse_optional_float(
-        config, "MAX_FLUXMAG", "MAX_FLUXMAG"
-    )
+    max_fluxmag = _parse_optional_float(config, "MAX_FLUXMAG", "MAX_FLUXMAG")
 
     # Validate magnitude ranges
     _validate_magnitude_ranges(
