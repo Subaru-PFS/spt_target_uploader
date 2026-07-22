@@ -1586,6 +1586,7 @@ dependencies = [
     { name = "seaborn" },
     { name = "skyfield" },
     { name = "spatialpandas" },
+    { name = "spot-nik" },
     { name = "typer" },
 ]
 
@@ -1643,6 +1644,7 @@ requires-dist = [
     { name = "skyfield", specifier = ">=1.53" },
     { name = "snakeviz", marker = "extra == 'profilers'", specifier = ">=2.2.0" },
     { name = "spatialpandas", specifier = ">=0.4.9" },
+    { name = "spot-nik", specifier = ">=1.2.0" },
     { name = "ty", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.12.3" },
 ]
