@@ -8,8 +8,16 @@
 # once in [tool.uv].override-dependencies. The override is what actually wins, so
 # a tag bumped in only one of the two places silently has no effect.
 #
-# This script fails when a package is pinned in both places with different URLs,
-# or when an override claims to mirror a direct dependency that no longer exists.
+# This script fails when a package is pinned in both places with different URLs.
+#
+# An override with no counterpart in [project].dependencies is reported but not
+# treated as an error: that is how the transitive-only pins are expressed, and
+# the two cases -- a legitimate transitive pin and an override left behind after
+# a direct dependency was dropped -- are indistinguishable from pyproject.toml
+# alone. Telling them apart would need a hardcoded list of the transitive ones,
+# i.e. a third place to keep in sync, which is the very problem this script
+# exists to catch. The skipped names are printed instead, so a change in that
+# set is visible in the CI log.
 #
 # Usage: python3 scripts/check-dep-overrides.py [path/to/pyproject.toml]
 
@@ -58,11 +66,14 @@ def main(argv: list[str]) -> int:
 
     errors = []
     checked = 0
+    skipped = []
 
     for name, override_url in sorted(overrides.items()):
         if name not in direct:
-            # Transitive-only override (no counterpart in [project].dependencies).
-            # Nothing to compare against, so there is nothing that can drift.
+            # No counterpart in [project].dependencies, so there is nothing to
+            # compare against. Expected for the transitive-only pins; reported
+            # below so that an unexpected addition to this set is noticeable.
+            skipped.append(name)
             continue
         checked += 1
         if direct[name] != override_url:
@@ -87,10 +98,12 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    print(
-        f"{pyproject_path}: OK — {checked} override(s) match [project].dependencies "
-        f"({len(overrides) - checked} transitive-only override(s) skipped)."
-    )
+    print(f"{pyproject_path}: OK — {checked} override(s) match [project].dependencies.")
+    if skipped:
+        print(
+            f"Not compared ({len(skipped)}, no counterpart in [project].dependencies): "
+            + ", ".join(skipped)
+        )
     return 0
 
 
