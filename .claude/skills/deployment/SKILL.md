@@ -10,7 +10,7 @@ description: Use when building Docker images, deploying to Google Cloud Run, con
 Configuration: copy `.env.docker.example` to `.env.docker` and customize. The build script auto-loads `.env.docker` if it exists.
 
 ```bash
-./scripts/build-container.sh -p   # Update dependencies and regenerate requirements.txt
+./scripts/build-container.sh -p   # Update dependencies (uv sync --upgrade)
 ./scripts/build-container.sh -d   # Build Docker image
 ./scripts/build-container.sh -g   # Deploy to Google Cloud Run
 ./scripts/build-container.sh -p -d -g   # Combine operations
