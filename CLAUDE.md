@@ -26,7 +26,7 @@ Rules:
 
 ## Setup and Commands
 
-`uv` is the primary tool (PDM and pip also work; scripts auto-detect uv > pdm > venv).
+`uv` is the primary tool (pip also works; scripts auto-detect uv > venv).
 
 ```bash
 uv sync --all-extras        # Install all dependencies (extras: dev, profilers)
@@ -38,7 +38,6 @@ mkdir -p data/temp
 ./scripts/serve-app-admin.sh  # Run admin app (dev)
 ./scripts/serve-doc.sh        # Serve MkDocs documentation locally
 ./scripts/build-doc.sh        # Build documentation
-./scripts/gen-requirements.sh # Regenerate requirements.txt
 ./scripts/gen-cli-readme.sh   # Generate CLI docs from typer docstrings
 ```
 
@@ -111,4 +110,5 @@ Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
 - Use `loguru` for logging (not stdlib `logging`)
 - HEALPix visibility checking (`visibility_checker_healpix()`) is the default; legacy checkers exist only for validation — details in the `internals` skill
 - Panel Tabulator with dynamic styles: set `.style` **before** `.value` (reverse order raises an `iloc` error on Panel 1.8.x)
-- Do not hand-edit `uv.lock`, `pdm.lock`, or `requirements.txt` (use `./scripts/gen-requirements.sh`)
+- Do not hand-edit `uv.lock` (regenerate with `uv sync`/`uv lock`)
+- `uv.lock` is the single source of truth for dependencies: the Docker build installs from it via `uv sync --frozen`, so there is no `requirements.txt` to keep in step

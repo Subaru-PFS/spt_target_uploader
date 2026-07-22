@@ -58,11 +58,8 @@ docs/.cache/
 .env.docker
 .env.*.example
 
-# PDM/UV lock files
-pdm.lock
-uv.lock
-.pdm.toml
-.pdm-python
+# NOTE: uv.lock must NOT be ignored here. The Docker build installs
+# dependencies with `uv sync --frozen` and needs the lock file in the context.
 
 # CI/CD
 .claude/

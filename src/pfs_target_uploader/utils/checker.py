@@ -16,7 +16,7 @@ from loguru import logger
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
-from qplan.util.eph_cache import EphemerisCache
+from spot.util.eph_cache import EphemerisCache
 from qplan.util.site import site_subaru as observer
 
 from . import (

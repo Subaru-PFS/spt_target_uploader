@@ -13,12 +13,8 @@ case "$basename" in
         echo "Blocked: $basename contains local/private configuration. Edit the corresponding .example file instead, or ask the user to update it manually." >&2
         exit 2
         ;;
-    uv.lock|pdm.lock)
-        echo "Blocked: $basename is a generated lock file. Run 'uv sync' / 'pdm install' to regenerate it instead of editing by hand." >&2
-        exit 2
-        ;;
-    requirements.txt)
-        echo "Blocked: requirements.txt is generated. Run ./scripts/gen-requirements.sh instead of editing by hand." >&2
+    uv.lock)
+        echo "Blocked: $basename is a generated lock file. Run 'uv sync' to regenerate it instead of editing by hand." >&2
         exit 2
         ;;
 esac

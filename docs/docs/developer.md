@@ -21,7 +21,6 @@ cd spt_target_uploader
 ### Installing dependencies
 
 ```sh
-pip install -r requirements.txt  # perhaps optional
 pip install -e .
 
 mkdir -p data/
