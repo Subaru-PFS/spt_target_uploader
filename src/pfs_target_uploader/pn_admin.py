@@ -277,7 +277,9 @@ def list_files_app(use_panel_cli=False):
                 tab_panels.active = 2
 
                 u_id = _df_files_tgt_psl["Upload ID"].iloc[row_target]
-                p_ppc = os.path.split(_df_files_tgt_psl["fullpath_psl"].iloc[row_target])[0]
+                p_ppc = os.path.split(
+                    _df_files_tgt_psl["fullpath_psl"].iloc[row_target]
+                )[0]
                 try:
                     psl_id = _df_files_tgt_psl["proposal ID"].iloc[row_target]
                 except KeyError:
@@ -358,28 +360,42 @@ def list_files_app(use_panel_cli=False):
 
                     # update tac allocation in program info tab
                     if sum(tb_tac_psl_t["resolution"] == "low") > 0:
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_done"] = True
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_FH_L"] = tb_tac_psl_t[
-                            "Texp (fiberhour)"
-                        ][tb_tac_psl_t["resolution"] == "low"]
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_nppc_L"] = tb_tac_psl_t[
-                            "N_ppc"
-                        ][tb_tac_psl_t["resolution"] == "low"]
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_ROT_L"] = tb_tac_psl_t[
-                            "Request time (h)"
-                        ][tb_tac_psl_t["resolution"] == "low"]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_done"
+                        ] = True
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_FH_L"
+                        ] = tb_tac_psl_t["Texp (fiberhour)"][
+                            tb_tac_psl_t["resolution"] == "low"
+                        ]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_nppc_L"
+                        ] = tb_tac_psl_t["N_ppc"][tb_tac_psl_t["resolution"] == "low"]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_ROT_L"
+                        ] = tb_tac_psl_t["Request time (h)"][
+                            tb_tac_psl_t["resolution"] == "low"
+                        ]
 
                     if sum(tb_tac_psl_t["resolution"] == "medium") > 0:
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_done"] = True
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_FH_M"] = tb_tac_psl_t[
-                            "Texp (fiberhour)"
-                        ][tb_tac_psl_t["resolution"] == "medium"]
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_nppc_M"] = tb_tac_psl_t[
-                            "N_ppc"
-                        ][tb_tac_psl_t["resolution"] == "medium"]
-                        _df_files_tgt_psl.loc[_df_files_tgt_psl.index[row_target], "TAC_ROT_M"] = tb_tac_psl_t[
-                            "Request time (h)"
-                        ][tb_tac_psl_t["resolution"] == "medium"]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_done"
+                        ] = True
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_FH_M"
+                        ] = tb_tac_psl_t["Texp (fiberhour)"][
+                            tb_tac_psl_t["resolution"] == "medium"
+                        ]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_nppc_M"
+                        ] = tb_tac_psl_t["N_ppc"][
+                            tb_tac_psl_t["resolution"] == "medium"
+                        ]
+                        _df_files_tgt_psl.loc[
+                            _df_files_tgt_psl.index[row_target], "TAC_ROT_M"
+                        ] = tb_tac_psl_t["Request time (h)"][
+                            tb_tac_psl_t["resolution"] == "medium"
+                        ]
 
                     _table_files_tgt_psl.value = _df_files_tgt_psl
 
@@ -487,8 +503,7 @@ def list_files_app(use_panel_cli=False):
         name="Download all the selected programs",
         icon="download",
         button_type="primary",
-        stylesheets=[
-            """
+        stylesheets=["""
             .bk-btn {
                 color: var(--success-text-color) !important;
                 background-color: #C7E2D6 !important;
@@ -501,8 +516,7 @@ def list_files_app(use_panel_cli=False):
                 // background-color: var(--success-bg-color);
                 // border-color: #008899;
             }
-        """
-        ],
+        """],
         width=300,
     )
     download_group = pn.widgets.RadioBoxGroup(
