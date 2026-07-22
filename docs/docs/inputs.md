@@ -300,4 +300,4 @@ Suppose you want to observe the COSMOS field with a **total integration time of 
 | 150.1  | 2.2     | L              |
 | 150.1  | 2.2     | L              |
 
-This will result in **four 15-minute exposure sequences (=unit exposure)** at the same pointing center. Each exposure sequence will be split into 2 exposures for better cosmic-ray rejection (see [the instrument web page](https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection)). Therefore, your 15-minute exposure sequence will consist of 2 exposures of 7.5 minutes. This results in **8 visits (or 8 FITS files per arm per spectrograph)**.
+This will result in **four 15-minute unit exposures** at the same pointing center. Each unit exposure will be split into 2 exposures for better cosmic-ray rejection (see [the instrument web page](https://www.naoj.org/Instruments/PFS/status.html#cosmic-ray-rejection)). Therefore, your 15-minute unit exposure will consist of 2 exposures of 7.5 minutes. This results in **8 visits (or 8 FITS files per arm per spectrograph)**.

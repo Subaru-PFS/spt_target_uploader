@@ -74,7 +74,7 @@ class ObsTypeWidgets(param.Parameterized):
                     width=400,
                 ),
                 pn.widgets.TooltipIcon(
-                    value="(Optional for Classical) Set **total exposure time per pointing** and **pointing centers** in the **Config** tab.",
+                    value="(Optional for Classical) Set **unit exposure time per pointing** and **pointing centers** in the **Config** tab.",
                     margin=(0, 0, 0, -230),
                 ),
             ),
