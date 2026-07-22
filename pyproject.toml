@@ -38,7 +38,10 @@ dependencies = [
   "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
   "psutil>=6.0.0",
   "python-dotenv>=1.0.0",
-  "qplan @ git+https://github.com/naojsoft/qplan.git",
+  # Pinned to a tag: a bare URL tracks master, and an upgrade previously moved
+  # qplan across the commit that relocated EphemerisCache into spot, breaking
+  # every entry point. v2.0.0 already contains that move.
+  "qplan @ git+https://github.com/naojsoft/qplan.git@v2.0.0",
   "scikit-learn>=1.3.0",
   "seaborn>=0.12.2",
   "skyfield>=1.53",
