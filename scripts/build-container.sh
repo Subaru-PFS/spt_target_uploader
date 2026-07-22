@@ -9,7 +9,7 @@
 #   build-container.sh [-p] [-d] [-g]
 #
 # Options:
-#   -p    Update package dependencies (uv/pdm auto-detect)
+#   -p    Update package dependencies (uv)
 #   -d    Build the Docker image (local only by default)
 #   -g    Deploy the app to Google Cloud Run
 #
@@ -54,7 +54,7 @@ DOCKER_PLATFORMS="${DOCKER_PLATFORMS:-linux/amd64,linux/arm64}"
 
 show_help() {
     echo "Usage: $0 [-p] [-d] [-g]"
-    echo "       -p    Update package dependencies using uv/pdm"
+    echo "       -p    Update package dependencies using uv"
     echo "       -d    Build the Docker image (set DOCKER_PUSH=true to push)"
     echo "       -g    Deploy the app to Google Cloud Run"
     echo ""
@@ -75,24 +75,17 @@ show_help() {
 update_packages() {
     echo "Update package dependencies to the latest versions"
 
-    # Auto-detect package manager: uv > pdm
-    if command -v uv &> /dev/null; then
-        echo "Using uv to update packages..."
-        uv sync --upgrade
-        # Export to requirements.txt for Docker
-        uv export --format requirements-txt --no-hashes --output-file requirements.txt
-    elif command -v pdm &> /dev/null; then
-        echo "Using pdm to update packages..."
-        pdm update --update-all
-        # Export package dependencies to requirements.txt (production only, no dev)
-        pdm export -f requirements --without-hashes --prod > requirements.txt
-    else
-        echo "Error: Neither 'uv' nor 'pdm' found in PATH" >&2
-        echo "Please install uv or pdm to update packages" >&2
+    if ! command -v uv &> /dev/null; then
+        echo "Error: 'uv' not found in PATH" >&2
+        echo "Please install uv to update packages" >&2
         exit 1
     fi
 
-    echo "requirements.txt has been updated"
+    echo "Using uv to update packages..."
+    uv sync --upgrade
+
+    echo "uv.lock has been updated"
+    echo "The Docker build installs from uv.lock directly, so there is nothing to export."
 }
 
 docker_image() {

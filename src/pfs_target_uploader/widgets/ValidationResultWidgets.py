@@ -1,9 +1,65 @@
 #!/usr/bin/env python3
 
+from io import BytesIO
+
 import numpy as np
 import pandas as pd
 import panel as pn
 from astropy import units as u
+from bokeh.models import NumberFormatter
+from pandas.io.formats.style import Styler as _PandasStyler
+
+# Shrink the label and icon (the icon scales with the inherited font-size)
+# so the Download CSV buttons sit closer to the surrounding body text size.
+# !important is required to win the cascade over Panel/Bokeh's own button
+# CSS, which otherwise keeps the default font-size.
+_download_button_size_stylesheet = """
+    .bk-btn {
+        font-size: 0.85rem !important;
+    }
+    """
+
+
+def _csv_download_callback(table_or_getter):
+    """Return a FileDownload callback that streams data as CSV.
+
+    *table_or_getter* may be either a Tabulator widget or a zero-argument
+    callable that returns a ``pd.DataFrame`` (or ``None``).  The callable form
+    is useful when the export DataFrame differs from what the Tabulator displays
+    (e.g. extra indicator columns that should not appear in the UI).
+
+    The callback is evaluated at click time, so it always reflects the data set
+    by the most recent ``show_results`` call.
+
+    The hidden numeric ``obj_id`` column is dropped, and ``obj_id_str`` is
+    renamed to ``obj_id`` so the CSV matches the display label.
+    """
+
+    def _cb():
+        if callable(table_or_getter):
+            df = table_or_getter()
+            if df is None:
+                df = pd.DataFrame()
+        else:
+            val = table_or_getter.value
+            if val is None:
+                df = pd.DataFrame()
+            elif isinstance(val, _PandasStyler):
+                df = val.data.copy()
+            else:
+                df = val.copy()
+        # Drop the hidden numeric obj_id column; rename obj_id_str → obj_id.
+        df = df.drop(
+            columns=[c for c in ("obj_id",) if c in df.columns], errors="ignore"
+        )
+        if "obj_id_str" in df.columns:
+            df = df.rename(columns={"obj_id_str": "obj_id"})
+        bio = BytesIO()
+        bio.write(df.to_csv(index=False).encode("utf-8"))
+        bio.seek(0)
+        return bio
+
+    return _cb
 
 
 class ValidationResultWidgets:
@@ -125,6 +181,62 @@ class ValidationResultWidgets:
             pd.DataFrame(), **self.tabulator_kwargs
         )
 
+        # --- Download buttons (one per flagged table) ---
+        # Built by a factory rather than a shared dict so that each widget gets
+        # its own ``stylesheets`` list; Panel stores the list by reference and a
+        # shared one would let a mutation on any button leak into all the others.
+        def _dl_kwargs():
+            return dict(
+                label="Download CSV",
+                button_type="default",
+                button_style="solid",
+                icon="download",
+                icon_size="1.25em",
+                visible=False,
+                max_width=180,
+                stylesheets=[_download_button_size_stylesheet],
+            )
+
+        self.download_button_str = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.error_table_str),
+            filename="pfs_validation_invalid_string.csv",
+            **_dl_kwargs(),
+        )
+        self.download_button_vals = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.error_table_vals),
+            filename="pfs_validation_value_errors.csv",
+            **_dl_kwargs(),
+        )
+        self.download_button_flux = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.error_table_flux),
+            filename="pfs_validation_missing_flux.csv",
+            **_dl_kwargs(),
+        )
+        # Separate export DataFrame for the flux-range table: identical to the
+        # displayed data but with an extra ``out_of_range_bands`` column that
+        # lists which bands are out of range for each row (e.g. "g,r").
+        self._df_fluxrange_csv: pd.DataFrame | None = None
+        self.download_button_fluxrange = pn.widgets.FileDownload(
+            callback=_csv_download_callback(lambda: self._df_fluxrange_csv),
+            filename="pfs_validation_flux_out_of_range.csv",
+            **_dl_kwargs(),
+        )
+        self.download_button_visibility = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.warning_table_visibility),
+            filename="pfs_validation_no_visibility.csv",
+            **_dl_kwargs(),
+        )
+        self.download_button_dups = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.error_table_dups),
+            filename="pfs_validation_duplicate_obcode.csv",
+            **_dl_kwargs(),
+        )
+        self.download_button_intdups = pn.widgets.FileDownload(
+            callback=_csv_download_callback(self.warning_table_intdups),
+            filename="pfs_validation_internal_duplication.csv",
+            **_dl_kwargs(),
+        )
+
         self.error_pane = pn.Column()
         self.warning_pane = pn.Column()
         self.info_pane = pn.Column()
@@ -181,6 +293,27 @@ class ValidationResultWidgets:
             if t.value is not None:
                 t.value[0:0]
             t.visible = False
+
+        for btn in [
+            self.download_button_str,
+            self.download_button_vals,
+            self.download_button_flux,
+            self.download_button_fluxrange,
+            self.download_button_visibility,
+            self.download_button_dups,
+            self.download_button_intdups,
+        ]:
+            btn.visible = False
+
+        self._df_fluxrange_csv = None
+
+        # Drop the flux-range highlighting/formatting left over from the previous
+        # validation: the Styler holds a closure over that run's
+        # ``out_of_range_bands``, and the formatters over its band columns.
+        # Both are rebuilt from scratch whenever the flux-range section is shown
+        # again, so nothing here needs to survive a reset.
+        self.warning_table_fluxrange.style = None
+        self.warning_table_fluxrange.formatters = {}
 
         self.error_pane.objects = []
         self.warning_pane.objects = []
@@ -319,6 +452,8 @@ class ValidationResultWidgets:
             self.error_table_str.value = df.loc[is_invalid_str, :]
             self.error_table_str.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_str)
+            self.error_pane.append(self.download_button_str)
+            self.download_button_str.visible = True
             self.error_pane.append(self.error_table_str)
             self.error_table_str.visible = True
 
@@ -367,6 +502,8 @@ class ValidationResultWidgets:
             ]
             self.error_table_vals.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_vals)
+            self.error_pane.append(self.download_button_vals)
+            self.download_button_vals.visible = True
             self.error_pane.append(self.error_table_vals)
             self.error_table_vals.visible = True
 
@@ -402,11 +539,16 @@ class ValidationResultWidgets:
             ]
             self.error_table_flux.frozen_columns = ["index"]
             self.error_pane.append(self.error_text_flux)
+            self.error_pane.append(self.download_button_flux)
+            self.download_button_flux.visible = True
             self.error_pane.append(self.error_table_flux)
             self.error_table_flux.visible = True
 
         # Flux values (only check if flux columns were successfully detected)
-        if validation_status["flux_columns"]["status"] and validation_status["flux_values"]["status"]:
+        if (
+            validation_status["flux_columns"]["status"]
+            and validation_status["flux_values"]["status"]
+        ):
             # Ensure info_text_flux is visible in the info pane before appending text
             if self.info_text_flux not in self.info_pane:
                 self.append_title("info")
@@ -531,57 +673,69 @@ class ValidationResultWidgets:
                     col for col in display_cols if col in df_out_of_range.columns
                 ]
 
-                # Format flux and mag columns to 2 decimal places
+                # Keep numeric dtype intact for clean CSV export.
+                # Display precision (2 d.p.) is handled by Tabulator formatters below.
                 df_display = df_out_of_range[available_cols].copy()
 
-                # Format all flux and mag columns to 2 decimal places
+                # Apply a Pandas Styler to highlight out-of-range cells with an
+                # amber tint, matching the warning severity of this section.
+                # Using a Styler keeps float values in .value.data, which the
+                # download callback reads to produce a clean CSV.
+                def _highlight_out_of_range(df, bands_map=out_of_range_bands):
+                    styles = pd.DataFrame("", index=df.index, columns=df.columns)
+                    for row_idx, bands in bands_map.items():
+                        if bands and row_idx in styles.index:
+                            for band in bands:
+                                for col in (
+                                    f"filter_{band}",
+                                    f"flux_{band}",
+                                    f"mag_{band}",
+                                ):
+                                    if col in styles.columns:
+                                        styles.at[row_idx, col] = (
+                                            "background-color: #fff3cd;"
+                                            " color: #856404;"
+                                            " font-weight: bold;"
+                                        )
+                    return styles
+
+                # Configure Tabulator formatters for numeric display precision
+                # (2 decimal places).  formatters only affect rendering, not .value.
+                formatters = {}
                 for band in ["g", "r", "i", "z", "y", "j"]:
-                    flux_col = f"flux_{band}"
-                    mag_col = f"mag_{band}"
-                    if flux_col in available_cols:
-                        df_display[flux_col] = df_display[flux_col].apply(
-                            lambda x: f"{x:.2f}" if pd.notna(x) else x
-                        )
-                    if mag_col in available_cols:
-                        df_display[mag_col] = df_display[mag_col].apply(
-                            lambda x: f"{x:.2f}" if pd.notna(x) else x
-                        )
-
-                # Mark out-of-range cells with a warning symbol
-                for row_idx, bands in out_of_range_bands.items():
-                    if bands:  # Only if there are out-of-range bands
-                        for band in bands:
-                            flux_col = f"flux_{band}"
-                            filter_col = f"filter_{band}"
-                            mag_col = f"mag_{band}"
-
-                            # Add warning symbol to out-of-range values
-                            if flux_col in available_cols and pd.notna(
-                                df_display.at[row_idx, flux_col]
-                            ):
-                                df_display.at[row_idx, flux_col] = (
-                                    f"⚠ {df_display.at[row_idx, flux_col]}"
-                                )
-                            if mag_col in available_cols and pd.notna(
-                                df_display.at[row_idx, mag_col]
-                            ):
-                                df_display.at[row_idx, mag_col] = (
-                                    f"⚠ {df_display.at[row_idx, mag_col]}"
-                                )
-                            if filter_col in available_cols and pd.notna(
-                                df_display.at[row_idx, filter_col]
-                            ):
-                                df_display.at[row_idx, filter_col] = (
-                                    f"⚠ {df_display.at[row_idx, filter_col]}"
-                                )
+                    for col in (f"flux_{band}", f"mag_{band}"):
+                        if col in available_cols:
+                            formatters[col] = NumberFormatter(format="0.00")
+                self.warning_table_fluxrange.formatters = formatters
 
                 self.warning_table_fluxrange.frozen_columns = []
                 if self.warning_table_fluxrange.value is not None:
                     self.warning_table_fluxrange.value[0:0]
 
+                # Build the CSV export DataFrame: same as df_display but with an
+                # extra ``out_of_range_bands`` column that lists which bands are
+                # out of range for each row (e.g. "g,r"), so users can identify
+                # flagged values after downloading without losing numeric dtypes.
+                out_of_range_str = pd.Series("", index=df_display.index, dtype=str)
+                for row_idx, bands in out_of_range_bands.items():
+                    if bands and row_idx in out_of_range_str.index:
+                        out_of_range_str.at[row_idx] = ",".join(sorted(bands))
+                df_for_csv = df_display.copy()
+                df_for_csv["out_of_range_bands"] = out_of_range_str
+                self._df_fluxrange_csv = df_for_csv
+
+                # Set .style BEFORE .value.  Panel's _validate watcher copies the
+                # _todo list (containing _highlight_out_of_range) to the Styler
+                # built from df_display when value changes.  Setting .value directly
+                # to a Styler breaks pagination='remote' (_get_data calls df.iloc[]).
+                self.warning_table_fluxrange.style = df_display.style.apply(
+                    _highlight_out_of_range, axis=None
+                )
                 self.warning_table_fluxrange.value = df_display
                 self.warning_table_fluxrange.frozen_columns = ["index"]
                 self.warning_pane.append(self.warning_text_fluxrange)
+                self.warning_pane.append(self.download_button_fluxrange)
+                self.download_button_fluxrange.visible = True
                 self.warning_pane.append(self.warning_table_fluxrange)
                 self.warning_table_fluxrange.visible = True
 
@@ -617,6 +771,8 @@ class ValidationResultWidgets:
                 self.warning_table_visibility.value = dfout
                 self.warning_table_visibility.frozen_columns = ["index"]
                 self.warning_pane.append(self.warning_text_visibility)
+                self.warning_pane.append(self.download_button_visibility)
+                self.download_button_visibility.visible = True
                 self.warning_pane.append(self.warning_table_visibility)
                 self.warning_table_visibility.visible = True
             self.error_table_visibility.visible = False
@@ -653,6 +809,8 @@ class ValidationResultWidgets:
                 validation_status["unique"]["flags"], :
             ]
             self.error_pane.append(self.error_text_dups)
+            self.error_pane.append(self.download_button_dups)
+            self.download_button_dups.visible = True
             self.error_pane.append(self.error_table_dups)
             self.error_table_dups.frozen_columns = ["index"]
             self.error_table_dups.visible = True
@@ -712,6 +870,8 @@ class ValidationResultWidgets:
 
             self.warning_table_intdups.value = df_intdups_display
             self.warning_pane.append(self.warning_text_intdups)
+            self.warning_pane.append(self.download_button_intdups)
+            self.download_button_intdups.visible = True
             self.warning_pane.append(self.warning_table_intdups)
             self.warning_table_intdups.frozen_columns = []
             self.warning_table_intdups.visible = True

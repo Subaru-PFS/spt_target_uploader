@@ -46,24 +46,37 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
+# Install uv, which resolves dependencies straight from uv.lock. There is no
+# intermediate requirements.txt: the lock file is the single source of truth,
+# so the image cannot drift from what `uv sync` installs locally.
+COPY --from=ghcr.io/astral-sh/uv:0.9.5 /uv /usr/local/bin/uv
+
 WORKDIR /build
 
-# Copy dependency specifications
-COPY requirements.txt ./
+# Build into a self-contained virtualenv that the runtime stage copies wholesale.
+# It is created at its FINAL runtime path, not under /build: console-script
+# shebangs bake in an absolute interpreter path, so a venv built elsewhere and
+# copied would leave `panel` and friends pointing at a directory that does not
+# exist in the runtime image.
+ENV UV_PROJECT_ENVIRONMENT=/home/pfsuser/.venv
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 
-# Upgrade pip and install build tools
-RUN python3 -m pip install --no-cache-dir -U pip setuptools wheel pybind11
-
-# Install Python dependencies to user site-packages
+# Dependencies first, without the project itself, so this layer is cached until
+# the lock actually changes.
 # Note: PyQt5 build requires significant memory (8GB+ recommended in Docker settings)
 # If build fails with memory errors, increase Docker Desktop memory allocation:
 # Settings > Resources > Memory > Set to 8GB or higher
-RUN pip install --user --no-cache-dir --no-warn-script-location -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Copy source and install the package itself
-COPY pyproject.toml ./
+# Then the source and the project itself. setuptools-scm derives the version
+# from git metadata, which is absent here, so pin it via the environment.
 COPY src/ ./src/
-RUN pip install --user --no-cache-dir --no-warn-script-location --no-deps -e .
+COPY README.md ./
+ARG SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}
+RUN uv sync --frozen --no-dev --no-editable
 
 # ============================================================================
 # Stage 3: Runtime image
@@ -87,11 +100,14 @@ RUN useradd -m -u 1000 pfsuser && \
 
 WORKDIR ${APP_HOME}
 
-# Copy Python dependencies from builder to pfsuser's home
-COPY --from=python-builder --chown=pfsuser:pfsuser /root/.local /home/pfsuser/.local
+# Copy the virtualenv built in stage 2, at the identical path it was built at
+# (see the shebang note there). It already contains the application package
+# installed non-editable, so no further install step is needed.
+COPY --from=python-builder --chown=pfsuser:pfsuser /home/pfsuser/.venv /home/pfsuser/.venv
 
-# Set PATH for pfsuser
-ENV PATH=/home/pfsuser/.local/bin:$PATH
+# Put the virtualenv first on PATH so `panel` and `python` resolve to it
+ENV VIRTUAL_ENV=/home/pfsuser/.venv
+ENV PATH=/home/pfsuser/.venv/bin:$PATH
 
 # Copy application source (ordered by change frequency)
 COPY --chown=pfsuser:pfsuser pyproject.toml ./
@@ -111,10 +127,6 @@ RUN mkdir -p ${APP_HOME}/data && \
 
 # Switch to non-root user
 USER pfsuser
-
-# Install setuptools (provides pkg_resources) and the application package
-RUN pip install --user --no-cache-dir setuptools && \
-    pip install --user --no-cache-dir --no-deps -e .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

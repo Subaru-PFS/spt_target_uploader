@@ -18,12 +18,7 @@ cd spt_target_uploader
 uv sync                  # Install all dependencies
 uv sync --extra dev      # Install with dev tools (black, ruff, etc.)
 
-# Or with PDM
-pdm install              # Install all dependencies
-pdm install -G dev       # Install with dev tools
-
-# Or with pip (legacy)
-pip install -r requirements.txt
+# Or with pip
 pip install -e .
 pip install -e .[dev]    # With dev tools
 
@@ -40,7 +35,7 @@ mkdir -p data/temp/
 ### Build documentation
 
 ```sh
-./scripts/build-doc.sh   # Auto-detect runner (uv/pdm/venv)
+./scripts/build-doc.sh   # Auto-detect runner (uv/venv)
 ```
 
 ### Requirements
@@ -60,7 +55,7 @@ Visit [Gurobi's website](https://www.gurobi.com/) for license information.
 
 ```sh
 # Start main uploader app (development)
-./scripts/serve-app.sh          # Auto-detect runner (uv/pdm/venv)
+./scripts/serve-app.sh          # Auto-detect runner (uv/venv)
 
 # Or start admin app (development)
 ./scripts/serve-app-admin.sh    # Auto-detect runner

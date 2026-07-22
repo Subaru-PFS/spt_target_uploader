@@ -211,3 +211,24 @@ The details of the validation results are shown in the main panel.
 First, errors are shown, followed by warnings. The successful checks are shown at the bottom.
 Tables containing invalid rows are also shown for each validation process.
 Please modify them to make them acceptable for the uploader.
+
+### Downloading validation result tables
+
+Each table of flagged targets has a **Download CSV** button placed between the message and the table.
+Clicking the button downloads the full contents of that table as a CSV file, regardless of the number of rows displayed per page.
+
+| Downloaded file | Contents |
+| --- | --- |
+| `pfs_validation_invalid_string.csv` | Rows with invalid characters in string columns |
+| `pfs_validation_value_errors.csv` | Rows with out-of-range values |
+| `pfs_validation_missing_flux.csv` | Rows with missing flux information |
+| `pfs_validation_flux_out_of_range.csv` | Rows with flux values outside the AB magnitude limits |
+| `pfs_validation_no_visibility.csv` | Rows with no visibility in the observing period |
+| `pfs_validation_duplicate_obcode.csv` | Rows with duplicated `ob_code` or `(obj_id, resolution)` |
+| `pfs_validation_internal_duplication.csv` | Rows flagged as potential coordinate duplicates |
+
+!!! note "Flux out-of-range CSV"
+
+    The `pfs_validation_flux_out_of_range.csv` file includes an extra column `out_of_range_bands`
+    that lists the filter bands (e.g., `g,r`) whose flux values fall outside the configured AB magnitude limits for each target.
+    This column is not shown in the on-screen table, where out-of-range cells are instead highlighted with an amber/yellow background.

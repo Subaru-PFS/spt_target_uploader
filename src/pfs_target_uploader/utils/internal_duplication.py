@@ -204,22 +204,20 @@ def _cluster_with_agglomerative(
         seps_arcsec = seps.arcsec
 
         # Create temporary dataframe for efficient groupby operation
-        df_pairs = pd.DataFrame({
-            'idx1': idx1,
-            'idx2': idx2,
-            'sep': seps_arcsec
-        })
+        df_pairs = pd.DataFrame({"idx1": idx1, "idx2": idx2, "sep": seps_arcsec})
 
         # For each point, find its minimum separation (considering both idx1 and idx2)
         # Stack idx1 and idx2 to treat them symmetrically
-        df_stacked = pd.concat([
-            df_pairs[['idx1', 'sep']].rename(columns={'idx1': 'idx'}),
-            df_pairs[['idx2', 'sep']].rename(columns={'idx2': 'idx'})
-        ])
+        df_stacked = pd.concat(
+            [
+                df_pairs[["idx1", "sep"]].rename(columns={"idx1": "idx"}),
+                df_pairs[["idx2", "sep"]].rename(columns={"idx2": "idx"}),
+            ]
+        )
 
         # Filter to only clustered points and compute minimum
-        df_stacked = df_stacked[df_stacked['idx'].isin(clustered_indices)]
-        min_seps = df_stacked.groupby('idx')['sep'].min()
+        df_stacked = df_stacked[df_stacked["idx"].isin(clustered_indices)]
+        min_seps = df_stacked.groupby("idx")["sep"].min()
 
         # Assign minimum separations back to the array
         nn_separations[min_seps.index] = min_seps.values
@@ -303,7 +301,9 @@ def _find_duplicates_with_separation(
         if not np.any(valid):
             raise ValueError("No valid coordinates found")
 
-        logger.warning(f"Processing {np.sum(valid)} valid coordinates, marking {n_invalid} as isolated")
+        logger.warning(
+            f"Processing {np.sum(valid)} valid coordinates, marking {n_invalid} as isolated"
+        )
 
         # Process only valid coordinates
         valid_ra = ra[valid]

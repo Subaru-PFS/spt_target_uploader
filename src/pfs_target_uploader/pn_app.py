@@ -583,9 +583,18 @@ def target_uploader_app(use_panel_cli=False):
 
         try:
             if (
-                ("EMAIL_FROM" not in config.raw_config.keys() or config.raw_config["EMAIL_FROM"] == "")
-                or ("EMAIL_TO" not in config.raw_config.keys() or config.raw_config["EMAIL_TO"] == "")
-                or ("SMTP_SERVER" not in config.raw_config.keys() or config.raw_config["SMTP_SERVER"] == "")
+                (
+                    "EMAIL_FROM" not in config.raw_config.keys()
+                    or config.raw_config["EMAIL_FROM"] == ""
+                )
+                or (
+                    "EMAIL_TO" not in config.raw_config.keys()
+                    or config.raw_config["EMAIL_TO"] == ""
+                )
+                or (
+                    "SMTP_SERVER" not in config.raw_config.keys()
+                    or config.raw_config["SMTP_SERVER"] == ""
+                )
             ):
                 logger.warning(
                     "Email configuration is not found. No email will be sent."

@@ -76,7 +76,9 @@ def validate(
             help='Save the validated target list in the directory specified by "--dir".'
         ),
     ] = False,
-    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = ObsType.queue,
+    obs_type: Annotated[
+        ObsType, typer.Option(help="Observation type.")
+    ] = ObsType.queue,
     min_mag: Annotated[
         float | None,
         typer.Option(
@@ -104,7 +106,9 @@ def validate(
         )
         return
     else:
-        date_begin_parsed = None if date_begin is None else date.fromisoformat(date_begin)
+        date_begin_parsed = (
+            None if date_begin is None else date.fromisoformat(date_begin)
+        )
 
         date_end_parsed = None if date_end is None else date.fromisoformat(date_end)
 
@@ -176,7 +180,9 @@ def simulate(
             "--max-exec-time", help="Max execution time (s). 0 means no limit."
         ),
     ] = 0,
-    obs_type: Annotated[ObsType, typer.Option(help="Observation type.")] = ObsType.queue,
+    obs_type: Annotated[
+        ObsType, typer.Option(help="Observation type.")
+    ] = ObsType.queue,
     min_mag: Annotated[
         float | None,
         typer.Option(
@@ -213,7 +219,9 @@ def simulate(
         )
         return
     else:
-        date_begin_parsed = None if date_begin is None else date.fromisoformat(date_begin)
+        date_begin_parsed = (
+            None if date_begin is None else date.fromisoformat(date_begin)
+        )
         date_end_parsed = None if date_end is None else date.fromisoformat(date_end)
 
         validation_status, df_validated = validate_input(
@@ -348,7 +356,9 @@ def start_app(
     allow_websocket_origin: Annotated[
         list[str] | None, typer.Option(help="Allow websocket origin.")
     ] = None,
-    static_dirs: Annotated[list[str] | None, typer.Option(help="Static directories.")] = None,
+    static_dirs: Annotated[
+        list[str] | None, typer.Option(help="Static directories.")
+    ] = None,
     use_xheaders: Annotated[
         bool, typer.Option(help="Set --use-xheaders option.")
     ] = False,

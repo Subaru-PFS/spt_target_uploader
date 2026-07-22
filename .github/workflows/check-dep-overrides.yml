@@ -1,0 +1,36 @@
+name: Check uv dependency overrides
+
+# [tool.uv] override-dependencies duplicates the PFS git pins from
+# [project].dependencies, and the override is what uv actually resolves.
+# A tag bumped in only one place silently has no effect, so fail the build
+# when the two drift apart.
+
+on:
+  push:
+    branches:
+      - main
+      - dev-main
+    paths:
+      - pyproject.toml
+      - scripts/check-dep-overrides.py
+      - .github/workflows/check-dep-overrides.yml
+  pull_request:
+    paths:
+      - pyproject.toml
+      - scripts/check-dep-overrides.py
+      - .github/workflows/check-dep-overrides.yml
+
+jobs:
+  check-overrides:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check override-dependencies are in sync
+        run: python3 scripts/check-dep-overrides.py

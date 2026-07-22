@@ -20,6 +20,15 @@ It is actually equivalent to 4 objects for 15 minutes.
 
 See the note on [the `Submission` page](submission.md#upload-id).
 
+### Can I mix different filters for the same band in a single target list?
+
+Yes. You can assign different filters for the same filter category to different targets within an input file.
+For columns where no flux measurement is available, use `NaN` or `Inf` as the value.
+Do not use `0.0`, as it will be interpreted as a valid flux measurement.
+Note that the left-most column with a finite value will be used as the flux value for a given filter category, and the rest of the columns in the same category will be ignored.
+
+See also [About Flux Information](inputs.md#about-flux-information) for details and examples.
+
 ## Known Issues
 
 ### The result of the pointing simulation varies with the identical input targets

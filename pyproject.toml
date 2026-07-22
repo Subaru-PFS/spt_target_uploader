@@ -38,11 +38,17 @@ dependencies = [
   "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
   "psutil>=6.0.0",
   "python-dotenv>=1.0.0",
-  "qplan @ git+https://github.com/naojsoft/qplan.git",
+  # Pinned to a tag: a bare URL tracks master, and an upgrade previously moved
+  # qplan across the commit that relocated EphemerisCache into spot, breaking
+  # every entry point. v2.0.0 already contains that move.
+  "qplan @ git+https://github.com/naojsoft/qplan.git@v2.0.0",
   "scikit-learn>=1.3.0",
   "seaborn>=0.12.2",
   "skyfield>=1.53",
   "spatialpandas>=0.4.9",
+  # Provides EphemerisCache, which qplan moved out of qplan.util into spot.util.
+  # qplan pulls it in transitively, but utils/checker.py imports it directly.
+  "spot-nik>=1.2.0",
   "typer>=0.12.3",
 ]
 dynamic = ["version"]
@@ -57,6 +63,30 @@ profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
 [build-system]
 requires = ["pybind11", "setuptools>=64", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv]
+# Override-dependencies resolve conflicting git URLs that arise when transitive
+# PFS packages (ics-cobraCharmer, ics-cobraOps, …) require the same packages
+# (pfs-utils, pfs-instdata, ics-utils, …) via bare-master git URLs, while this
+# project pins them to specific tags.  uv treats different URLs for the same
+# package as a hard conflict; the overrides here tell uv which version wins.
+#
+# IMPORTANT: when updating a tag in [project].dependencies, update the
+# corresponding entry here too — otherwise the override silently wins and the
+# tag in [project].dependencies has no effect.
+override-dependencies = [
+    # --- Direct dependencies: keep in sync with [project].dependencies ---
+    "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
+    "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1.8.71",
+    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.3",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.5",
+    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@v3.4",
+    # --- Transitive dependencies (no tag upstream): pinned to commits in uv.lock
+    #     for reproducibility when using `uv pip install -e .` (which bypasses the lock).
+    #     Update these hashes when running `uv lock --upgrade-package <name>`. ---
+    "ics-utils @ git+https://github.com/Subaru-PFS/ics_utils.git@34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7",
+    "spt-operational-database @ git+https://github.com/Subaru-PFS/spt_operational_database.git@cbcbd4b55346bd2abdd3eaa1b0038a04761c2f4a",
+]
 
 [tool.black]
 line-length = 88
@@ -98,65 +128,3 @@ include-package-data = true
 [tool.setuptools_scm]
 version_file = "src/pfs_target_uploader/_version.py"
 fallback_version = "0.0.0+unknown"
-
-# ==============================================================================
-# DEPRECATED: PDM Scripts (Legacy)
-# ==============================================================================
-# NOTE: The PDM scripts below are deprecated and maintained for backward compatibility only.
-# For new development, use the shell scripts in scripts/ directory instead,
-# which support automatic detection of uv/pdm/venv runners.
-# See scripts/serve-app.sh, scripts/serve-app-admin.sh, etc.
-#
-# [tool.pdm.scripts]
-# serve-app = { cmd = [
-#     "pdm",
-#     "run",
-#     "pfs-uploader-cli",
-#     "start-app",
-#     "uploader",
-#     "--port",
-#     "5008",
-#     "--allow-websocket-origin",
-#     "localhost:5008",
-#     "--allow-websocket-origin",
-#     "localhost:8080",
-#     "--prefix=uploader/",
-#     "--static-dirs",
-#     "doc=docs/site",
-#     "--static-dirs",
-#     "data=data",
-#     "--max-upload-size=500",
-#     "--autoreload",
-# ], help = "Start the dev server for app and admin pages" }
-# serve-app-admin = { cmd = [
-#     "pdm",
-#     "run",
-#     "pfs-uploader-cli",
-#     "start-app",
-#     "admin",
-#     "--port",
-#     "5009",
-#     "--allow-websocket-origin",
-#     "localhost:5009",
-#     "--prefix=uploader-admin/",
-#     "--static-dirs",
-#     "doc=docs/site",
-#     "--static-dirs",
-#     "data=data",
-#     "--max-upload-size=100",
-#     "--autoreload",
-# ], help = "Start the dev server for app and admin pages" }
-# serve-doc = { shell = "cd docs && mkdocs serve", help = "Start the dev server for doc preview" }
-# build-doc = { shell = "cd docs && mkdocs build", help = "Build documentation" }
-# gen-requirements = { cmd = [
-#     "pdm",
-#     "export",
-#     "--format",
-#     "requirements",
-#     "--without-hashes",
-#     "--pyproject",
-#     "--dev",
-#     "--output",
-#     "requirements.txt",
-#     "--verbose",
-# ], help = "Generate requirements.txt" }
