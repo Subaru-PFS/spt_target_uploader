@@ -49,7 +49,7 @@ About the Enhanced Character-Separated Values (ECSV) format, visit https://docs.
         return readme_text
 
 
-def _strip_leading_comment_lines(byte_string, encoding="utf8"):
+def _strip_full_line_comments(byte_string, encoding="utf8"):
     """Return CSV content with only genuine full-line comments removed.
 
     pandas' ``comment="#"`` truncates a line from the *first* occurrence of
@@ -57,10 +57,13 @@ def _strip_leading_comment_lines(byte_string, encoding="utf8"):
     drops the rest of a data row (e.g. ``obj_id``, ``ra``, ``dec``, ...) if a
     value such as ``ob_code`` happens to contain a literal ``#``, which then
     fails later with a confusing low-level error instead of the intended
-    "invalid character" validation message. Here, only lines whose first
-    non-whitespace character is ``#`` are dropped, so a leading comment/header
-    line is still supported but a ``#`` inside a data value is preserved and
-    reaches the string validation as expected.
+    "invalid character" validation message.
+
+    Here, a line is dropped only when its first non-whitespace character is
+    ``#``; such comment lines are recognized anywhere in the file, not just at
+    the top. A ``#`` that appears *after* data on the same line is preserved,
+    so it reaches the string validation as expected instead of truncating the
+    row. See "Comment lines" in ``docs/docs/inputs.md``.
     """
     if isinstance(byte_string, (str, os.PathLike)):
         with open(byte_string, encoding=encoding) as f:
@@ -133,7 +136,7 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
         try:
             if format == "csv":
                 df_input = pd.read_csv(
-                    _strip_leading_comment_lines(byte_string),
+                    _strip_full_line_comments(byte_string),
                     encoding="utf8",
                     dtype=dtype,
                     converters={

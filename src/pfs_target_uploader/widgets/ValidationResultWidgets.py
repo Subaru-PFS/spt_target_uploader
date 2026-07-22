@@ -182,30 +182,35 @@ class ValidationResultWidgets:
         )
 
         # --- Download buttons (one per flagged table) ---
-        _dl_kwargs = dict(
-            label="Download CSV",
-            button_type="default",
-            button_style="solid",
-            icon="download",
-            icon_size="1.25em",
-            visible=False,
-            max_width=180,
-            stylesheets=[_download_button_size_stylesheet],
-        )
+        # Built by a factory rather than a shared dict so that each widget gets
+        # its own ``stylesheets`` list; Panel stores the list by reference and a
+        # shared one would let a mutation on any button leak into all the others.
+        def _dl_kwargs():
+            return dict(
+                label="Download CSV",
+                button_type="default",
+                button_style="solid",
+                icon="download",
+                icon_size="1.25em",
+                visible=False,
+                max_width=180,
+                stylesheets=[_download_button_size_stylesheet],
+            )
+
         self.download_button_str = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.error_table_str),
             filename="pfs_validation_invalid_string.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         self.download_button_vals = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.error_table_vals),
             filename="pfs_validation_value_errors.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         self.download_button_flux = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.error_table_flux),
             filename="pfs_validation_missing_flux.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         # Separate export DataFrame for the flux-range table: identical to the
         # displayed data but with an extra ``out_of_range_bands`` column that
@@ -214,22 +219,22 @@ class ValidationResultWidgets:
         self.download_button_fluxrange = pn.widgets.FileDownload(
             callback=_csv_download_callback(lambda: self._df_fluxrange_csv),
             filename="pfs_validation_flux_out_of_range.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         self.download_button_visibility = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.warning_table_visibility),
             filename="pfs_validation_no_visibility.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         self.download_button_dups = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.error_table_dups),
             filename="pfs_validation_duplicate_obcode.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
         self.download_button_intdups = pn.widgets.FileDownload(
             callback=_csv_download_callback(self.warning_table_intdups),
             filename="pfs_validation_internal_duplication.csv",
-            **_dl_kwargs,
+            **_dl_kwargs(),
         )
 
         self.error_pane = pn.Column()
@@ -301,6 +306,14 @@ class ValidationResultWidgets:
             btn.visible = False
 
         self._df_fluxrange_csv = None
+
+        # Drop the flux-range highlighting/formatting left over from the previous
+        # validation: the Styler holds a closure over that run's
+        # ``out_of_range_bands``, and the formatters over its band columns.
+        # Both are rebuilt from scratch whenever the flux-range section is shown
+        # again, so nothing here needs to survive a reset.
+        self.warning_table_fluxrange.style = None
+        self.warning_table_fluxrange.formatters = {}
 
         self.error_pane.objects = []
         self.warning_pane.objects = []
