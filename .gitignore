@@ -172,6 +172,9 @@ src/pfs_target_uploader/_version.py
 
 .DS_Store
 
+# Git worktrees created for isolated feature work
+.worktrees/
+
 # Claude Code: personal settings stay local; shared config (.claude/settings.json,
 # skills, agents, hooks) is tracked
 .claude/settings.local.json
