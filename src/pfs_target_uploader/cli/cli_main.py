@@ -19,7 +19,7 @@ from loguru import logger
 from ..utils.checker import validate_input
 from ..utils.db import bulk_insert_uid_db, create_uid_db, remove_duplicate_uid_db
 from ..utils.io import load_input, upload_file
-from ..utils.ppp import PPPrunStart, ppp_result
+from ..utils.ppp import PPPrunStart, drain_ppp_queue, ppp_result
 from ..widgets import StatusWidgets
 
 app = typer.Typer(
@@ -296,6 +296,12 @@ def simulate(
         # return
         return
     else:
+        latest = drain_ppp_queue(ppp_run_results)
+
+        if latest is None:
+            logger.error("Pointing simulation produced no results")
+            return
+
         (
             uS_L2,
             _,
@@ -308,7 +314,7 @@ def simulate(
             sub_m,
             obj_allo_M_fin,
             _,  # ppc_status
-        ) = ppp_run_results.get()
+        ) = latest
 
     logger.info("Summarizing the results")
 
