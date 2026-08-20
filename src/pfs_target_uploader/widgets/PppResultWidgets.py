@@ -11,7 +11,7 @@ from astropy.table import Table
 from loguru import logger
 
 from ..utils.io import upload_file
-from ..utils.ppp import PPPrunStart, ppp_result
+from ..utils.ppp import PPPrunStart, drain_ppp_queue, ppp_result
 
 
 class PppResultWidgets:
@@ -296,7 +296,6 @@ class PppResultWidgets:
             tb_ppc = []
 
         ppp_run_results = mp.Manager().Queue()
-        Empty = mp.queues.Empty
 
         ppp_run = mp.Process(
             target=PPPrunStart,
@@ -349,12 +348,7 @@ class PppResultWidgets:
                 ppp_run.join()
                 sys.exit(0)
 
-            latest = None
-            while True:
-                try:
-                    latest = ppp_run_results.get_nowait()
-                except Empty:
-                    break
+            latest = drain_ppp_queue(ppp_run_results)
 
             (
                 uS_L2,
@@ -374,12 +368,7 @@ class PppResultWidgets:
             )
             self.status_ = 1  # ppc_status=1 in case of runout time
         else:
-            latest = None
-            while True:
-                try:
-                    latest = ppp_run_results.get_nowait()
-                except Empty:
-                    break
+            latest = drain_ppp_queue(ppp_run_results)
 
             (
                 uS_L2,
