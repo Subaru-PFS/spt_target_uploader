@@ -57,7 +57,7 @@ dynamic = ["version"]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 
 [project.optional-dependencies]
-dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0"]
+dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0", "pytest>=8.0.0"]
 profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
 
 [build-system]

@@ -10,6 +10,7 @@ import time
 import warnings
 from functools import partial
 from itertools import chain
+from queue import Empty
 
 import colorcet as cc
 import hdbscan
@@ -1651,6 +1652,25 @@ def PPPrunStart(
         out_obj_allo_M_fin,
         status_,
     )
+
+
+def drain_ppp_queue(queue):
+    """Drain a PPP result queue and return the last item pushed onto it.
+
+    PPPrunStart pushes an intermediate snapshot onto ``queue`` every time it
+    fixes a new pointing, then a final snapshot with the complete plan just
+    before returning — all pushes share the same shape. A single
+    ``queue.get()`` returns the first (FIFO) snapshot, i.e. one pointing,
+    not the final plan; callers must drain until empty and keep the last
+    item instead.
+    """
+    latest = None
+    while True:
+        try:
+            latest = queue.get_nowait()
+        except Empty:
+            break
+    return latest
 
 
 def ppp_result(
