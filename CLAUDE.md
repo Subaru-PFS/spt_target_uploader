@@ -112,3 +112,4 @@ Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
 - Panel Tabulator with dynamic styles: set `.style` **before** `.value` (reverse order raises an `iloc` error on Panel 1.8.x)
 - Do not hand-edit `uv.lock` (regenerate with `uv sync`/`uv lock`)
 - `uv.lock` is the single source of truth for dependencies: the Docker build installs from it via `uv sync --frozen`, so there is no `requirements.txt` to keep in step
+- `docs/` is the MkDocs project root (`docs/mkdocs.yml`, source under `docs/docs/`, build output under `docs/site/`). Never place `superpowers` skill output (plans, specs, design docs) under `docs/` — it does not belong in the documentation site. Save plans to `.claude/superpowers/plans/` and specs/design docs to `.claude/superpowers/specs/` instead (gitignored, not tracked).
