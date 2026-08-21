@@ -1637,6 +1637,11 @@ def PPPrunStart(
         out_cR_M_ = [cR_M_fh_, cR_M_n_]
         out_sub_m = sub_m
 
+    # Only reached on the normal path, so an exception raised earlier in
+    # PPPrunStart skips this call. That's fine: PPPrunStart always runs as
+    # an mp.Process (CLI and web app both), and multiprocessing's atexit
+    # finalizers reap any still-open pool when that process exits, even on
+    # the exception path (verified empirically -- see PR #466 discussion).
     close_kde_pool()
 
     t_ppp_stop = time.time()
