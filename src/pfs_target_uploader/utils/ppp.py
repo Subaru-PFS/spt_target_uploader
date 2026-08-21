@@ -540,11 +540,14 @@ def PPPrunStart(
     # pool serves every call.
     kde_pool_holder = []
 
+    def kde_workers():
+        # max(1, ...) because round() takes a single-core machine to 0, which
+        # both mp.Pool and np.array_split reject.
+        return max(1, round(mp.cpu_count() / 2))
+
     def kde_pool():
         if not kde_pool_holder:
-            # max(1, ...) because round() takes a single-core machine to 0,
-            # which mp.Pool rejects.
-            kde_pool_holder.append(mp.Pool(max(1, round(mp.cpu_count() / 2))))
+            kde_pool_holder.append(mp.Pool(kde_workers()))
         return kde_pool_holder[0]
 
     def close_kde_pool():
@@ -625,7 +628,7 @@ def PPPrunStart(
             positions1 = np.vstack([Y_.ravel(), X_.ravel()])
 
             if multiProcesing:
-                threads_count = round(mp.cpu_count() / 2)
+                threads_count = kde_workers()
                 thread_n = min(
                     threads_count, round(len(sample) * 0.5)
                 )  # threads_count=10 in this machine
