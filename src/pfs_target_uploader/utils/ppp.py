@@ -529,6 +529,29 @@ def PPPrunStart(
 
         return index_
 
+    # Worker pool for KDE, created on first use and reused for the rest of
+    # the run. Building a pool forks one worker per slot, and fork has to
+    # copy the parent's page tables -- cheap while the process is small, but
+    # tens of seconds once a solver has grown it to several GB in 4 kB pages
+    # (measured: 0.4 s at ~0.2 GB, 17 s at ~11.5 GB for 64 workers). KDE is
+    # called once per pointing, so paying that per call dominated the run.
+    # Creating the pool once, while the process is still small, keeps it to a
+    # single fork. Sized at the largest thread_n KDE() ever asks for, so one
+    # pool serves every call.
+    kde_pool_holder = []
+
+    def kde_pool():
+        if not kde_pool_holder:
+            # max(1, ...) because round() takes a single-core machine to 0,
+            # which mp.Pool rejects.
+            kde_pool_holder.append(mp.Pool(max(1, round(mp.cpu_count() / 2))))
+        return kde_pool_holder[0]
+
+    def close_kde_pool():
+        for pool in kde_pool_holder:
+            pool.terminate()
+        kde_pool_holder.clear()
+
     def KDE_xy(sample, X, Y):
         """calculate a single KDE
 
@@ -607,16 +630,12 @@ def PPPrunStart(
                     threads_count, round(len(sample) * 0.5)
                 )  # threads_count=10 in this machine
 
-                kde_p = mp.Pool(thread_n)
-                dMap_ = kde_p.map_async(
+                # Same split into thread_n chunks and same summation order as
+                # before, so Z is unchanged; only the pool's lifetime differs.
+                dMap_ = kde_pool().map(
                     partial(KDE_xy, X=X_, Y=Y_),
                     np.array_split(sample, thread_n),
                 )
-
-                kde_p.close()
-                kde_p.join()
-
-                dMap_ = dMap_.get()
 
                 Z = sum(dMap_)
 
@@ -1614,6 +1633,8 @@ def PPPrunStart(
         out_cR_M = [cR_M_fh, cR_M_n]
         out_cR_M_ = [cR_M_fh_, cR_M_n_]
         out_sub_m = sub_m
+
+    close_kde_pool()
 
     t_ppp_stop = time.time()
     logger.info(f"PPP run finished in {t_ppp_stop-t_ppp_start:.1f} seconds")
