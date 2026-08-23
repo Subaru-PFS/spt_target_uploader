@@ -271,10 +271,13 @@ def simulate(
     # Wait max_exetime for PPP
     ppp_run.join(max_exec_time if max_exec_time > 0 else None)
 
-    if ppp_run.is_alive():
+    timed_out = ppp_run.is_alive()
+
+    if timed_out:
         # if ppp is still running after max_exetime, kill it
-        logger.error(
-            f"Pointing simulation failed (exceed the max_exec_time of {max_exec_time} s)"
+        logger.warning(
+            f"Pointing simulation ran out of time (max_exec_time {max_exec_time} s);"
+            " reporting the pointings fixed so far"
         )
 
         # Terminate child processes related to ppp_run (otherwise ppp_run.terminate will report BrokenPipeError)
@@ -293,28 +296,39 @@ def simulate(
         # Cleanup
         ppp_run.join()
 
-        # return
+    # PPP queues a snapshot every time it fixes a pointing, so the queue holds
+    # a usable partial plan even when the run was cut short -- which is what
+    # the web app reports on timeout (PppResultWidgets), rather than nothing.
+    # Draining it here too keeps the CLI's answer to "how much did this get
+    # done inside the time budget" the same as the deployed app's.
+    latest = drain_ppp_queue(ppp_run_results)
+
+    if latest is None:
+        logger.error(
+            "Pointing simulation produced no results"
+            + (" before running out of time" if timed_out else "")
+        )
         return
-    else:
-        latest = drain_ppp_queue(ppp_run_results)
 
-        if latest is None:
-            logger.error("Pointing simulation produced no results")
-            return
+    (
+        uS_L2,
+        _,
+        cR_L_,
+        sub_l,
+        obj_allo_L_fin,
+        uS_M2,
+        _,
+        cR_M_,
+        sub_m,
+        obj_allo_M_fin,
+        _,  # ppc_status
+    ) = latest
 
-        (
-            uS_L2,
-            _,
-            cR_L_,
-            sub_l,
-            obj_allo_L_fin,
-            uS_M2,
-            _,
-            cR_M_,
-            sub_m,
-            obj_allo_M_fin,
-            _,  # ppc_status
-        ) = latest
+    if timed_out:
+        logger.warning(
+            f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs"
+            " determined (run out of time)"
+        )
 
     logger.info("Summarizing the results")
 
