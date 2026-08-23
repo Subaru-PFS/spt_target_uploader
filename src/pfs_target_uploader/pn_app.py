@@ -462,6 +462,7 @@ def target_uploader_app(use_panel_cli=False):
                 quiet=config.ppp_quiet,
                 max_exetime=config.max_exetime,
                 logger=logger,
+                solver_backend=config.solver_backend,
             )
 
             await asyncio.to_thread(panel_ppp.show_results)

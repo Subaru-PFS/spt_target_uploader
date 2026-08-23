@@ -28,6 +28,7 @@ class AppConfig:
     ppp_quiet : bool
         Whether to suppress verbose PPP output.
     clustering_algorithm : str
+    solver_backend : str
         Target clustering algorithm (HDBSCAN, DBSCAN, FAST_HDBSCAN).
     ann_file : str | None
         Path to announcement file, or None if not configured.
@@ -54,6 +55,7 @@ class AppConfig:
     max_exetime: int = 900
     ppp_quiet: bool = True
     clustering_algorithm: str = "HDBSCAN"
+    solver_backend: str = "gurobi"
     ann_file: str | None = None
     uploadid_db: str | None = None
     db_path: str | None = None
@@ -86,6 +88,7 @@ class AppConfig:
             items.append(("ANN_FILE", self.ann_file))
 
         items.append(("CLUSTERING_ALGORITHM", self.clustering_algorithm))
+        items.append(("SOLVER_BACKEND", self.solver_backend))
 
         if self.use_uid_db:
             items.append(("DB_PATH", self.db_path))
@@ -393,6 +396,13 @@ def load_app_config(
 
     clustering_algorithm = config.get("CLUSTERING_ALGORITHM", "HDBSCAN")
 
+    solver_backend = config.get("SOLVER_BACKEND", "gurobi")
+    if solver_backend not in ("gurobi", "highs"):
+        logger.warning(
+            f"Invalid SOLVER_BACKEND value: {solver_backend}, using default: gurobi"
+        )
+        solver_backend = "gurobi"
+
     # Resolve announcement file
     ann_file = _resolve_ann_file(config, validate=validate_ann_file)
 
@@ -425,6 +435,7 @@ def load_app_config(
         output_dir=output_dir,
         log_level=log_level,
         max_exetime=max_exetime,
+        solver_backend=solver_backend,
         ppp_quiet=ppp_quiet,
         clustering_algorithm=clustering_algorithm,
         ann_file=ann_file,

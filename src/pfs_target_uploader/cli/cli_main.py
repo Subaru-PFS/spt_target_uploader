@@ -34,6 +34,11 @@ class PanelAppName(str, Enum):
     admin = "admin"
 
 
+class SolverBackend(str, Enum):
+    gurobi = "gurobi"
+    highs = "highs"
+
+
 class LogLevel(str, Enum):
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -198,6 +203,10 @@ def simulate(
     log_level: Annotated[
         LogLevel, typer.Option(case_sensitive=False, help="Set the log level.")
     ] = LogLevel.INFO,
+    solver: Annotated[
+        SolverBackend,
+        typer.Option(help="ILP solver backend used for the pointing simulation."),
+    ] = SolverBackend.gurobi,
 ):
     # Load environment variables from .env.shared file
     load_dotenv(".env.shared")
@@ -262,6 +271,7 @@ def simulate(
             ppp_run_results,
             logger,
             ppp_timing_verbose,  # timing_verbose
+            solver.value,  # solver_backend
         ),
     )
 

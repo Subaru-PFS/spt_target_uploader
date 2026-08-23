@@ -320,6 +320,7 @@ def PPPrunStart(
     queue=None,
     logger=None,
     timing_verbose=False,
+    solver_backend="gurobi",
 ):
     if logger is None:
         from loguru import logger as global_logger
@@ -1065,6 +1066,17 @@ def PPPrunStart(
             LogToConsole=0,
         )
 
+        # Same intent in HiGHS's own option names. HiGHS has no equivalent of
+        # Gurobi's method or degenmoves, so only the settings that transfer
+        # are set: the 5% MIP gap, a fixed seed, and silence.
+        highsOptions = {
+            "mip_rel_gap": 5.0e-2,
+            "random_seed": 0,
+            "output_flag": False,
+        }
+
+        backendOptions = {"gurobi": gurobiOptions, "highs": highsOptions}[solver_backend]
+
         # partially observed? no
         alreadyObserved = {}
 
@@ -1081,7 +1093,7 @@ def PPPrunStart(
             # disable netflow stdout output
             with suppress_stdout(ppp_quiet):
                 # compute observation strategy
-                ppp_timer.start("Gurobi_BuildProblem")
+                ppp_timer.start(f"{solver_backend}_BuildProblem")
                 prob = nf.buildProblem(
                     bench,
                     tgt,
@@ -1092,16 +1104,16 @@ def PPPrunStart(
                     cobraMoveCost=cobraMoveCost,
                     collision_distance=2.0,
                     elbow_collisions=True,
-                    gurobi=True,
-                    gurobiOptions=gurobiOptions,
+                    solver=solver_backend,
+                    solverOptions=backendOptions,
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
                 )
-                ppp_timer.stop("Gurobi_BuildProblem")
+                ppp_timer.stop(f"{solver_backend}_BuildProblem")
 
-                ppp_timer.start("Gurobi_Solve")
+                ppp_timer.start(f"{solver_backend}_Solve")
                 prob.solve()
-                ppp_timer.stop("Gurobi_Solve")
+                ppp_timer.stop(f"{solver_backend}_Solve")
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
         logger.debug("Extract solution:")
