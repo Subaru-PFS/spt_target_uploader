@@ -25,6 +25,7 @@ from astropy import units as u
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.table import Table, join, vstack
 from astropy.time import Time
+from astropy.utils import iers
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
@@ -61,6 +62,19 @@ hv.renderer("bokeh").webgl = False
 warnings.filterwarnings("ignore")
 
 pn.extension(notifications=True)
+
+# set_observation_time() only needs coarse (15-min resolution, degree-level)
+# altitude checks, so avoid astropy's automatic IERS finals2000A.all download
+# (astropy.utils.iers.conf.auto_download=True by default). The bundled table's
+# predictive_mjd is fixed at astropy-iers-data's release date, so once that
+# date is >auto_max_age days in the past every fresh process re-triggers a
+# download attempt (not just once every auto_max_age days) and eventually a
+# ValueError. The bundled/cached IERS table is accurate enough for this
+# purpose, so download attempts are disabled entirely instead.
+# To refresh the bundled table, bump the pinned version instead of relying on
+# runtime downloads: `uv lock --upgrade-package astropy-iers-data && uv sync`.
+iers.conf.auto_download = False
+iers.conf.auto_max_age = None
 
 # Cached Subaru Telescope location to avoid repeated registry lookups
 _SUBARU_LOCATION = EarthLocation.of_site("Subaru Telescope")
@@ -1075,7 +1089,9 @@ def PPPrunStart(
             "output_flag": False,
         }
 
-        backendOptions = {"gurobi": gurobiOptions, "highs": highsOptions}[solver_backend]
+        backendOptions = {"gurobi": gurobiOptions, "highs": highsOptions}[
+            solver_backend
+        ]
 
         # partially observed? no
         alreadyObserved = {}
