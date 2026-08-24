@@ -40,16 +40,57 @@ mkdir -p data/temp/
 
 ### Requirements
 
-#### Gurobi Optimization Solver
+#### ILP solver for the pointing simulation
 
-The pointing simulation uses the Gurobi optimizer. While the application can run without a license for small target lists, larger datasets will be subject to Gurobi's size limitations.
+The pointing simulation (PPP) solves an integer linear program with `ets-fiber-assigner`'s netflow.
+Two solver backends can be selected:
 
-For production use with large target lists, you will need:
+| Backend | Value | License | Installation |
+| --- | --- | --- | --- |
+| Gurobi (default) | `gurobi` | Commercial or academic license required for realistic target lists | `gurobipy` is installed with the app; the license file is set up separately |
+| HiGHS | `highs` | None ([open source](https://highs.dev/)) | `highspy` is installed with the app; nothing else to do |
 
-- Gurobi optimizer installed
-- A valid Gurobi license (commercial or academic)
+Gurobi remains the default, so an existing deployment that does not set the new option
+behaves exactly as before. Without a license, Gurobi falls back to its size-limited
+trial mode, which only works for small target lists; for production use with large lists
+you need the Gurobi optimizer installed and a valid license
+(see [Gurobi's website](https://www.gurobi.com/)) — or use HiGHS instead, which has no
+license requirement.
 
-Visit [Gurobi's website](https://www.gurobi.com/) for license information.
+##### Selecting the backend
+
+**Web app**: set `SOLVER_BACKEND` in `.env.shared` (read through `utils/config.py`).
+
+```bash
+# gurobi (needs a license) or highs (open source, no license)
+SOLVER_BACKEND=highs
+```
+
+An unrecognized value is rejected with a warning in the log and falls back to `gurobi`.
+
+**CLI**: pass `--solver` to `pfs-uploader-cli simulate`.
+
+```sh
+pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/ --solver highs
+```
+
+The two settings are independent: the CLI does **not** read `SOLVER_BACKEND`, so
+`simulate` uses Gurobi unless `--solver highs` is given explicitly.
+
+The PPP timing logs (`PPP_TIMING_VERBOSE=1`) are labeled with the backend name
+(`highs_BuildProblem`, `highs_Solve`, ...), so it is visible which solver produced them.
+
+##### Notes
+
+- HiGHS support comes from `ets-fiber-assigner`, which is pinned in `pyproject.toml` to a
+  commit on `tickets/FIBERALLOC-62` (branched from `v3.4`) because that work is not tagged
+  upstream yet. The pin moves back to a tag once it is released.
+- Solver options are set to the same intent for both backends: a 5% MIP gap, a fixed seed,
+  and silenced solver output. HiGHS has no equivalent of Gurobi's `method` or `degenmoves`,
+  so only the settings that transfer are applied. The options handed to Gurobi are unchanged.
+- On a benchmark of 22 real target lists, HiGHS completed the same 20 lists Gurobi completed
+  within the execution time limit, at 1.08x the total runtime, with pointing counts agreeing
+  to within the run-to-run scatter of a single solver.
 
 ## Run the app
 
@@ -114,6 +155,10 @@ PPP_QUIET=1
 # Target clustering algorithm
 # FAST_HDBSCAN, HDBSCAN, or DBSCAN
 CLUSTERING_ALGORITHM=FAST_HDBSCAN
+
+# ILP solver used for the pointing simulation
+# gurobi (needs a license) or highs (open source, no license)
+SOLVER_BACKEND=gurobi
 
 # Text to be announce at the beginning (Markdown)
 ANN_FILE="user_announcement.md"
