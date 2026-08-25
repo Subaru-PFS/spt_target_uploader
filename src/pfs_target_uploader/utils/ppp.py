@@ -366,6 +366,11 @@ def PPPrunStart(
         logger.remove()
         logger.add(sys.stderr, level="INFO", enqueue=True)
 
+    # Which solver ran is otherwise only visible in the timing labels, which
+    # need PPP_TIMING_VERBOSE. Say it once, unconditionally, so a slow or
+    # surprising run can be attributed to a backend after the fact.
+    logger.info(f"Pointing simulation starts with the {solver_backend} solver")
+
     r_pfi = d_pfi / 2.0
 
     ppp_quiet = quiet

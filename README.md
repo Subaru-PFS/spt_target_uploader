@@ -79,8 +79,10 @@ pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/ --solver h
 The two settings are independent: the CLI does **not** read `SOLVER_BACKEND`, so
 `simulate` uses Gurobi unless `--solver highs` is given explicitly.
 
-The PPP timing logs (`PPP_TIMING_VERBOSE=1`) are labeled with the backend name
-(`highs_BuildProblem`, `highs_Solve`, ...), so it is visible which solver produced them.
+Either way the chosen backend is logged once at `INFO` when the simulation starts
+(`Pointing simulation starts with the highs solver`), so a run can be attributed to a
+backend after the fact. With `PPP_TIMING_VERBOSE=1` the per-stage timing logs are
+labeled with it as well (`highs_BuildProblem`, `highs_Solve`, ...).
 
 ##### Notes
 
