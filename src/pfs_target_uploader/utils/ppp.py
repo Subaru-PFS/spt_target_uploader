@@ -381,20 +381,22 @@ def PPPrunStart(
     # Create Bench object once at the start (reused across all netflow runs)
     ppp_timer.start("CobraCoach_Initialization")
     instdata_setup_envvar()
-    with tempfile.TemporaryDirectory() as cobra_coach_dir:
-        with suppress_third_party_logging(enabled=True, redirect_stderr=True):
-            cobra_coach = CobraCoach(
-                loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
-            )
+    with (
+        tempfile.TemporaryDirectory() as cobra_coach_dir,
+        suppress_third_party_logging(enabled=True, redirect_stderr=True),
+    ):
+        cobra_coach = CobraCoach(
+            loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
+        )
 
-            # blackDotsCalibrationProduct is left at its default (None): Bench
-            # builds it from cobra_coach.blackdotModel, which CobraCoach.__init__
-            # already loaded via the same Butler-resolved black_dots_mm.csv this
-            # code used to read directly. Matches how ets_pointing builds Bench.
-            bench = Bench(
-                cobraCoach=cobra_coach,
-                blackDotsMargin=1.65,
-            )
+        # blackDotsCalibrationProduct is left at its default (None): Bench
+        # builds it from cobra_coach.blackdotModel, which CobraCoach.__init__
+        # already loaded via the same Butler-resolved black_dots_mm.csv this
+        # code used to read directly. Matches how ets_pointing builds Bench.
+        bench = Bench(
+            cobraCoach=cobra_coach,
+            blackDotsMargin=1.65,
+        )
     ppp_timer.stop("CobraCoach_Initialization")
     logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
