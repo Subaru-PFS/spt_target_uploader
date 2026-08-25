@@ -205,7 +205,10 @@ def simulate(
     ] = LogLevel.INFO,
     solver: Annotated[
         SolverBackend,
-        typer.Option(help="ILP solver backend used for the pointing simulation."),
+        typer.Option(
+            case_sensitive=False,
+            help="ILP solver backend used for the pointing simulation.",
+        ),
     ] = SolverBackend.gurobi,
 ):
     # Load environment variables from .env.shared file

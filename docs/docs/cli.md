@@ -1,7 +1,9 @@
 # CLI tool
 
 The command-line interface (CLI) tool `pfs-uploader-cli` is provided to run the validation and simulation locally.
-You need a valid [Gurobi](https://www.gurobi.com/) license and `GRB_LICENSE_FILE` environment variable needs to be set appropriately.
+`simulate` needs an ILP solver. With the default `--solver gurobi` you need a valid
+[Gurobi](https://www.gurobi.com/) license and the `GRB_LICENSE_FILE` environment variable set appropriately.
+Passing `--solver highs` uses [HiGHS](https://highs.dev/) instead, which needs no license.
 
 !!! danger
 
@@ -88,6 +90,7 @@ $ pfs-uploader-cli simulate [OPTIONS] INPUT_LIST
 - `--min-mag FLOAT`: Minimum AB magnitude (brightest limit) for flux range check. None means no bright limit.
 - `--max-mag FLOAT`: Maximum AB magnitude (faintest limit) for flux range check. None means no faint limit.
 - `--log-level [debug|info|warning|error|critical]`: Set the log level. [default: INFO]
+- `--solver [gurobi|highs]`: ILP solver backend used for the pointing simulation. [default: gurobi]
 - `--help`: Show this message and exit.
 
 ---

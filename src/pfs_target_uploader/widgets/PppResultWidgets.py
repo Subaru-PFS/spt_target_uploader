@@ -274,6 +274,7 @@ class PppResultWidgets:
         max_exetime=900,
         logger=None,
         solver_backend="gurobi",
+        timing_verbose=False,
     ):
         if logger is None:
             logger.remove()
@@ -311,7 +312,7 @@ class PppResultWidgets:
                 clustering_algorithm,
                 ppp_run_results,
                 logger,
-                False,  # timing_verbose
+                timing_verbose,
                 solver_backend,
             ),
         )

@@ -98,6 +98,10 @@ PPP_QUIET=1
 # HDBSCAN or DBSCAN
 CLUSTERING_ALGORITHM=HDBSCAN
 
+# ILP solver used for the pointing simulation
+# gurobi (needs a license) or highs (open source, no license)
+SOLVER_BACKEND=gurobi
+
 # Text to be announce at the beginning (Markdown)
 ANN_FILE="user_announcement.md"
 

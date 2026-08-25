@@ -77,13 +77,15 @@ build-backend = "setuptools.build_meta"
 # tag in [project].dependencies has no effect.
 override-dependencies = [
     # --- Direct dependencies: keep in sync with [project].dependencies ---
-    # ets-fiber-assigner is pinned to a commit rather than a tag: the HiGHS
-    # backend lives on tickets/FIBERALLOC-62, branched from v3.4, and
-    # has no tag of its own yet. Move this back to a tag once it lands upstream.
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
     "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1.8.71",
     "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.3",
     "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.5",
+    # ets-fiber-assigner is pinned to a commit rather than a tag: the HiGHS
+    # backend lives on tickets/FIBERALLOC-62, branched from v3.4, and has no
+    # tag of its own yet. Move this back to a tag once it lands upstream.
+    # The package reports version 3.4.0 either way, so utils/ppp.py probes for
+    # nf.HighsProblem rather than trusting the version.
     "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@655e2e6c583f4bd9ffca84ccb9af663e4bc618d7",
     # --- Transitive dependencies (no tag upstream): pinned to commits in uv.lock
     #     for reproducibility when using `uv pip install -e .` (which bypasses the lock).
