@@ -16,15 +16,15 @@ dependencies = [
   "colorcet>=3.0.1",
   "dask>=2023.10.1",
   "datashader>=0.16.0",
-  "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@30824213aab0f23e52f0ced96b87aa43001476e8",
+  "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@78656ea43dafd423eb68784ff7dbf7cf50b9f9bb",
   "fontawesome-markdown @ https://github.com/bmcorser/fontawesome-markdown/archive/5feb14118d963312d52bb1fdb4c7eefa4da19880.zip",
   "gurobipy>=12,<13",
   "highspy>=1.11",
   "hdbscan>=0.8.40",
   "holoviews>=1.17.1",
   "hvplot>=0.8.4",
-  "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.3",
-  "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.5",
+  "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.9",
+  "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.7",
   "loguru>=0.7.2",
   "mkdocs>=1.4.3,<2.0.0",
   "mkdocs-macros-plugin>=0.7.0",
@@ -79,14 +79,15 @@ override-dependencies = [
     # --- Direct dependencies: keep in sync with [project].dependencies ---
     "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
     "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1.8.71",
-    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.3",
-    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.5",
+    "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.9",
+    "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.7",
     # ets-fiber-assigner is pinned to a commit rather than a tag: the HiGHS
-    # backend lives on tickets/FIBERALLOC-62, branched from v3.4, and has no
-    # tag of its own yet. Move this back to a tag once it lands upstream.
-    # The package reports version 3.4.0 either way, so utils/ppp.py probes for
-    # nf.HighsProblem rather than trusting the version.
-    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@30824213aab0f23e52f0ced96b87aa43001476e8",
+    # backend lives on tickets/FIBERALLOC-62, rebased (merged) onto v3.8, and
+    # has no tag of its own yet. Move this back to a tag once it lands
+    # upstream. The package now correctly reports version 3.8.0 (utils/ppp.py's
+    # nf.HighsProblem probe still applies: a plain v3.8 install also reports
+    # 3.8.0 but has no HighsProblem).
+    "ets-fiber-assigner @ git+https://github.com/Subaru-PFS/ets_fiberalloc.git@78656ea43dafd423eb68784ff7dbf7cf50b9f9bb",
     # --- Transitive dependencies (no tag upstream): pinned to commits in uv.lock
     #     for reproducibility when using `uv pip install -e .` (which bypasses the lock).
     #     Update these hashes when running `uv lock --upgrade-package <name>`. ---
