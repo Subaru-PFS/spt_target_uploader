@@ -87,10 +87,11 @@ labeled with it as well (`highs_BuildProblem`, `highs_Solve`, ...).
 ##### Notes
 
 - HiGHS support comes from `ets-fiber-assigner`, which is pinned in `pyproject.toml` to a
-  commit on `tickets/FIBERALLOC-62` (branched from `v3.4`) because that work is not tagged
-  upstream yet. The pin moves back to a tag once it is released. The package reports
-  version `3.4.0` either way, so `utils/ppp.py` probes for `nf.HighsProblem` and refuses
-  `highs` with a clear message if the installed netflow does not carry it.
+  commit on `tickets/FIBERALLOC-62` (the HiGHS backend merged onto `v3.8`) because that work
+  is not tagged upstream yet. The pin moves back to a tag once it is released. The package
+  correctly reports version `3.8.0`, but `utils/ppp.py` still probes for `nf.HighsProblem`
+  and refuses `highs` with a clear message if the installed netflow does not carry it (a
+  plain `v3.8` install also reports `3.8.0` but has no `HighsProblem`).
 - Solver options are set to the same intent for both backends: a 5% MIP gap, a fixed seed,
   and silenced solver output. HiGHS has no equivalent of Gurobi's `method` or `degenmoves`,
   so only the settings that transfer are applied. The options handed to Gurobi are unchanged.

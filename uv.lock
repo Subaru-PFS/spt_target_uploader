@@ -4,9 +4,9 @@ requires-python = "==3.12.*"
 
 [manifest]
 overrides = [
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8" },
-    { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3" },
-    { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.5" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" },
+    { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.9" },
+    { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.7" },
     { name = "ics-utils", git = "https://github.com/Subaru-PFS/ics_utils.git?rev=34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" },
     { name = "pfs-instdata", git = "https://github.com/Subaru-PFS/pfs_instdata.git?rev=1.8.71" },
     { name = "pfs-utils", git = "https://github.com/Subaru-PFS/pfs_utils.git?rev=7.4.22" },
@@ -477,8 +477,8 @@ wheels = [
 
 [[package]]
 name = "ets-fiber-assigner"
-version = "3.4.0"
-source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8#30824213aab0f23e52f0ced96b87aa43001476e8" }
+version = "3.8.0"
+source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb#78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" }
 dependencies = [
     { name = "astropy" },
     { name = "numpy" },
@@ -737,8 +737,8 @@ wheels = [
 
 [[package]]
 name = "ics-cobracharmer"
-version = "1.5.3"
-source = { git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3#c198f136615e42efa9d3f2be8317cb06b1d94e91" }
+version = "1.5.9"
+source = { git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.9#e92ea8559793433db653cda1387fc68212a14613" }
 dependencies = [
     { name = "astropy" },
     { name = "bokeh" },
@@ -760,8 +760,8 @@ dependencies = [
 
 [[package]]
 name = "ics-cobraops"
-version = "2.0.5"
-source = { git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.5#7385afecc1fd9776ae1178c7e807242c7e404014" }
+version = "2.0.7"
+source = { git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.7#2ba0bb2ff4bf6a58ae8d7da56b6ee5d711b8d86b" }
 dependencies = [
     { name = "ics-cobracharmer" },
     { name = "ics-utils" },
@@ -1642,15 +1642,15 @@ requires-dist = [
     { name = "colorcet", specifier = ">=3.0.1" },
     { name = "dask", specifier = ">=2023.10.1" },
     { name = "datashader", specifier = ">=0.16.0" },
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" },
     { name = "fontawesome-markdown", url = "https://github.com/bmcorser/fontawesome-markdown/archive/5feb14118d963312d52bb1fdb4c7eefa4da19880.zip" },
     { name = "gurobipy", specifier = ">=12,<13" },
     { name = "hdbscan", specifier = ">=0.8.40" },
     { name = "highspy", specifier = ">=1.11" },
     { name = "holoviews", specifier = ">=1.17.1" },
     { name = "hvplot", specifier = ">=0.8.4" },
-    { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3" },
-    { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.5" },
+    { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.9" },
+    { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.7" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.14.0" },
     { name = "loguru", specifier = ">=0.7.2" },
     { name = "memray", marker = "extra == 'profilers'", specifier = ">=1.10.0" },

@@ -63,7 +63,7 @@ def test_ppprunstart_rejects_an_unknown_backend():
 
 
 def test_ppprunstart_refuses_highs_when_netflow_lacks_it(monkeypatch):
-    """ets-fiber-assigner reports 3.4.0 with or without the HiGHS backend, so
+    """ets-fiber-assigner reports 3.8.0 with or without the HiGHS backend, so
     PPPrunStart probes for the class rather than trusting the version."""
     from pfs_target_uploader.utils import ppp
 

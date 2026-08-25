@@ -46,7 +46,6 @@ from .suppress_logging import (
 import ets_fiber_assigner.netflow as nf
 from ics.cobraCharmer.cobraCoach.cobraCoach import CobraCoach
 from ics.cobraOps.Bench import Bench
-from ics.cobraOps.BlackDotsCalibrationProduct import BlackDotsCalibrationProduct
 from pfs.instdata import setup_envvar as instdata_setup_envvar
 
 # Disable WebGL for Firefox compatibility
@@ -346,7 +345,7 @@ def PPPrunStart(
             f"expected one of {', '.join(map(repr, SOLVER_BACKENDS))}"
         )
 
-    # ets-fiber-assigner reports version 3.4.0 both for the released tag and
+    # ets-fiber-assigner reports version 3.8.0 both for the released tag and
     # for the pinned commit that adds HiGHS, so the version is no help in
     # telling them apart. Probe for the class instead, or an environment
     # resolved to the released tag would fail with an opaque "unexpected
@@ -355,7 +354,7 @@ def PPPrunStart(
         raise RuntimeError(
             "The installed ets-fiber-assigner has no HiGHS backend. "
             "It is only in the commit pinned in pyproject.toml, not in the "
-            "released v3.4 tag. Run `uv sync` to install the pinned version, "
+            "released v3.8 tag. Run `uv sync` to install the pinned version, "
             "or select the gurobi backend."
         )
 
@@ -382,24 +381,22 @@ def PPPrunStart(
     # Create Bench object once at the start (reused across all netflow runs)
     ppp_timer.start("CobraCoach_Initialization")
     instdata_setup_envvar()
-    with tempfile.TemporaryDirectory() as cobra_coach_dir:
-        with suppress_third_party_logging(enabled=True, redirect_stderr=True):
-            cobra_coach = CobraCoach(
-                loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
-            )
+    with (
+        tempfile.TemporaryDirectory() as cobra_coach_dir,
+        suppress_third_party_logging(enabled=True, redirect_stderr=True),
+    ):
+        cobra_coach = CobraCoach(
+            loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
+        )
 
-            calibration_file_name = os.path.join(
-                os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
-            )
-            black_dots_calibration_product = BlackDotsCalibrationProduct(
-                calibration_file_name
-            )
-
-            bench = Bench(
-                cobraCoach=cobra_coach,
-                blackDotsCalibrationProduct=black_dots_calibration_product,
-                blackDotsMargin=1.65,
-            )
+        # blackDotsCalibrationProduct is left at its default (None): Bench
+        # builds it from cobra_coach.blackdotModel, which CobraCoach.__init__
+        # already loaded via the same Butler-resolved black_dots_mm.csv this
+        # code used to read directly. Matches how ets_pointing builds Bench.
+        bench = Bench(
+            cobraCoach=cobra_coach,
+            blackDotsMargin=1.65,
+        )
     ppp_timer.stop("CobraCoach_Initialization")
     logger.info(f"Number of cobras: {bench.cobras.nCobras}")
 
@@ -1158,6 +1155,11 @@ def PPPrunStart(
                     **solverArgs,
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
+                    # v3.8 defaults avoidFiducials to True; keep the pre-v3.8 behavior
+                    # (fiducial-fiber interference was never checked) until Phase 2 makes
+                    # this an explicit, benchmarked, opt-in setting.
+                    avoidFiducials=False,
+                    brokenCobrasMargin=0.0,
                 )
                 ppp_timer.stop(f"{solver_backend}_BuildProblem")
 
