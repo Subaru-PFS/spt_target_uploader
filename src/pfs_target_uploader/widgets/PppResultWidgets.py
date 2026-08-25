@@ -273,6 +273,8 @@ class PppResultWidgets:
         quiet=True,
         max_exetime=900,
         logger=None,
+        solver_backend="gurobi",
+        timing_verbose=False,
     ):
         if logger is None:
             logger.remove()
@@ -310,6 +312,8 @@ class PppResultWidgets:
                 clustering_algorithm,
                 ppp_run_results,
                 logger,
+                timing_verbose,
+                solver_backend,
             ),
         )
 
@@ -348,41 +352,53 @@ class PppResultWidgets:
                 ppp_run.join()
                 sys.exit(0)
 
-            latest = drain_ppp_queue(ppp_run_results)
+            timed_out = True
+        else:
+            timed_out = False
 
-            (
-                uS_L2,
-                cR_L,
-                cR_L_,
-                sub_l,
-                obj_allo_L_fin,
-                uS_M2,
-                cR_M,
-                cR_M_,
-                sub_m,
-                obj_allo_M_fin,
-                self.status_,
-            ) = latest
+        latest = drain_ppp_queue(ppp_run_results)
+
+        if latest is None:
+            # The child died before queueing anything -- a crash, or a
+            # timeout that struck before the first pointing was fixed.
+            # Report it the way ppp_result() reports its own failures, which
+            # show_results() and pn_app already read as "simulation failed".
+            logger.error(
+                "Pointing simulation produced no results"
+                + (" before running out of time" if timed_out else "")
+            )
+            if not timed_out:
+                pn.state.notifications.error(
+                    "Pointing simulation failed to produce any result.",
+                    duration=0,  # ever
+                )
+            self.nppc = None
+            self.p_result_fig = None
+            self.p_result_ppc = None
+            self.p_result_tab = None
+            # 1 renders as "time is running out", 2 as "no fiber assigned".
+            self.status_ = 1 if timed_out else 2
+            return
+
+        (
+            uS_L2,
+            cR_L,
+            cR_L_,
+            sub_l,
+            obj_allo_L_fin,
+            uS_M2,
+            cR_M,
+            cR_M_,
+            sub_m,
+            obj_allo_M_fin,
+            self.status_,
+        ) = latest
+
+        if timed_out:
             logger.warning(
                 f"{len(obj_allo_L_fin):04d} L and {len(obj_allo_M_fin):04d} M PPCs determined (run out of time)"
             )
             self.status_ = 1  # ppc_status=1 in case of runout time
-        else:
-            latest = drain_ppp_queue(ppp_run_results)
-
-            (
-                uS_L2,
-                cR_L,
-                cR_L_,
-                sub_l,
-                obj_allo_L_fin,
-                uS_M2,
-                cR_M,
-                cR_M_,
-                sub_m,
-                obj_allo_M_fin,
-                self.status_,
-            ) = latest
 
         (
             self.nppc,

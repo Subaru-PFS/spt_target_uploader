@@ -4,7 +4,7 @@ requires-python = "==3.12.*"
 
 [manifest]
 overrides = [
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=v3.4" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8" },
     { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3" },
     { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.5" },
     { name = "ics-utils", git = "https://github.com/Subaru-PFS/ics_utils.git?rev=34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" },
@@ -478,7 +478,7 @@ wheels = [
 [[package]]
 name = "ets-fiber-assigner"
 version = "3.4.0"
-source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=v3.4#bac93f640f524d0841baa5c6e2f6e2ded30ab2f1" }
+source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8#30824213aab0f23e52f0ced96b87aa43001476e8" }
 dependencies = [
     { name = "astropy" },
     { name = "numpy" },
@@ -652,6 +652,27 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/f0/4f719c1275158a13918124ce7d798be4b4ae2898469b467216fde974e443/hdbscan-0.8.44-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:cc4917a57f73984137bc6f14cddd1a140907102522174af8d8add42668a5e196", size = 2590501, upload-time = "2026-06-01T18:55:52.587Z" },
     { url = "https://files.pythonhosted.org/packages/5c/95/4f08d8adeba894453a057f1b87d24fb155e040601137cb82536d9708ff30/hdbscan-0.8.44-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d67f2b3628a80764a07fff3a994df2c6b2d9a6b9c8024edde7b36c184f6657f6", size = 5868686, upload-time = "2026-06-01T18:56:33.787Z" },
     { url = "https://files.pythonhosted.org/packages/b5/a2/959f617dbff9ebe0ef9b55f61c84b7ad00e5eb91b47b838b3a1a2bf0aa95/hdbscan-0.8.44-cp312-cp312-win_amd64.whl", hash = "sha256:29bffe0ef8a8191e6cd5af3dc7fdf5e7f6334eea8fa39ee8488f2f16911c1cdf", size = 1947427, upload-time = "2026-06-01T18:56:14.433Z" },
+]
+
+[[package]]
+name = "highspy"
+version = "1.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/02/c6b658f79911fee921721da728b9ab8f5e19ff06121fff36f90f77127f4d/highspy-1.15.1.tar.gz", hash = "sha256:20ed2fbf1cb64bf3044ee6632364b7e2653d93e6901e2b19fd3d5df10702e8c5", size = 1703256, upload-time = "2026-07-02T12:03:25.009Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/59/b79a7b1711ddfcca36674ddb41759e98eb1797f4a94513e7dd215e32e94d/highspy-1.15.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:a781dc8432568ea990fcdcc8d6e4365e67aa4848ca1f99275db096645b27cae3", size = 4878738, upload-time = "2026-07-02T12:02:03.82Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/e4/ae08124f71187628471a177e6db1ed2c1c45e9dceadc45f7111dfd7c2254/highspy-1.15.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:9499d631edeb9642fc08dee59ca6c5815be1764c13a336c58ab7ba063011aa24", size = 4473938, upload-time = "2026-07-02T12:02:05.754Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/7f/185b8c9579a9e4ef88eda45d1fdaf8d23a3a640f73c403a7b29fc0f0c4be/highspy-1.15.1-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ef048fa722cdeb80062d271b8ba211cd6650ab73419762d80da7642bbd4a8420", size = 4636755, upload-time = "2026-07-02T12:02:07.996Z" },
+    { url = "https://files.pythonhosted.org/packages/82/6b/18bec60d8585df860b8d33d310e99e7893eaabe3c8e9ebfa7e387ba9d2a4/highspy-1.15.1-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9730647160a6481426729f46d9989a0507d05f3cf96f9fb180f4ab9891bea67b", size = 5034168, upload-time = "2026-07-02T12:02:09.89Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/51/e43f06e64e994ccb41a336ff78802c0dae63aed46c17acd52167b5ca3d76/highspy-1.15.1-cp312-cp312-manylinux_2_26_i686.manylinux_2_28_i686.whl", hash = "sha256:6a6a2f21ee31a9205a928fbbc3f8c054893c1aec34f6a7c56588317e2800e673", size = 5861937, upload-time = "2026-07-02T12:02:11.801Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/2a/5501a23cac55926e4b0554352b4285734b417dbec385c593f2ae405ea637/highspy-1.15.1-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:9a6760962b3e813814dc5e88301890d7cce975de5ce97cc3aed589cfdd461811", size = 6192004, upload-time = "2026-07-02T12:02:14.544Z" },
+    { url = "https://files.pythonhosted.org/packages/94/08/fb7d30ea0e6c83fb943b16bf31951ba13a5be01a638ec13962a477009b91/highspy-1.15.1-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:787c92d5ff274256ba8848ab174cfc65d5af696f51bffe87423c85b2ea25c3fe", size = 7233098, upload-time = "2026-07-02T12:02:16.609Z" },
+    { url = "https://files.pythonhosted.org/packages/23/77/9a07df7181834cfb61dafa5594e5eedc78369797c6487806bd3221d20667/highspy-1.15.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:dd9ee8e139e7260ec1306a48e30f1bd7937d9cfb8cb201d25da10e1099e5129b", size = 6636717, upload-time = "2026-07-02T12:02:18.72Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/25/5083d8e3d5cf5ff5edf5bcc03e3f693630ab59142c9d0a0bcbb2d315c50e/highspy-1.15.1-cp312-cp312-win32.whl", hash = "sha256:01c6585e83938ecf4139248b074b2ee736816d63716a20dc608b1d2fc9637b66", size = 2306753, upload-time = "2026-07-02T12:02:20.837Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/01/05521ca6b38e34e68d707888c378d3bcac34e62715b739e7c0c9b9887993/highspy-1.15.1-cp312-cp312-win_amd64.whl", hash = "sha256:8c548165270608a40147a7ea6d985fd62a65fabf0f075b3c0c59ea910b724223", size = 2711114, upload-time = "2026-07-02T12:02:22.621Z" },
 ]
 
 [[package]]
@@ -1570,6 +1591,7 @@ dependencies = [
     { name = "fontawesome-markdown" },
     { name = "gurobipy" },
     { name = "hdbscan" },
+    { name = "highspy" },
     { name = "holoviews" },
     { name = "hvplot" },
     { name = "ics-cobracharmer" },
@@ -1620,10 +1642,11 @@ requires-dist = [
     { name = "colorcet", specifier = ">=3.0.1" },
     { name = "dask", specifier = ">=2023.10.1" },
     { name = "datashader", specifier = ">=0.16.0" },
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=v3.4" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=30824213aab0f23e52f0ced96b87aa43001476e8" },
     { name = "fontawesome-markdown", url = "https://github.com/bmcorser/fontawesome-markdown/archive/5feb14118d963312d52bb1fdb4c7eefa4da19880.zip" },
     { name = "gurobipy", specifier = ">=12,<13" },
     { name = "hdbscan", specifier = ">=0.8.40" },
+    { name = "highspy", specifier = ">=1.11" },
     { name = "holoviews", specifier = ">=1.17.1" },
     { name = "hvplot", specifier = ">=0.8.4" },
     { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.3" },

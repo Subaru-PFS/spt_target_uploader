@@ -54,7 +54,8 @@ ty check src/           # Type check (experimental, Astral ty)
 ```bash
 pfs-uploader-cli validate target_list.csv                     # Validate a target list
 pfs-uploader-cli validate target_list.csv --obs-type queue --min-mag 10.0 --max-mag 30.0
-pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/   # Pointing simulation
+pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/   # Pointing simulation (Gurobi)
+pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/ --solver highs  # ... with HiGHS
 pfs-uploader-cli uid2sqlite -d data --db upload_id.sqlite     # Manage upload ID database
 pfs-uploader-cli clean-uid data/upload_id.sqlite              # Clean duplicate upload IDs
 ```
@@ -69,7 +70,7 @@ Package root: `src/pfs_target_uploader/`
 - **`utils/config.py`**: `AppConfig` dataclass; `load_app_config()` (full), `load_minimal_config()` (admin), `get_min_fluxmag_for_obstype()`
 - **`utils/checker.py`**: Validation logic — columns, value ranges, flux, flux range vs AB mag limits (`check_fluxrange()`), HEALPix-optimized visibility, internal duplication
 - **`utils/internal_duplication.py`**: Duplicate detection via coordinate clustering (see `internals` skill)
-- **`utils/ppp.py`**: Pointing simulation engine (HDBSCAN/DBSCAN clustering + Gurobi optimization)
+- **`utils/ppp.py`**: Pointing simulation engine (HDBSCAN/DBSCAN clustering + netflow ILP solved by Gurobi or HiGHS; `solver_backend` argument of `PPPrunStart()`)
 - **`utils/io.py`**: Target list I/O and data persistence
 - **`utils/db.py`**: SQLite upload ID management
 - **`utils/session.py`**: Session management and security tokens
@@ -80,7 +81,7 @@ Package root: `src/pfs_target_uploader/`
 
 1. **Upload**: CSV target list via web UI or CLI
 2. **Validation** (`checker.py`): format → coordinates → flux → visibility (HEALPix) → internal duplicates → optional flux range vs AB mag limits
-3. **Clustering + Simulation** (`ppp.py`): HDBSCAN/DBSCAN grouping, Gurobi-optimized pointing patterns
+3. **Clustering + Simulation** (`ppp.py`): HDBSCAN/DBSCAN grouping, ILP-optimized pointing patterns (Gurobi by default, HiGHS optional)
 4. **Results**: interactive plots + downloadable files, saved to timestamped directories under `data/`
 
 ### File Formats
@@ -91,7 +92,7 @@ Package root: `src/pfs_target_uploader/`
 ## Configuration
 
 - **`.env.shared`**: main config; **`.env.private`**: credentials (`ADMIN_USERNAME`/`ADMIN_PASSWORD`, gitignored); **`.env.docker`**: Docker build settings
-- Key settings: `OUTPUT_DIR` (data storage), `MAX_EXETIME` (PPP timeout sec, 0 = unlimited), `CLUSTERING_ALGORITHM` (`FAST_HDBSCAN`), `PPP_QUIET`, `PPP_TIMING_VERBOSE`, `LOG_LEVEL`, `UPLOADID_DB`, `MIN_FLUXMAG_QUEUE`/`_CLASSICAL`/`_FILLER` (bright AB-mag limits per obs type), `MAX_FLUXMAG` (shared faint limit), optional `EMAIL_FROM`/`EMAIL_TO`/`SMTP_SERVER`
+- Key settings: `OUTPUT_DIR` (data storage), `MAX_EXETIME` (PPP timeout sec, 0 = unlimited), `CLUSTERING_ALGORITHM` (`FAST_HDBSCAN`), `SOLVER_BACKEND` (`gurobi` default, or `highs`; invalid values warn and fall back to `gurobi`), `PPP_QUIET`, `PPP_TIMING_VERBOSE`, `LOG_LEVEL`, `UPLOADID_DB`, `MIN_FLUXMAG_QUEUE`/`_CLASSICAL`/`_FILLER` (bright AB-mag limits per obs type), `MAX_FLUXMAG` (shared faint limit), optional `EMAIL_FROM`/`EMAIL_TO`/`SMTP_SERVER`
 - See `.env.shared.example` for the full annotated list
 
 ## Testing
@@ -104,7 +105,10 @@ Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
 
 ## Gotchas and Conventions
 
-- **Gurobi license required** for pointing simulations; PPP can be computationally heavy for large lists
+- **Pointing simulations need an ILP solver**: Gurobi (default, needs a license) or HiGHS (open source, no license). Web app: `SOLVER_BACKEND` in `.env.shared`; CLI: `--solver` on `simulate`. The CLI flag does **not** read `SOLVER_BACKEND` — it defaults to `gurobi` on its own. PPP can be computationally heavy for large lists with either backend
+- `ets-fiber-assigner` is pinned in `pyproject.toml` (and `override-dependencies`) to a commit on `tickets/FIBERALLOC-62` instead of a tag, because that branch carries the HiGHS backend (`HighsProblem`) on top of `v3.4`. Move it back to a tag once released; keep both pins in sync
+- Gurobi and HiGHS options in `ppp.py` express the same intent (5% MIP gap, fixed seed, silent); HiGHS has no `method`/`degenmoves` equivalent. Do not change the Gurobi options while touching this — they are deliberately unchanged from before HiGHS was added
+- Astropy IERS auto-download is disabled at import time in `utils/ppp.py` (`iers.conf.auto_download = False`). Do not re-enable it: PPP altitude checks only need coarse accuracy, and every fresh process would otherwise retry a `finals2000A.all` download once the bundled `astropy-iers-data` snapshot ages past `auto_max_age`. Refresh via `uv lock --upgrade-package astropy-iers-data` instead
 - All astronomical calculations use Astropy conventions (J2000/ICRS, degrees)
 - Internal duplication threshold is 1.0 arcsec (PFS fiber diameter); L-mode and M-mode targets are never treated as duplicates of each other
 - Use `loguru` for logging (not stdlib `logging`)

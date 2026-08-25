@@ -12,6 +12,12 @@ from pprint import pformat
 from dotenv import dotenv_values
 from loguru import logger
 
+# ILP solver backends netflow can be driven with. Lives here rather than in
+# utils/ppp.py so the CLI and the config loader can reach it without pulling
+# in netflow and the whole plotting stack. cli/cli_main.py mirrors it as a
+# typer Enum; tests/test_solver_backend.py keeps the two in step.
+SOLVER_BACKENDS = ("gurobi", "highs")
+
 
 @dataclass(frozen=True)
 class AppConfig:
@@ -27,8 +33,12 @@ class AppConfig:
         Maximum execution time for PPP in seconds. 0 means no limit.
     ppp_quiet : bool
         Whether to suppress verbose PPP output.
+    ppp_timing_verbose : bool
+        Whether to log per-stage PPP timings.
     clustering_algorithm : str
         Target clustering algorithm (HDBSCAN, DBSCAN, FAST_HDBSCAN).
+    solver_backend : str
+        ILP solver backend for the pointing simulation (gurobi, highs).
     ann_file : str | None
         Path to announcement file, or None if not configured.
     uploadid_db : str | None
@@ -53,7 +63,9 @@ class AppConfig:
     log_level: str = "INFO"
     max_exetime: int = 900
     ppp_quiet: bool = True
+    ppp_timing_verbose: bool = False
     clustering_algorithm: str = "HDBSCAN"
+    solver_backend: str = "gurobi"
     ann_file: str | None = None
     uploadid_db: str | None = None
     db_path: str | None = None
@@ -86,6 +98,7 @@ class AppConfig:
             items.append(("ANN_FILE", self.ann_file))
 
         items.append(("CLUSTERING_ALGORITHM", self.clustering_algorithm))
+        items.append(("SOLVER_BACKEND", self.solver_backend))
 
         if self.use_uid_db:
             items.append(("DB_PATH", self.db_path))
@@ -106,6 +119,7 @@ class AppConfig:
 
         items.append(("OUTPUT_DIR", self.output_dir))
         items.append(("PPP_QUIET", str(self.ppp_quiet)))
+        items.append(("PPP_TIMING_VERBOSE", str(self.ppp_timing_verbose)))
 
         if self.use_uid_db:
             items.append(("UPLOADID_DB", self.uploadid_db))
@@ -122,7 +136,9 @@ class AppConfig:
             "LOG_LEVEL",
             "MAX_EXETIME",
             "PPP_QUIET",
+            "PPP_TIMING_VERBOSE",
             "CLUSTERING_ALGORITHM",
+            "SOLVER_BACKEND",
             "ANN_FILE",
             "UPLOADID_DB",
             "MIN_FLUXMAG_QUEUE",
@@ -390,8 +406,23 @@ def load_app_config(
             )
 
     ppp_quiet = _parse_bool_int(config.get("PPP_QUIET"), default=True)
+    ppp_timing_verbose = _parse_bool_int(
+        config.get("PPP_TIMING_VERBOSE"), default=False
+    )
 
     clustering_algorithm = config.get("CLUSTERING_ALGORITHM", "HDBSCAN")
+
+    # Accepted case-insensitively: a "HiGHS" in .env.shared would otherwise
+    # fall back to Gurobi, turning a spelling choice into a licence failure on
+    # a site that has no Gurobi licence. PPPrunStart wants the lowercase form.
+    # dotenv_values() yields None for a valueless key, hence the `or`.
+    solver_backend = (config.get("SOLVER_BACKEND") or "gurobi").strip().lower()
+    if solver_backend not in SOLVER_BACKENDS:
+        logger.warning(
+            f"Invalid SOLVER_BACKEND value: {config['SOLVER_BACKEND']}, "
+            "using default: gurobi"
+        )
+        solver_backend = "gurobi"
 
     # Resolve announcement file
     ann_file = _resolve_ann_file(config, validate=validate_ann_file)
@@ -425,7 +456,9 @@ def load_app_config(
         output_dir=output_dir,
         log_level=log_level,
         max_exetime=max_exetime,
+        solver_backend=solver_backend,
         ppp_quiet=ppp_quiet,
+        ppp_timing_verbose=ppp_timing_verbose,
         clustering_algorithm=clustering_algorithm,
         ann_file=ann_file,
         uploadid_db=uploadid_db,

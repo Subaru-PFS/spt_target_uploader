@@ -25,6 +25,7 @@ from astropy import units as u
 from astropy.coordinates import AltAz, EarthLocation, SkyCoord
 from astropy.table import Table, join, vstack
 from astropy.time import Time
+from astropy.utils import iers
 from bokeh.models.widgets.tables import NumberFormatter
 from loguru import logger
 from matplotlib.path import Path
@@ -32,6 +33,7 @@ from sklearn.cluster import DBSCAN, HDBSCAN
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
 
+from .config import SOLVER_BACKENDS
 from .suppress_logging import (
     suppress_loggers,
     suppress_root_logger,
@@ -61,6 +63,19 @@ hv.renderer("bokeh").webgl = False
 warnings.filterwarnings("ignore")
 
 pn.extension(notifications=True)
+
+# set_observation_time() only needs coarse (15-min resolution, degree-level)
+# altitude checks, so avoid astropy's automatic IERS finals2000A.all download
+# (astropy.utils.iers.conf.auto_download=True by default). The bundled table's
+# predictive_mjd is fixed at astropy-iers-data's release date, so once that
+# date is >auto_max_age days in the past every fresh process re-triggers a
+# download attempt (not just once every auto_max_age days) and eventually a
+# ValueError. The bundled/cached IERS table is accurate enough for this
+# purpose, so download attempts are disabled entirely instead.
+# To refresh the bundled table, bump the pinned version instead of relying on
+# runtime downloads: `uv lock --upgrade-package astropy-iers-data && uv sync`.
+iers.conf.auto_download = False
+iers.conf.auto_max_age = None
 
 # Cached Subaru Telescope location to avoid repeated registry lookups
 _SUBARU_LOCATION = EarthLocation.of_site("Subaru Telescope")
@@ -320,13 +335,41 @@ def PPPrunStart(
     queue=None,
     logger=None,
     timing_verbose=False,
+    solver_backend="gurobi",
 ):
+    # Fail here rather than at the netflow call further down: PPPrunStart runs
+    # in a child process, and by the time the solver is picked the clustering
+    # has already burned minutes for nothing.
+    if solver_backend not in SOLVER_BACKENDS:
+        raise ValueError(
+            f"Unknown solver_backend {solver_backend!r}; "
+            f"expected one of {', '.join(map(repr, SOLVER_BACKENDS))}"
+        )
+
+    # ets-fiber-assigner reports version 3.4.0 both for the released tag and
+    # for the pinned commit that adds HiGHS, so the version is no help in
+    # telling them apart. Probe for the class instead, or an environment
+    # resolved to the released tag would fail with an opaque "unexpected
+    # keyword argument 'solver'" deep inside the child process.
+    if solver_backend == "highs" and not hasattr(nf, "HighsProblem"):
+        raise RuntimeError(
+            "The installed ets-fiber-assigner has no HiGHS backend. "
+            "It is only in the commit pinned in pyproject.toml, not in the "
+            "released v3.4 tag. Run `uv sync` to install the pinned version, "
+            "or select the gurobi backend."
+        )
+
     if logger is None:
         from loguru import logger as global_logger
 
         logger = global_logger
         logger.remove()
         logger.add(sys.stderr, level="INFO", enqueue=True)
+
+    # Which solver ran is otherwise only visible in the timing labels, which
+    # need PPP_TIMING_VERBOSE. Say it once, unconditionally, so a slow or
+    # surprising run can be attributed to a backend after the fact.
+    logger.info(f"Pointing simulation starts with the {solver_backend} solver")
 
     r_pfi = d_pfi / 2.0
 
@@ -1065,6 +1108,26 @@ def PPPrunStart(
             LogToConsole=0,
         )
 
+        # Same intent in HiGHS's own option names. HiGHS has no equivalent of
+        # Gurobi's method or degenmoves, so only the settings that transfer
+        # are set: the 5% MIP gap, a fixed seed, and silence.
+        highsOptions = {
+            "mip_rel_gap": 5.0e-2,
+            "random_seed": 0,
+            "output_flag": False,
+        }
+
+        if solver_backend == "highs":
+            # HighsProblem is reached through buildProblem's solver= argument,
+            # which only exists on the ets-fiber-assigner branch pinned in
+            # pyproject.toml.
+            solverArgs = dict(solver="highs", solverOptions=highsOptions)
+        else:
+            # Keep the pre-HiGHS call shape for Gurobi, so the default path
+            # still runs against a released ets-fiber-assigner. buildProblem
+            # treats this as identical to solver="gurobi".
+            solverArgs = dict(gurobi=True, gurobiOptions=gurobiOptions)
+
         # partially observed? no
         alreadyObserved = {}
 
@@ -1081,7 +1144,7 @@ def PPPrunStart(
             # disable netflow stdout output
             with suppress_stdout(ppp_quiet):
                 # compute observation strategy
-                ppp_timer.start("Gurobi_BuildProblem")
+                ppp_timer.start(f"{solver_backend}_BuildProblem")
                 prob = nf.buildProblem(
                     bench,
                     tgt,
@@ -1092,16 +1155,15 @@ def PPPrunStart(
                     cobraMoveCost=cobraMoveCost,
                     collision_distance=2.0,
                     elbow_collisions=True,
-                    gurobi=True,
-                    gurobiOptions=gurobiOptions,
+                    **solverArgs,
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
                 )
-                ppp_timer.stop("Gurobi_BuildProblem")
+                ppp_timer.stop(f"{solver_backend}_BuildProblem")
 
-                ppp_timer.start("Gurobi_Solve")
+                ppp_timer.start(f"{solver_backend}_Solve")
                 prob.solve()
-                ppp_timer.stop("Gurobi_Solve")
+                ppp_timer.stop(f"{solver_backend}_Solve")
 
         res = [{} for _ in range(min(nvisit, len(Telra)))]
         logger.debug("Extract solution:")
