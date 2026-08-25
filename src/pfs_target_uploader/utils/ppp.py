@@ -46,7 +46,6 @@ from .suppress_logging import (
 import ets_fiber_assigner.netflow as nf
 from ics.cobraCharmer.cobraCoach.cobraCoach import CobraCoach
 from ics.cobraOps.Bench import Bench
-from ics.cobraOps.BlackDotsCalibrationProduct import BlackDotsCalibrationProduct
 from pfs.instdata import setup_envvar as instdata_setup_envvar
 
 # Disable WebGL for Firefox compatibility
@@ -388,16 +387,12 @@ def PPPrunStart(
                 loadModel=True, trajectoryMode=True, rootDir=cobra_coach_dir
             )
 
-            calibration_file_name = os.path.join(
-                os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
-            )
-            black_dots_calibration_product = BlackDotsCalibrationProduct.from_file(
-                calibration_file_name
-            )
-
+            # blackDotsCalibrationProduct is left at its default (None): Bench
+            # builds it from cobra_coach.blackdotModel, which CobraCoach.__init__
+            # already loaded via the same Butler-resolved black_dots_mm.csv this
+            # code used to read directly. Matches how ets_pointing builds Bench.
             bench = Bench(
                 cobraCoach=cobra_coach,
-                blackDotsCalibrationProduct=black_dots_calibration_product,
                 blackDotsMargin=1.65,
             )
     ppp_timer.stop("CobraCoach_Initialization")
