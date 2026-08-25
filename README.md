@@ -66,9 +66,11 @@ license requirement.
 SOLVER_BACKEND=highs
 ```
 
-An unrecognized value is rejected with a warning in the log and falls back to `gurobi`.
+The value is matched case-insensitively, so `highs`, `HiGHS` and `HIGHS` are the same
+setting. An unrecognized value is rejected with a warning in the log and falls back to
+`gurobi`.
 
-**CLI**: pass `--solver` to `pfs-uploader-cli simulate`.
+**CLI**: pass `--solver` to `pfs-uploader-cli simulate` (also case-insensitive).
 
 ```sh
 pfs-uploader-cli simulate target_list.csv --obs-type queue -d output/ --solver highs
@@ -84,7 +86,9 @@ The PPP timing logs (`PPP_TIMING_VERBOSE=1`) are labeled with the backend name
 
 - HiGHS support comes from `ets-fiber-assigner`, which is pinned in `pyproject.toml` to a
   commit on `tickets/FIBERALLOC-62` (branched from `v3.4`) because that work is not tagged
-  upstream yet. The pin moves back to a tag once it is released.
+  upstream yet. The pin moves back to a tag once it is released. The package reports
+  version `3.4.0` either way, so `utils/ppp.py` probes for `nf.HighsProblem` and refuses
+  `highs` with a clear message if the installed netflow does not carry it.
 - Solver options are set to the same intent for both backends: a 5% MIP gap, a fixed seed,
   and silenced solver output. HiGHS has no equivalent of Gurobi's `method` or `degenmoves`,
   so only the settings that transfer are applied. The options handed to Gurobi are unchanged.

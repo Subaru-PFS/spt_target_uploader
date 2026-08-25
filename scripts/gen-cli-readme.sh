@@ -6,6 +6,16 @@
 # This script uses typer's built-in documentation generator to create
 # markdown documentation for the CLI commands.
 #
+# It writes to stdout and covers only the generated part of
+# docs/docs/cli.md. Everything above that file's first "## " heading is
+# hand-written and must be kept, so refresh the file with:
+#
+#   sed -n '1,/^## /{/^## /!p;}' docs/docs/cli.md > /tmp/preamble.md
+#   { cat /tmp/preamble.md; ./scripts/gen-cli-readme.sh; } > /tmp/cli.md
+#   mv /tmp/cli.md docs/docs/cli.md
+#
+# rather than redirecting straight over it.
+#
 # Usage:
 #   gen-cli-readme.sh [uv|venv]
 #
