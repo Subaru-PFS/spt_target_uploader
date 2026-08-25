@@ -1158,6 +1158,11 @@ def PPPrunStart(
                     **solverArgs,
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
+                    # v3.8 defaults avoidFiducials to True; keep the pre-v3.8 behavior
+                    # (fiducial-fiber interference was never checked) until Phase 2 makes
+                    # this an explicit, benchmarked, opt-in setting.
+                    avoidFiducials=False,
+                    brokenCobrasMargin=0.0,
                 )
                 ppp_timer.stop(f"{solver_backend}_BuildProblem")
 
