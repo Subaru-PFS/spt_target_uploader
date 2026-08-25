@@ -12,6 +12,12 @@ from pprint import pformat
 from dotenv import dotenv_values
 from loguru import logger
 
+# ILP solver backends netflow can be driven with. Lives here rather than in
+# utils/ppp.py so the CLI and the config loader can reach it without pulling
+# in netflow and the whole plotting stack. cli/cli_main.py mirrors it as a
+# typer Enum; tests/test_solver_backend.py keeps the two in step.
+SOLVER_BACKENDS = ("gurobi", "highs")
+
 
 @dataclass(frozen=True)
 class AppConfig:
@@ -411,7 +417,7 @@ def load_app_config(
     # a site that has no Gurobi licence. PPPrunStart wants the lowercase form.
     # dotenv_values() yields None for a valueless key, hence the `or`.
     solver_backend = (config.get("SOLVER_BACKEND") or "gurobi").strip().lower()
-    if solver_backend not in ("gurobi", "highs"):
+    if solver_backend not in SOLVER_BACKENDS:
         logger.warning(
             f"Invalid SOLVER_BACKEND value: {config['SOLVER_BACKEND']}, "
             "using default: gurobi"

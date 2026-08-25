@@ -33,6 +33,7 @@ from sklearn.cluster import DBSCAN, HDBSCAN
 from sklearn.neighbors import KernelDensity
 from spatialpandas.geometry import PolygonArray
 
+from .config import SOLVER_BACKENDS
 from .suppress_logging import (
     suppress_loggers,
     suppress_root_logger,
@@ -75,10 +76,6 @@ pn.extension(notifications=True)
 # runtime downloads: `uv lock --upgrade-package astropy-iers-data && uv sync`.
 iers.conf.auto_download = False
 iers.conf.auto_max_age = None
-
-# ILP solver backends netflow can be driven with. utils/config.py and the CLI's
-# --solver option validate against the same set at the outer boundary.
-SOLVER_BACKENDS = ("gurobi", "highs")
 
 # Cached Subaru Telescope location to avoid repeated registry lookups
 _SUBARU_LOCATION = EarthLocation.of_site("Subaru Telescope")
