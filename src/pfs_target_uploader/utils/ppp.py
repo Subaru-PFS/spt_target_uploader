@@ -76,6 +76,10 @@ pn.extension(notifications=True)
 iers.conf.auto_download = False
 iers.conf.auto_max_age = None
 
+# ILP solver backends netflow can be driven with. utils/config.py and the CLI's
+# --solver option validate against the same set at the outer boundary.
+SOLVER_BACKENDS = ("gurobi", "highs")
+
 # Cached Subaru Telescope location to avoid repeated registry lookups
 _SUBARU_LOCATION = EarthLocation.of_site("Subaru Telescope")
 
@@ -336,6 +340,15 @@ def PPPrunStart(
     timing_verbose=False,
     solver_backend="gurobi",
 ):
+    # Fail here rather than at the netflow call further down: PPPrunStart runs
+    # in a child process, and by the time the solver is picked the clustering
+    # has already burned minutes for nothing.
+    if solver_backend not in SOLVER_BACKENDS:
+        raise ValueError(
+            f"Unknown solver_backend {solver_backend!r}; "
+            f"expected one of {', '.join(map(repr, SOLVER_BACKENDS))}"
+        )
+
     if logger is None:
         from loguru import logger as global_logger
 
@@ -1089,9 +1102,16 @@ def PPPrunStart(
             "output_flag": False,
         }
 
-        backendOptions = {"gurobi": gurobiOptions, "highs": highsOptions}[
-            solver_backend
-        ]
+        if solver_backend == "highs":
+            # HighsProblem is reached through buildProblem's solver= argument,
+            # which only exists on the ets-fiber-assigner branch pinned in
+            # pyproject.toml.
+            solverArgs = dict(solver="highs", solverOptions=highsOptions)
+        else:
+            # Keep the pre-HiGHS call shape for Gurobi, so the default path
+            # still runs against a released ets-fiber-assigner. buildProblem
+            # treats this as identical to solver="gurobi".
+            solverArgs = dict(gurobi=True, gurobiOptions=gurobiOptions)
 
         # partially observed? no
         alreadyObserved = {}
@@ -1120,8 +1140,7 @@ def PPPrunStart(
                     cobraMoveCost=cobraMoveCost,
                     collision_distance=2.0,
                     elbow_collisions=True,
-                    solver=solver_backend,
-                    solverOptions=backendOptions,
+                    **solverArgs,
                     alreadyObserved=alreadyObserved,
                     forbiddenPairs=forbiddenPairs,
                 )
