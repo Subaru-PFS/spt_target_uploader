@@ -8,6 +8,13 @@ file_path=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('tool_in
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
+# Only format files inside this project. Sibling PFS checkouts (ets_fiberalloc,
+# ics_cobraOps, ...) are not black-formatted upstream, and reformatting one
+# turns a two-line edit into a whole-file rewrite.
+abs_path=$(cd "$(dirname "$file_path")" 2>/dev/null && pwd)/$(basename "$file_path")
+abs_project=$(cd "$PROJECT_DIR" 2>/dev/null && pwd) || exit 0
+[[ "$abs_path" == "$abs_project"/* ]] || exit 0
+
 run_tool() {
     local name="$1"
     shift
