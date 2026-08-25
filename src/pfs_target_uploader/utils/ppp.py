@@ -345,7 +345,7 @@ def PPPrunStart(
             f"expected one of {', '.join(map(repr, SOLVER_BACKENDS))}"
         )
 
-    # ets-fiber-assigner reports version 3.4.0 both for the released tag and
+    # ets-fiber-assigner reports version 3.8.0 both for the released tag and
     # for the pinned commit that adds HiGHS, so the version is no help in
     # telling them apart. Probe for the class instead, or an environment
     # resolved to the released tag would fail with an opaque "unexpected
@@ -354,7 +354,7 @@ def PPPrunStart(
         raise RuntimeError(
             "The installed ets-fiber-assigner has no HiGHS backend. "
             "It is only in the commit pinned in pyproject.toml, not in the "
-            "released v3.4 tag. Run `uv sync` to install the pinned version, "
+            "released v3.8 tag. Run `uv sync` to install the pinned version, "
             "or select the gurobi backend."
         )
 
