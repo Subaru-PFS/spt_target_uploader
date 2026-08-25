@@ -391,7 +391,7 @@ def PPPrunStart(
             calibration_file_name = os.path.join(
                 os.environ["PFS_INSTDATA_DIR"], "data/pfi/dot", "black_dots_mm.csv"
             )
-            black_dots_calibration_product = BlackDotsCalibrationProduct(
+            black_dots_calibration_product = BlackDotsCalibrationProduct.from_file(
                 calibration_file_name
             )
 
