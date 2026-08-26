@@ -26,12 +26,7 @@ dependencies = [
   "ics-cobraCharmer @ git+https://github.com/Subaru-PFS/ics_cobraCharmer.git@1.5.9",
   "ics-cobraOps @ git+https://github.com/Subaru-PFS/ics_cobraOps.git@v2.0.7",
   "loguru>=0.7.2",
-  "mkdocs>=1.4.3,<2.0.0",
-  "mkdocs-macros-plugin>=0.7.0",
-  "mkdocs-material[imaging]>=9.5.4",
-  "mkdocs-video>=1.5.0",
   "multiprocess>=0.70.15",
-  "myst-parser>=2.0.0",
   "numpy>=2.4.0",
   "pandas>=2.0.3,<3.0.0",
   "panel>=1.8.0,<1.9.0",
@@ -60,6 +55,20 @@ pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 [project.optional-dependencies]
 dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0", "pytest>=8.0.0"]
 profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
+# Only scripts/build-doc.sh and scripts/serve-doc.sh need this locally; the
+# Docker docs-builder stage and the GitHub Actions doc-build workflows each
+# pip-install their own separate, minimal mkdocs environment and never touch
+# this extra. Kept out of the base [project].dependencies so the app's own
+# venv (and the Docker image built from it) doesn't carry mkdocs-material's
+# ~120MB of imaging/i18n dependencies (cairosvg, babel, sphinx via
+# myst-parser, ...) that the app itself never imports.
+docs = [
+  "mkdocs>=1.4.3,<2.0.0",
+  "mkdocs-macros-plugin>=0.7.0",
+  "mkdocs-material[imaging]>=9.5.4",
+  "mkdocs-video>=1.5.0",
+  "myst-parser>=2.0.0",
+]
 
 [build-system]
 requires = ["pybind11", "setuptools>=64", "setuptools-scm>=8.0", "wheel"]

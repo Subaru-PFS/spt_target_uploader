@@ -15,7 +15,7 @@ from queue import Empty
 import colorcet as cc
 import hdbscan
 import holoviews as hv
-import hvplot.pandas  # noqa need to run pandas.DataFrame.hvplot
+import hvplot.pandas
 import multiprocess as mp
 import numpy as np
 import pandas as pd
@@ -1897,7 +1897,7 @@ def ppp_result(
                 ppc_coord_one += [a, d]
             ppc_coord.append([np.array(ppc_coord_one)])
         ppc_coord_polygon_array = PolygonArray(ppc_coord)
-        df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
+        df_polygon = sp.GeoDataFrame({"polygons": ppc_coord_polygon_array})
 
         #
         # The following p_ are static plots and neeed to be created only once
@@ -2299,7 +2299,7 @@ def ppp_result_reproduce(
             logger.error(
                 "'allocated_targets' not found in the pointing list. raise exception."
             )
-            raise KeyError  #
+            raise KeyError
 
         sample["exptime_assign"] = 0
         sub_l = sorted(list(set(sample["priority"])))
@@ -2454,7 +2454,7 @@ def ppp_result_reproduce(
                 ppc_coord_one += [a, d]
             ppc_coord.append([np.array(ppc_coord_one)])
         ppc_coord_polygon_array = PolygonArray(ppc_coord)
-        df_polygon = sp.GeoDataFrame(({"polygons": ppc_coord_polygon_array}))
+        df_polygon = sp.GeoDataFrame({"polygons": ppc_coord_polygon_array})
 
         #
         # The following p_ are static plots and neeed to be created only once

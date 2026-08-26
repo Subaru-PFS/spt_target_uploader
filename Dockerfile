@@ -6,6 +6,11 @@
 # Reason: PyQt5 prebuilt wheels are available for amd64, avoiding memory-intensive source builds
 # Usage: docker build --platform linux/amd64 -t pfs_target_uploader .
 # Or use: ./scripts/build-container.sh -d (automatically uses correct platform)
+# Or use: docker compose up --build
+#
+# The container defaults to the HiGHS ILP solver (no license required). See
+# scripts/docker-entrypoint.sh for the full list of environment variables it
+# reads (SOLVER_BACKEND, OUTPUT_DIR, PORT, PREFIX, ALLOW_WEBSOCKET_ORIGIN, ...).
 
 # ============================================================================
 # Stage 1: Build documentation
@@ -78,6 +83,38 @@ ARG SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}
 RUN uv sync --frozen --no-dev --no-editable
 
+# Prune historical PFI cobra-calibration snapshots bundled by pfs-instdata
+# (pinned git dependency, tag 1.8.71): ~1.3GB of the ~1.5GB this package
+# installs is data/pfi/modules/, made up of ~40 per-module directories plus
+# ~28 dated snapshot files (ALL_final_<date>_mm.xml, TEST.xml, ...) under
+# modules/ALL/. This app's only consumer, utils/ppp.py's
+# CobraCoach(loadModel=True, ...) + Bench(...) call, never passes a
+# version/moduleVersion argument, so cobraCoach.py's loadModel() always
+# resolves to modules/ALL/ALL.xml -- verified by tracing every open() call
+# that construction makes. Nothing else in this repo touches pfs.instdata
+# (grep -rl instdata src/). If pfs-instdata is upgraded and this starts
+# failing, the app will raise FileNotFoundError for whatever new path
+# loadModel() wants; add it to the keep-list below or drop this block.
+RUN INSTDATA_MODULES="/home/pfsuser/.venv/lib/python3.12/site-packages/pfs/instdata/data/pfi/modules" && \
+    test -f "${INSTDATA_MODULES}/ALL/ALL.xml" && \
+    find "${INSTDATA_MODULES}" -mindepth 1 -maxdepth 1 -not -name ALL -exec rm -rf {} + && \
+    find "${INSTDATA_MODULES}/ALL" -mindepth 1 -not -name ALL.xml -delete && \
+    test -f "${INSTDATA_MODULES}/ALL/ALL.xml"
+
+# Uninstall packages that are hard (unconditional) dependencies of pinned PFS
+# git packages -- ics-cobraCharmer requires opencv-python; ics-utils requires
+# opdb, which pulls in Twisted and both the psycopg2 and psycopg (v3) drivers
+# for a live PostgreSQL connection -- but that this app never imports.
+# Verified by tracing sys.modules after importing pn_app/pn_admin (the two
+# Panel entry points) and after running the full CobraCoach+Bench
+# construction utils/ppp.py performs (`grep -rl "cv2\|opencv\|twisted\|
+# psycopg\|opdb" src/` also finds nothing). `uv pip uninstall` (rather than
+# `rm -rf`) keeps the venv's installed-package metadata consistent. If a
+# future code path does need one of these, `uv sync` will not reinstall it
+# automatically -- add it back to this list's exclusion or drop this RUN.
+RUN uv pip uninstall --python "${UV_PROJECT_ENVIRONMENT}" \
+    opencv-python twisted psycopg2-binary psycopg psycopg-binary opdb
+
 # ============================================================================
 # Stage 3: Runtime image
 # ============================================================================
@@ -112,34 +149,36 @@ ENV PATH=/home/pfsuser/.venv/bin:$PATH
 # Copy application source (ordered by change frequency)
 COPY --chown=pfsuser:pfsuser pyproject.toml ./
 COPY --chown=pfsuser:pfsuser src/ ./src/
-COPY --chown=pfsuser:pfsuser scripts/ ./scripts/
-
-# Copy app entry point
-COPY --chown=pfsuser:pfsuser tmp/bak/app.py ./app.py
+COPY --chown=pfsuser:pfsuser --chmod=0755 scripts/ ./scripts/
 
 # Copy pre-built documentation (without videos - 135MB saved)
 COPY --from=docs-builder /build/docs/site ./docs/site
 
-# Create data directory and configuration
+# Create the data directory. Configuration (.env.shared) is generated at
+# container startup by scripts/docker-entrypoint.sh from environment
+# variables, not baked into the image -- see that script for the full list
+# of variables and defaults (notably SOLVER_BACKEND, which defaults to the
+# license-free HiGHS backend).
 RUN mkdir -p ${APP_HOME}/data && \
-    echo 'OUTPUT_DIR="/app/data"' > .env.shared && \
     chown -R pfsuser:pfsuser ${APP_HOME}
 
 # Switch to non-root user
 USER pfsuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()" || exit 1
+EXPOSE 8080
 
-# Run the web service on container startup
-CMD ["panel", "serve", "./app.py", \
-     "--address", "0.0.0.0", \
-     "--port", "8080", \
-     "--allow-websocket-origin=*", \
-     "--static-dirs", "doc=./docs/site/", \
-     "--static-dirs", "data=/app/data", \
-     "--num-procs=4"]
+# Health check. Reads PORT/PREFIX from the container's own environment so it
+# still passes when those are overridden (e.g. behind a reverse proxy).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "\
+import os, urllib.request; \
+port = os.environ.get('PORT', '8080'); \
+prefix = os.environ.get('PREFIX', '').strip('/'); \
+path = f'/{prefix}/' if prefix else '/'; \
+urllib.request.urlopen(f'http://localhost:{port}{path}').read()" \
+    || exit 1
+
+ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
 
 # TODO
 # - Remove temporary files in data directory periodically using crontab
