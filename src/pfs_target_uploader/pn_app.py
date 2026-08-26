@@ -543,15 +543,17 @@ def target_uploader_app(use_panel_cli=False):
             panel_status.reset()
             panel_results.reset()
 
-            pn.state.notifications.clear()
-
             _toggle_widgets(widget_set, disabled=False)
             _toggle_widgets(button_set, disabled=False)
 
             if validation_status is None:
+                # panel_input.validate() already raised a sticky notification
+                # (missing file, bad dates, or an unexpected validation
+                # error) -- clearing it here would hide it from the user.
                 panel_timer.timer(on=False, time_limit=False)
                 return
             else:
+                pn.state.notifications.clear()
                 panel_status.show_results(df_validated, validation_status)
                 panel_results.show_results(df_validated, validation_status)
                 panel_targets.show_results(df_validated)

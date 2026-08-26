@@ -1252,9 +1252,9 @@ def check_internal_duplicate(
     Parameters
     ----------
     df : pandas.DataFrame
-        Input target table. The ``"ob_code"`` column must uniquely identify
-        each target. This uniqueness should be enforced by running
-        :func:`check_unique` before calling this function.
+        Input target table. ``"ob_code"`` is not required to be unique here
+        -- duplicate ``"ob_code"`` values are themselves reported by
+        :func:`check_unique` and must not prevent this check from running.
     sep : astropy.units.Quantity, optional
         Maximum angular separation used to define near-duplicates.
         Default is 1.0 arcsec (PFS fiber diameter).
@@ -1273,8 +1273,14 @@ def check_internal_duplicate(
         - ``"nn_sep"``: a float array giving the nearest-neighbour separation
           (in arcsec) for duplicated targets, and ``NaN`` for isolated ones.
     """
+    # Work on a positionally-indexed copy so the row alignment below never
+    # depends on `ob_code` being unique (a list with duplicate `ob_code`
+    # still needs to reach validation results -- via check_unique() --
+    # instead of raising).
+    df_positional = df.reset_index(drop=True)
+
     df_isolated, df_dups_exact, df_dups_near = dupcheck_internal(
-        df,
+        df_positional,
         sep=sep,
         max_cluster_diameter=1.0 * u.arcsec,  # PFS fiber diameter
         max_points_for_agglomerative=None,
@@ -1284,18 +1290,15 @@ def check_internal_duplicate(
     df_dups_all = pd.concat([df_dups_exact, df_dups_near], ignore_index=False)
 
     # Initialize output arrays (use len(df) to avoid index assumptions)
-    is_duplicated = np.ones(len(df), dtype=bool)
+    is_duplicated = np.zeros(len(df), dtype=bool)
     nn_sep_array = np.full(len(df), np.nan)
 
-    # Vectorized: mark isolated targets as not duplicated using isin() - O(n)
-    isolated_mask = df["ob_code"].isin(df_isolated["ob_code"])
-    is_duplicated[isolated_mask.to_numpy()] = False
-
-    # Vectorized: assign nn_sep for duplicated targets using map() - O(n)
+    # dupcheck_internal() preserves the row position (0..len(df)-1) of the
+    # rows it returns, so align by position rather than by `ob_code` value.
     if not df_dups_all.empty:
-        nn_sep_map = df_dups_all.set_index("ob_code")["nn_sep"]
-        nn_sep_series = df["ob_code"].map(nn_sep_map)
-        nn_sep_array = nn_sep_series.to_numpy()
+        dup_positions = df_dups_all.index.to_numpy()
+        is_duplicated[dup_positions] = True
+        nn_sep_array[dup_positions] = df_dups_all["nn_sep"].to_numpy()
 
     if len(df) == len(df_isolated):
         logger.info("No duplicated or clustered targets found internally.")
@@ -1343,6 +1346,7 @@ def validate_input(
     validation_status["flux_range"] = {"status": None}
     validation_status["visibility"] = {"status": None}
     validation_status["unique"] = {"status": None}
+    validation_status["internal_duplication"] = {"status": None}
 
     # check mandatory columns
     logger.info("[Column names] Checking column names")
