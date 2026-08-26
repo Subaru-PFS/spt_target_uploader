@@ -4,7 +4,7 @@ requires-python = "==3.12.*"
 
 [manifest]
 overrides = [
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=0783d1d22867268d2c0186c717e865999a14b39a" },
     { name = "ics-cobracharmer", git = "https://github.com/Subaru-PFS/ics_cobraCharmer.git?rev=1.5.9" },
     { name = "ics-cobraops", git = "https://github.com/Subaru-PFS/ics_cobraOps.git?rev=v2.0.7" },
     { name = "ics-utils", git = "https://github.com/Subaru-PFS/ics_utils.git?rev=34179a6fcb40c918b37a1ebbc4fcb4f366feb1b7" },
@@ -478,7 +478,7 @@ wheels = [
 [[package]]
 name = "ets-fiber-assigner"
 version = "3.8.0"
-source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb#78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" }
+source = { git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=0783d1d22867268d2c0186c717e865999a14b39a#0783d1d22867268d2c0186c717e865999a14b39a" }
 dependencies = [
     { name = "astropy" },
     { name = "numpy" },
@@ -1642,7 +1642,7 @@ requires-dist = [
     { name = "colorcet", specifier = ">=3.0.1" },
     { name = "dask", specifier = ">=2023.10.1" },
     { name = "datashader", specifier = ">=0.16.0" },
-    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=78656ea43dafd423eb68784ff7dbf7cf50b9f9bb" },
+    { name = "ets-fiber-assigner", git = "https://github.com/Subaru-PFS/ets_fiberalloc.git?rev=0783d1d22867268d2c0186c717e865999a14b39a" },
     { name = "fontawesome-markdown", url = "https://github.com/bmcorser/fontawesome-markdown/archive/5feb14118d963312d52bb1fdb4c7eefa4da19880.zip" },
     { name = "gurobipy", specifier = ">=12,<13" },
     { name = "hdbscan", specifier = ">=0.8.40" },
