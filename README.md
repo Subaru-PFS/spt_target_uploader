@@ -22,6 +22,7 @@ uv sync --extra docs     # Install with mkdocs, needed by ./scripts/build-doc.sh
 # Or with pip
 pip install -e .
 pip install -e .[dev]    # With dev tools
+pip install -e .[docs]   # With mkdocs, needed to build documentation manually
 
 # Setup environment configuration files
 cp .env.shared.example .env.shared
