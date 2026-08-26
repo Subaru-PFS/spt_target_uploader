@@ -136,37 +136,25 @@ class FileInputWidgets(param.Parameterized):
             pn.state.notifications.error("Please select a CSV file.")
             return None, None, None
 
-        try:
-            validation_status, df_output = validate_input(
-                df_input.copy(deep=True),
-                date_begin=date_begin,
-                date_end=date_end,
-                single_exptime=single_exptime,
-                min_mag=min_mag,
-                max_mag=max_mag,
-            )
-            t_stop = time.time()
-            logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
+        validation_status, df_output = validate_input(
+            df_input.copy(deep=True),
+            date_begin=date_begin,
+            date_end=date_end,
+            single_exptime=single_exptime,
+            min_mag=min_mag,
+            max_mag=max_mag,
+        )
+        t_stop = time.time()
+        logger.info(f"Validation finished in {t_stop - t_start:.2f} [s]")
 
-            # convert obj_id to string
-            logger.debug(f"{validation_status=}")
-            if validation_status["required_keys"]["status"]:
-                df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
+        # convert obj_id to string
+        logger.debug(f"{validation_status=}")
+        if validation_status["required_keys"]["status"]:
+            df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
 
-            # append first 7 characters of secret_token to ob_codes
-            df_output["ob_code"] = df_output["ob_code"].apply(
-                lambda x: f"{x}_{self.secret_token[:7]}"
-            )
-        except Exception as e:
-            # A bug in validate_input() (or in how its output is consumed
-            # here) must not leave the UI stuck with disabled widgets and no
-            # feedback -- report it like the other failure paths above.
-            logger.exception("Unexpected error during validation")
-            pn.state.notifications.error(
-                "An unexpected error occurred while validating the input file. "
-                f"Please check the content of the file. Error: {e}",
-                duration=0,
-            )
-            return None, None, None
+        # append first 7 characters of secret_token to ob_codes
+        df_output["ob_code"] = df_output["ob_code"].apply(
+            lambda x: f"{x}_{self.secret_token[:7]}"
+        )
 
         return validation_status, df_input, df_output
