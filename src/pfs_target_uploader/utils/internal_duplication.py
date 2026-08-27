@@ -389,7 +389,11 @@ def dupcheck_internal(
         - df_isolated: DataFrame of isolated (non-duplicate) targets
         - df_dups_exact: DataFrame of exact coordinate duplicates
         - df_dups_near: DataFrame of near duplicates within separation threshold
-        All DataFrames will be empty if input df is empty.
+        All DataFrames will be empty if input df is empty. Each returned
+        DataFrame keeps the row index of ``df`` (row position, if ``df`` uses
+        the default RangeIndex) -- callers such as
+        :func:`~pfs_target_uploader.utils.checker.check_internal_duplicate`
+        rely on this to align results back onto the input by position.
     """
     if df.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()

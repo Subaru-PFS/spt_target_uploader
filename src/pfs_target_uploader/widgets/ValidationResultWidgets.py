@@ -816,7 +816,9 @@ class ValidationResultWidgets:
             self.error_table_dups.visible = True
 
         # internal duplication
-        if validation_status["internal_duplication"]["status"]:
+        if validation_status["internal_duplication"]["status"] is None:
+            pass
+        elif validation_status["internal_duplication"]["status"]:
             self.append_title("info")
             self.info_text_intdups.object = (
                 "<font size=4><u>Internal duplication by coordinate</u></font>"
