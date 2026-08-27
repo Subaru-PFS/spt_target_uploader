@@ -17,7 +17,6 @@ does, show_results() has to cope with any check coming back None.
 """
 
 from copy import deepcopy
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -25,39 +24,37 @@ import pytest
 
 from pfs_target_uploader.utils.checker import validate_input
 from pfs_target_uploader.widgets.ValidationResultWidgets import ValidationResultWidgets
+from tests.conftest import CHECKS, DATA, DATE_BEGIN, DATE_END, FIXTURE_FILES
 
-DATA = Path(__file__).resolve().parent / "data"
-
-DATE_BEGIN = date(2026, 2, 1)
-DATE_END = date(2026, 7, 31)
-
-# In the order validate_input() fills them in.  required_keys is left out: it
-# is the first thing checked and can never be unreached.
-CHECKS = [
-    "empty",
-    "str",
-    "values",
-    "flux_columns",
-    "flux_values",
-    "flux_range",
-    "visibility",
-    "unique",
-    "internal_duplication",
-]
+# Derived, not retyped: required_keys is the first thing validate_input()
+# checks, so it is the one entry that can never come back unreached.
+SKIPPABLE = [c for c in CHECKS if c != "required_keys"]
 
 
 @pytest.fixture(scope="module")
 def clean_result():
-    """A validation_status in which every check ran, plus the frame it read."""
+    """A validation_status in which every check ran, plus the frame it read.
+
+    Validated here rather than through conftest's cache because this one needs
+    magnitude limits, which make flux_range produce a real result instead of
+    the "no limits configured" None.  The baseline has to have every field
+    populated for the parametrization below to strip them off one tail at a
+    time.  It costs one extra validation, and the visibility results for this
+    patch of sky are already cached by the time it runs.
+    """
     df = pd.read_csv(DATA / "valid_minimal.csv")
     validation_status, df_validated = validate_input(
         df, date_begin=DATE_BEGIN, date_end=DATE_END, min_mag=10.0, max_mag=30.0
     )
     assert validation_status["status"], "fixture must pass validation"
+    for check in SKIPPABLE:
+        assert (
+            validation_status[check]["status"] is not None
+        ), f"baseline must have run {check}"
     return validation_status, df_validated
 
 
-@pytest.mark.parametrize("first_skipped", CHECKS, ids=CHECKS)
+@pytest.mark.parametrize("first_skipped", SKIPPABLE, ids=SKIPPABLE)
 def test_renders_when_a_check_never_ran(clean_result, first_skipped):
     """Simulate an early return before `first_skipped` and render the result.
 
@@ -66,7 +63,7 @@ def test_renders_when_a_check_never_ran(clean_result, first_skipped):
     show_results() stops depending on where they happen to be.
     """
     validation_status, df = deepcopy(clean_result)
-    for key in CHECKS[CHECKS.index(first_skipped) :]:
+    for key in SKIPPABLE[SKIPPABLE.index(first_skipped) :]:
         validation_status[key] = {"status": None}
     validation_status["status"] = False
 
@@ -74,23 +71,14 @@ def test_renders_when_a_check_never_ran(clean_result, first_skipped):
     ValidationResultWidgets().show_results(df, validation_status)
 
 
-@pytest.mark.parametrize(
-    "filename",
-    sorted(p.name for p in DATA.glob("*.csv")),
-)
-def test_renders_every_fixture_outcome(filename):
+@pytest.mark.parametrize("filename", FIXTURE_FILES)
+def test_renders_every_fixture_outcome(validate_fixture, filename):
     """Render each real validation outcome, including the four early returns.
 
     Complements the synthetic test above: those states are reached through
     validate_input() itself rather than assembled by hand, so a status dict
     this file gets wrong cannot hide a break here.
     """
-    df = pd.read_csv(DATA / filename)
-    kwargs = {}
-    if filename == "flux_out_of_ab_range.csv":
-        kwargs = dict(min_mag=12.0, max_mag=30.0)
-    validation_status, df_validated = validate_input(
-        df, date_begin=DATE_BEGIN, date_end=DATE_END, **kwargs
-    )
+    validation_status, df_validated = validate_fixture(filename)
 
     ValidationResultWidgets().show_results(df_validated, validation_status)

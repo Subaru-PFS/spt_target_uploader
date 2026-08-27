@@ -13,45 +13,26 @@ early returns, leaving the checks below it unreached.  Anything consuming a
 validation_status has to cope with those None statuses, so keeping one input
 per early-return path available is the point of the set.
 
-Dates are pinned rather than left to default.  validate_input() falls back to
-"the next semester relative to now", which would make the visibility
-expectations below depend on the day the suite runs.
+The pinned dates, the check-name list and the validation itself come from
+conftest.py, which caches each fixture's result for the session -- the
+visibility check is slow enough that validating the same 13 files once per
+module is worth avoiding.
 """
 
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from pfs_target_uploader.utils.checker import validate_input
+from tests.conftest import CHECKS, DATA, DATE_BEGIN, DATE_END
 
-DATA = Path(__file__).resolve().parent / "data"
 PUBLISHED = Path(__file__).resolve().parents[1] / "docs" / "docs" / "examples"
 
 # Everything in docs/docs/examples/ that is a target list. The other two files
 # there are a pointing list and an admin proposal-ID list, neither of which
 # validate_input() takes.
 NOT_TARGET_LISTS = {"example_ppclist.csv", "example_admin_pslID.csv"}
-
-# A window in which the fixtures' northern targets are observable from Maunakea
-# and the southern ones in not_visible.csv are not.
-DATE_BEGIN = date(2026, 2, 1)
-DATE_END = date(2026, 7, 31)
-
-# Every key validate_input() pre-seeds, in the order it fills them in.
-CHECKS = [
-    "required_keys",
-    "empty",
-    "str",
-    "values",
-    "flux_columns",
-    "flux_values",
-    "flux_range",
-    "visibility",
-    "unique",
-    "internal_duplication",
-]
 
 # True = passed, False = failed, None = never reached (or, for flux_range,
 # not applicable because no magnitude limits were supplied).
@@ -73,36 +54,32 @@ def _expect(**overrides):
     return {**_PASS_THROUGH, **overrides}
 
 
-# (filename, extra validate_input kwargs, expected per-check status, overall status)
+# (filename, expected per-check status, overall status).  Any extra
+# validate_input() arguments a fixture needs live in conftest.EXTRA_KWARGS.
 FIXTURES = [
     (
         "valid_minimal.csv",
-        {},
         _expect(),
         True,
     ),
     # --- inputs that make validate_input() return early ---------------------
     (
         "missing_required_column.csv",
-        {},
         dict.fromkeys(CHECKS) | dict(required_keys=False),
         False,
     ),
     (
         "empty_header_only.csv",
-        {},
         dict.fromkeys(CHECKS) | dict(required_keys=True, empty=False),
         False,
     ),
     (
         "invalid_string.csv",
-        {},
         dict.fromkeys(CHECKS) | dict(required_keys=True, empty=True, str=False),
         False,
     ),
     (
         "invalid_value_range.csv",
-        {},
         dict.fromkeys(CHECKS)
         | dict(required_keys=True, empty=True, str=True, values=False),
         False,
@@ -110,13 +87,11 @@ FIXTURES = [
     # --- inputs that run every check, failing one of the later ones ---------
     (
         "missing_flux.csv",
-        {},
         _expect(flux_columns=False),
         False,
     ),
     (
         "suspicious_flux_values.csv",
-        {},
         _expect(flux_values=False),
         # flux_values is warning-only and is deliberately left out of the
         # overall success criteria.
@@ -124,37 +99,31 @@ FIXTURES = [
     ),
     (
         "flux_out_of_ab_range.csv",
-        dict(min_mag=12.0, max_mag=30.0),
         _expect(flux_range=False),
         True,
     ),
     (
         "not_visible.csv",
-        {},
         _expect(visibility=False),
         False,
     ),
     (
         "duplicate_ob_code.csv",
-        {},
         _expect(unique=False),
         False,
     ),
     (
         "duplicate_obj_id_resolution.csv",
-        {},
         _expect(unique=False),
         False,
     ),
     (
         "internal_duplication.csv",
-        {},
         _expect(internal_duplication=False),
         True,
     ),
     (
         "internal_duplication_lm_pair.csv",
-        {},
         # Same coordinates, but L and M are never duplicates of each other,
         # so this one must come back clean.
         _expect(),
@@ -164,17 +133,14 @@ FIXTURES = [
 
 
 @pytest.mark.parametrize(
-    "filename, kwargs, expected, expected_overall",
+    "filename, expected, expected_overall",
     FIXTURES,
     ids=[f[0] for f in FIXTURES],
 )
 def test_fixture_triggers_expected_outcome(
-    filename, kwargs, expected, expected_overall
+    validate_fixture, filename, expected, expected_overall
 ):
-    df = pd.read_csv(DATA / filename)
-    validation_status, _ = validate_input(
-        df, date_begin=DATE_BEGIN, date_end=DATE_END, **kwargs
-    )
+    validation_status, _ = validate_fixture(filename)
 
     actual = {k: validation_status[k]["status"] for k in CHECKS}
     # Cast away numpy bools so a mismatch prints as True/False, not np.True_.
@@ -193,7 +159,7 @@ def test_every_early_return_path_is_covered():
     complete as the list of early returns grows.
     """
     early_return_checks = set()
-    for filename, kwargs, expected, _ in FIXTURES:
+    for _filename, expected, _overall in FIXTURES:
         unreached = [k for k in CHECKS if expected[k] is None]
         if not unreached:
             continue
