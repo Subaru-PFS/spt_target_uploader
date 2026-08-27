@@ -27,6 +27,13 @@ mkdir -p data/
 mkdir -p data/temp/
 ```
 
+!!! tip
+
+    In a Claude Code git worktree, `.worktreeinclude` copies the gitignored
+    config (`.env.*`, `.python-version`) in for you; run
+    `./scripts/setup-worktree.sh` in the worktree to install dependencies, set up
+    the `$OUTPUT_DIR/` runtime directories, and build the docs site.
+
 ### Build documentation
 
 ```sh

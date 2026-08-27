@@ -41,6 +41,17 @@ mkdir -p data/temp
 ./scripts/gen-cli-readme.sh   # Generate CLI docs from typer docstrings
 ```
 
+### Git worktrees
+
+`.worktreeinclude` copies the gitignored config (`.env.shared`, `.env.private`,
+`.env.docker`, `.python-version`) into every new worktree Claude Code creates. It
+cannot carry `.venv/`, `data/`, or `docs/site/`, so inside a fresh worktree run
+`./scripts/setup-worktree.sh` once: `uv sync --all-extras`,
+`mkdir -p $OUTPUT_DIR/temp`, `mkdocs build` (serve-app.sh serves `docs/site` as a
+static dir), and — because the main app runs `load_app_config(validate_db=True)`
+and aborts if `$OUTPUT_DIR/$UPLOADID_DB` is missing — an empty `upload_id.sqlite`
+via `pfs-uploader-cli uid2sqlite`.
+
 ### Code Quality
 
 ```bash

@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+#
+# setup-worktree.sh
+# Prepare a fresh git worktree for development.
+#
+# Claude Code copies the gitignored files listed in .worktreeinclude
+# (.env.shared, .env.private, .env.docker, .python-version) into every new
+# worktree, but it cannot copy .venv/ (~3 GB, and its editable install would
+# point back at the main checkout) or data/ (runtime output). This script
+# builds those inside the worktree:
+#
+#   1. sanity-check that .worktreeinclude did its job (.env.shared present)
+#   2. uv sync --all-extras   (or fall back to pip install -e ".[dev,profilers]")
+#   3. mkdir -p $OUTPUT_DIR/temp   (OUTPUT_DIR read from .env.shared, default "data")
+#   4. create an empty $OUTPUT_DIR/$UPLOADID_DB if .env.shared configures one
+#      (the main app calls load_app_config(validate_db=True) and raises
+#      FileNotFoundError on startup when the file is missing)
+#   5. build docs/site (serve-app.sh serves it via --static-dirs doc=docs/site;
+#      Panel raises "Cannot serve non-existent path" if it is missing)
+#
+# It is idempotent, so re-running it is safe.
+#
+# Usage:
+#   ./scripts/setup-worktree.sh [uv|pip]
+#
+# Arguments:
+#   uv     - force 'uv sync'
+#   pip    - force 'pip install -e' into the active environment
+#   (none) - auto-detect (priority: uv > pip)
+#
+# ('pip', not 'venv': unlike serve-app.sh / build-doc.sh this installs rather
+#  than running an existing tool, and it uses whatever pip is active, not
+#  ./.venv/bin/pip.)
+#
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the project root (parent of scripts/)
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+cd "${PROJECT_ROOT}"
+
+RUNNER_TYPE="${1:-auto}"
+
+# Read KEY ($1) from a .env file ($2): print its value with surrounding quotes
+# stripped, or nothing. Commented lines (leading '#') never match. Always exits
+# 0 -- a missing file or absent key must not abort the script under `set -e`,
+# so callers can fall back to a default.
+read_env() {
+    [ -f "$2" ] || return 0
+    sed -nE "s/^[[:space:]]*$1=[\"']?([^\"']*)[\"']?.*/\1/p" "$2" | tail -1
+}
+
+# 1. Check the .worktreeinclude copy landed.
+if [ ! -f ".env.shared" ]; then
+    echo "Warning: .env.shared is missing." >&2
+    echo "  If this is a Claude Code worktree, .worktreeinclude should have copied it." >&2
+    echo "  Otherwise seed it yourself:  cp .env.shared.example .env.shared" >&2
+    echo "  (and cp .env.private.example .env.private for the admin app)" >&2
+fi
+
+# 2. Install dependencies. CLI_RUNNER / MKDOCS are the command prefixes used for
+#    the remaining steps ("uv run ..." under uv, bare on PATH under pip -- mkdocs
+#    and pfs-uploader-cli are both installed either way).
+install_with_uv() {
+    echo "==> uv sync --all-extras"
+    uv sync --all-extras
+    CLI_RUNNER="uv run pfs-uploader-cli"
+    MKDOCS="uv run mkdocs"
+}
+
+install_with_pip() {
+    echo "==> pip install -e \".[dev,profilers]\""
+    pip install -e ".[dev,profilers]"
+    CLI_RUNNER="pfs-uploader-cli"
+    MKDOCS="mkdocs"
+}
+
+case "${RUNNER_TYPE}" in
+    uv)
+        if ! command -v uv &> /dev/null; then
+            echo "Error: 'uv' not found in PATH" >&2
+            exit 1
+        fi
+        install_with_uv
+        ;;
+    pip)
+        if ! command -v pip &> /dev/null; then
+            echo "Error: 'pip' not found in PATH (activate the environment first)" >&2
+            exit 1
+        fi
+        install_with_pip
+        ;;
+    auto)
+        if command -v uv &> /dev/null; then
+            install_with_uv
+        elif command -v pip &> /dev/null; then
+            install_with_pip
+        else
+            echo "Error: neither 'uv' nor 'pip' found in PATH" >&2
+            echo "Install uv (https://docs.astral.sh/uv/) or activate a Python environment." >&2
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Error: Invalid runner type '${RUNNER_TYPE}'" >&2
+        echo "Usage: $0 [uv|pip]" >&2
+        exit 1
+        ;;
+esac
+
+# 3. Runtime output directory.
+OUTPUT_DIR="$(read_env OUTPUT_DIR .env.shared)"
+OUTPUT_DIR="${OUTPUT_DIR:-data}"
+mkdir -p "${OUTPUT_DIR}/temp"
+echo "==> ${OUTPUT_DIR}/temp ready"
+
+# 4. Bootstrap an empty upload_id database if one is configured but absent.
+#    .worktreeinclude cannot carry it (it lives under the wholly-ignored data/).
+UPLOADID_DB="$(read_env UPLOADID_DB .env.shared)"
+if [ -n "${UPLOADID_DB}" ]; then
+    # uid2sqlite resolves the path as os.path.join(output_dir, dbfile), which
+    # drops output_dir when dbfile is absolute -- mirror that here so the
+    # existence check looks where uid2sqlite will actually write.
+    case "${UPLOADID_DB}" in
+        /*) DB_PATH="${UPLOADID_DB}" ;;
+        *)  DB_PATH="${OUTPUT_DIR}/${UPLOADID_DB}" ;;
+    esac
+    if [ -f "${DB_PATH}" ]; then
+        echo "==> ${DB_PATH} already present"
+    else
+        echo "==> creating empty upload_id database at ${DB_PATH}"
+        ${CLI_RUNNER} uid2sqlite --dir "${OUTPUT_DIR}" --db "${UPLOADID_DB}"
+    fi
+fi
+
+# 5. Build the documentation site that serve-app.sh serves as a static dir.
+#    docs/ is the MkDocs project root (mkdocs.yml lives there).
+if [ -f "docs/site/index.html" ]; then
+    echo "==> docs/site already built"
+else
+    echo "==> mkdocs build"
+    ( cd docs && ${MKDOCS} build )
+fi
+
+echo
+echo "Worktree ready. Next:"
+echo "  ./scripts/serve-app.sh          # main uploader app (http://localhost:5008/uploader/)"
+echo "  ./scripts/serve-app-admin.sh    # admin app (http://localhost:5009/uploader-admin/)"
+echo "  ${CLI_RUNNER} --help  # CLI"
