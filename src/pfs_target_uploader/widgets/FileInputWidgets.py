@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import os
 import secrets
 import time
@@ -35,6 +36,13 @@ class FileInputWidgets(param.Parameterized):
         self.output_dir = None
         self.use_db = True
 
+        # Last validation result, kept so cb_PPP and cb_submit do not redo the
+        # full validation cb_validate already paid for. One entry only: a
+        # validated frame for a large list runs to hundreds of megabytes.
+        self._cached_key = None
+        self._cached_result = None
+        self.last_validation_key = None
+
         self.pane = pn.Column(
             pn.Row(
                 pn.pane.Markdown(
@@ -64,6 +72,55 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.filename = None
         self.file_input.mime_type = None
         self.file_input.value = None
+        self._cached_key = None
+        self._cached_result = None
+        self.last_validation_key = None
+
+    def _cache_key(self, date_begin, date_end, single_exptime, min_mag, max_mag):
+        """Identity of everything validate() reads.
+
+        The raw bytes go in rather than a digest of them. Comparing the key
+        tuples goes through PyObject_RichCompareBool, which short-circuits on
+        identity, and Panel hands back the same bytes object until the user
+        uploads again -- so the usual comparison is free, against 17 ms to
+        SHA-256 a 40 MB list. A distinct object with the same content still
+        costs only a memcmp. No extra memory either: previous_value below
+        already holds a reference to these bytes, and the surrounding code
+        compares them the same way.
+
+        secret_token is part of the key because validate() stamps its first 7
+        characters onto every ob_code, and cb_submit assigns a fresh token
+        after an upload. Without it, a re-validation after a submit would hand
+        back ob_codes carrying the previous upload's ID. It is here to be
+        compared, not generated -- the upload ID itself comes from
+        assign_secret_token() and is untouched by the cache.
+        """
+        return (
+            self.file_input.filename,
+            self.file_input.mime_type,
+            self.file_input.value,
+            self.secret_token,
+            date_begin,
+            date_end,
+            single_exptime,
+            min_mag,
+            max_mag,
+        )
+
+    def has_cached_validation(
+        self,
+        date_begin=None,
+        date_end=None,
+        single_exptime=900.0,
+        min_mag=None,
+        max_mag=None,
+    ):
+        """True when validate() with these arguments would skip the real work."""
+        if self._cached_result is None:
+            return False
+        return self._cached_key == self._cache_key(
+            date_begin, date_end, single_exptime, min_mag, max_mag
+        )
 
     def validate(
         self,
@@ -80,6 +137,26 @@ class FileInputWidgets(param.Parameterized):
                 "Date Begin must be before Date End.", duration=0
             )
             return None, None, None
+
+        # cb_validate, cb_PPP and cb_submit all validate the same inputs in
+        # turn; only the first of them has to do the work. The "very large
+        # list" notification below is skipped along with it, which is fine --
+        # the user has already been shown it once for this file.
+        cache_key = self._cache_key(
+            date_begin, date_end, single_exptime, min_mag, max_mag
+        )
+        if self._cached_result is not None and cache_key == self._cached_key:
+            logger.info(
+                "Inputs are unchanged since the last validation; reusing the result."
+            )
+            logger.info(f"Upload ID: {self.secret_token}")
+            self.last_validation_key = cache_key
+            validation_status, df_input, df_output = self._cached_result
+            return (
+                copy.deepcopy(validation_status),
+                df_input.copy(deep=True),
+                df_output.copy(deep=True),
+            )
 
         # update the upload ID when the input file is different from previous validation.
         if (
@@ -173,4 +250,18 @@ class FileInputWidgets(param.Parameterized):
             )
             return None, None, None
 
-        return validation_status, df_input, df_output
+        # Recomputed rather than reusing cache_key from the top: a new file
+        # reassigns secret_token above, which is part of the key.
+        self._cached_key = self._cache_key(
+            date_begin, date_end, single_exptime, min_mag, max_mag
+        )
+        self._cached_result = (validation_status, df_input, df_output)
+        self.last_validation_key = self._cached_key
+
+        # Callers get a private copy in both paths: run_ppp() writes
+        # single_exptime into the frame it is handed.
+        return (
+            copy.deepcopy(validation_status),
+            df_input.copy(deep=True),
+            df_output.copy(deep=True),
+        )
