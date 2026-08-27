@@ -111,9 +111,16 @@ def target_uploader_app(use_panel_cli=False):
         that from being a rule spread across four call sites -- forget it once
         and the gate refuses to redraw a panel it believes is still current,
         which the user cannot recover from without reloading the page.
+
+        It blanks the same three panels render_validation_results() writes.
+        Leaving panel_targets out (as the code did before these two became a
+        pair) strands the previous file's rows in the "Input list" tab on
+        every path that resets and then early-returns -- cb_PPP's "0 visible
+        targets", above all, which does not hide the tabs either.
         """
         panel_status.reset()
         panel_results.reset()
+        panel_targets.reset()
         rendered_validation["key"] = None
 
     def render_validation_results(df_validated, validation_status):
