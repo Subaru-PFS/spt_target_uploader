@@ -1,14 +1,20 @@
-"""Tests for validation edge cases and internal-duplication detection.
+"""Tests for validate_input() edge cases and internal-duplication detection.
 
-check_internal_duplicate() used to align its per-row results back onto the
-input DataFrame by matching on the *value* of `ob_code`
-(`df["ob_code"].map(...)` against a Series indexed by `ob_code`). That breaks
-the moment `ob_code` itself is duplicated -- exactly the case `check_unique()`
-is meant to catch and report to the user -- because a non-uniquely-indexed
-Series cannot be used as a `.map()` mapper. Instead of surfacing the
-"duplicate ob_code" validation error, the whole validate step crashed with
-`pandas.errors.InvalidIndexError: Reindexing only valid with uniquely valued
-Index objects` (see GitHub issue #475).
+Header-only input (GitHub issue #490): a CSV with valid column headers but no
+data rows used to reach check_str(), where `np.vectorize` raises `cannot call
+vectorize on size 0 inputs` before any validation error could be reported.
+validate_input() now rejects an empty frame explicitly, right after the
+required-column check.
+
+Duplicate `ob_code` (GitHub issue #475): check_internal_duplicate() used to
+align its per-row results back onto the input DataFrame by matching on the
+*value* of `ob_code` (`df["ob_code"].map(...)` against a Series indexed by
+`ob_code`). That breaks the moment `ob_code` itself is duplicated -- exactly
+the case `check_unique()` is meant to catch and report to the user -- because
+a non-uniquely-indexed Series cannot be used as a `.map()` mapper. Instead of
+surfacing the "duplicate ob_code" validation error, the whole validate step
+crashed with `pandas.errors.InvalidIndexError: Reindexing only valid with
+uniquely valued Index objects`.
 """
 
 from datetime import date
