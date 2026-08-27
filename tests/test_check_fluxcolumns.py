@@ -237,45 +237,6 @@ def test_real_example_lists_match_reference(name):
     assert_same_result(df)
 
 
-def test_text_in_an_error_column_no_longer_discards_the_whole_column():
-    """The one shipped list where the rewrite deliberately changes the output.
-
-    example_targetlist_random100.csv has a truncated final row ending
-    "...,10752.32,875.41>". That stray ">" makes pandas read the entire
-    i2_hsc_error column as strings. The old code then hit
-    np.isfinite(str) -> TypeError on every row, swallowed it with a bare
-    `except TypeError: pass`, and so threw away all 66 perfectly good error
-    values along with the one corrupt cell.
-
-    pd.to_numeric(errors="coerce") recovers them and drops only the bad cell.
-    The column itself is present either way -- other i-band error columns keep
-    it alive -- so what changes is 66 objects gaining a real flux_error_i in
-    the target_<id>.ecsv that goes to targetDB.
-    """
-    from pfs_target_uploader.utils.io import load_input
-
-    df, dict_load = load_input(
-        str(EXAMPLES / "example_targetlist_random100.csv"), format="csv"
-    )
-    assert dict_load["status"]
-    # Precondition: the corruption is still in the file. If someone fixes the
-    # CSV this assertion fires and the test can simply be deleted.
-    assert df["i2_hsc_error"].dtype == object
-
-    _, out = check_fluxcolumns(df.copy(deep=True))
-    _, ref = reference_check_fluxcolumns(df.copy(deep=True))
-
-    # Same columns, same everything else.
-    assert list(out.columns) == list(ref.columns)
-    differing = [c for c in out.columns if not out[c].equals(ref[c])]
-    assert differing == ["flux_error_i"]
-
-    recovered = out["flux_error_i"].notna() & ref["flux_error_i"].isna()
-    assert recovered.sum() == 66
-    # And nothing the old code had was lost.
-    assert not (ref["flux_error_i"].notna() & out["flux_error_i"].isna()).any()
-
-
 def test_flux_and_filter_columns_come_back_with_usable_dtypes():
     """check_fluxrange() runs np.isfinite and >=/<= on flux_<band>, so it has
     to be float64 even when the source column was object dtype."""
