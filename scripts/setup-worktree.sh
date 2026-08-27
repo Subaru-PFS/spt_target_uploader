@@ -15,6 +15,8 @@
 #   4. create an empty $OUTPUT_DIR/$UPLOADID_DB if .env.shared configures one
 #      (the main app calls load_app_config(validate_db=True) and raises
 #      FileNotFoundError on startup when the file is missing)
+#   5. build docs/site (serve-app.sh serves it via --static-dirs doc=docs/site;
+#      Panel raises "Cannot serve non-existent path" if it is missing)
 #
 # It is idempotent, so re-running it is safe.
 #
@@ -59,12 +61,14 @@ install_with_uv() {
     echo "==> uv sync --all-extras"
     uv sync --all-extras
     CLI_RUNNER="uv run pfs-uploader-cli"
+    DOC_BUILDER="./scripts/build-doc.sh uv"
 }
 
 install_with_pip() {
     echo "==> pip install -e \".[dev,profilers]\""
     pip install -e ".[dev,profilers]"
     CLI_RUNNER="pfs-uploader-cli"
+    DOC_BUILDER="./scripts/build-doc.sh venv"
 }
 
 case "${RUNNER_TYPE}" in
@@ -117,6 +121,14 @@ if [ -n "${UPLOADID_DB}" ]; then
         echo "==> creating empty upload_id database at ${DB_PATH}"
         ${CLI_RUNNER} uid2sqlite --dir "${OUTPUT_DIR}" --db "${UPLOADID_DB}"
     fi
+fi
+
+# 5. Build the documentation site that serve-app.sh serves as a static dir.
+if [ -f "docs/site/index.html" ]; then
+    echo "==> docs/site already built"
+else
+    echo "==> ${DOC_BUILDER}"
+    ${DOC_BUILDER}
 fi
 
 echo
