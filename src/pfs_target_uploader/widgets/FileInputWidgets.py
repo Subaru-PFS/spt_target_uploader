@@ -38,7 +38,9 @@ class FileInputWidgets(param.Parameterized):
 
         # Last validation result, kept so cb_PPP and cb_submit do not redo the
         # full validation cb_validate already paid for. One entry only: a
-        # validated frame for a large list runs to hundreds of megabytes.
+        # validated frame for a large list runs to hundreds of megabytes, and
+        # for the same reason the raw input frame is deliberately not kept
+        # alongside it -- see validate()'s return.
         self._cached_key = None
         self._cached_result = None
         self.last_validation_key = None
@@ -135,9 +137,18 @@ class FileInputWidgets(param.Parameterized):
             max_mag,
         )
 
-    def _cache_hit(self, key):
-        """The single definition of "this key is already validated"."""
-        return self._cached_result is not None and key == self._cached_key
+    def _cached_for(self, key):
+        """The stored result for this key, or None if there is not one.
+
+        The single definition of "this key is already validated". It hands
+        back the entry rather than a bool so that the caller unpacking it does
+        not have to re-establish that it is there -- the check and the use
+        stay in one place instead of a reader (or a type checker) having to
+        prove the two agree.
+        """
+        if self._cached_result is None or key != self._cached_key:
+            return None
+        return self._cached_result
 
     def has_cached_validation(
         self,
@@ -150,23 +161,26 @@ class FileInputWidgets(param.Parameterized):
         """True when validate() with these arguments would skip the real work.
 
         Callers use this to decide whether to blank the panels first. It shares
-        _cache_hit() with validate() so the two cannot drift; note that it does
-        not model validate()'s date-range guard, which sits ahead of the cache
-        check. That is harmless only because a matching key implies the cached
-        run's dates, which already satisfied begin < end. Any *new* early
-        return added ahead of the cache check has to be mirrored here.
+        _cached_for() with validate() so the two cannot drift; note that it
+        does not model validate()'s date-range guard, which sits ahead of the
+        cache check. That is harmless only because a matching key implies the
+        cached run's dates, which already satisfied begin < end. Any *new*
+        early return added ahead of the cache check has to be mirrored here.
         """
-        return self._cache_hit(
-            self._cache_key(
-                self.file_input.filename,
-                self.file_input.mime_type,
-                self.file_input.value,
-                date_begin,
-                date_end,
-                single_exptime,
-                min_mag,
-                max_mag,
+        return (
+            self._cached_for(
+                self._cache_key(
+                    self.file_input.filename,
+                    self.file_input.mime_type,
+                    self.file_input.value,
+                    date_begin,
+                    date_end,
+                    single_exptime,
+                    min_mag,
+                    max_mag,
+                )
             )
+            is not None
         )
 
     def validate(
@@ -184,7 +198,7 @@ class FileInputWidgets(param.Parameterized):
                 "Date Begin must be before Date End.", duration=0
             )
             self.last_validation_key = None
-            return None, None, None
+            return None, None
 
         # Snapshot the file's identity once, up front. Everything below runs
         # in a worker thread (asyncio.to_thread) and a large list takes tens of
@@ -208,28 +222,27 @@ class FileInputWidgets(param.Parameterized):
 
         # cb_validate, cb_PPP and cb_submit all validate the same inputs in
         # turn; only the first of them has to do the work.
-        if self._cache_hit(cache_key()):
+        cached = self._cached_for(cache_key())
+        if cached is not None:
             logger.info(
                 "Inputs are unchanged since the last validation; reusing the result."
             )
             logger.info(f"Upload ID: {self.secret_token}")
             self.last_validation_key = cache_key()
-            validation_status, df_input, df_output = self._cached_result
+            validation_status, df_output = cached
             # Re-raised rather than assumed still on screen: every callback
             # clears the notifications before calling us, so the copy shown
             # after the first validation is gone by the time the user starts
-            # the multi-minute simulation this warns about.
-            if df_input.index.size >= warn_threshold:
+            # the multi-minute simulation this warns about. Counted on the
+            # validated frame because the raw one is not kept; validate_input
+            # adds and drops columns but never rows.
+            if df_output.index.size >= warn_threshold:
                 pn.state.notifications.info(
                     "The number of objects is very large. "
                     "It may take a long time to process.",
                     duration=0,
                 )
-            return (
-                copy.deepcopy(validation_status),
-                df_input.copy(deep=True),
-                df_output.copy(deep=True),
-            )
+            return copy.deepcopy(validation_status), df_output.copy(deep=True)
 
         # update the upload ID when the input file is different from previous validation.
         if (
@@ -273,7 +286,7 @@ class FileInputWidgets(param.Parameterized):
                     duration=0,
                 )
                 self.last_validation_key = None
-                return None, None, None
+                return None, None
 
             if df_input.index.size >= warn_threshold:
                 pn.state.notifications.info(
@@ -284,7 +297,7 @@ class FileInputWidgets(param.Parameterized):
             logger.info("No file selected.")
             pn.state.notifications.error("Please select a CSV file.")
             self.last_validation_key = None
-            return None, None, None
+            return None, None
 
         try:
             validation_status, df_output = validate_input(
@@ -322,13 +335,17 @@ class FileInputWidgets(param.Parameterized):
                 duration=0,
             )
             self.last_validation_key = None
-            return None, None, None
+            return None, None
 
         # Recomputed rather than reusing the key from the top: a new file
         # reassigns secret_token above, which is part of the key. The file's
         # identity still comes from the snapshot taken before the work began.
         self._cached_key = cache_key()
-        self._cached_result = (validation_status, df_input, df_output)
+        # df_input is deliberately left out. No caller reads the frame as it
+        # came off the CSV, and keeping it would pin a second frame of
+        # comparable size -- 49 MB on a 163,000-row list -- for the life of
+        # the session, plus a discarded deep copy on every call.
+        self._cached_result = (validation_status, df_output)
         # Every failure path above sets this to None, so it always describes
         # the most recent call: a key on success, None on failure. The render
         # gate in pn_app reads it and depends on that being true.
@@ -336,8 +353,4 @@ class FileInputWidgets(param.Parameterized):
 
         # Callers get a private copy in both paths: run_ppp() writes
         # single_exptime into the frame it is handed.
-        return (
-            copy.deepcopy(validation_status),
-            df_input.copy(deep=True),
-            df_output.copy(deep=True),
-        )
+        return copy.deepcopy(validation_status), df_output.copy(deep=True)

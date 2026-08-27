@@ -83,7 +83,7 @@ def _has_cache(w, **overrides):
 
 
 def test_second_identical_validation_is_served_from_cache(widget, monkeypatch):
-    status_1, _, df_1 = _validate(widget)
+    status_1, df_1 = _validate(widget)
     assert status_1 is not None
 
     # Any real work would go through validate_input; make it explode.
@@ -98,17 +98,17 @@ def test_second_identical_validation_is_served_from_cache(widget, monkeypatch):
 
     monkeypatch.setattr(module, "validate_input", _boom)
 
-    status_2, _, df_2 = _validate(widget)
+    status_2, df_2 = _validate(widget)
 
     assert status_2["status"] == status_1["status"]
     pd.testing.assert_frame_equal(df_2, df_1)
 
 
 def test_cache_hands_out_independent_copies(widget):
-    _, _, df_1 = _validate(widget)
+    _, df_1 = _validate(widget)
     df_1["exptime"] = -999.0
 
-    _, _, df_2 = _validate(widget)
+    _, df_2 = _validate(widget)
 
     assert (df_2["exptime"] == 900.0).all()
 
@@ -133,13 +133,13 @@ def test_changing_min_mag_misses_the_cache(widget):
 def test_a_new_upload_id_misses_the_cache(widget):
     """cb_submit assigns a fresh token after an upload; the cached frame
     carries the old one stamped onto every ob_code."""
-    _, _, df_1 = _validate(widget)
+    _, df_1 = _validate(widget)
     assert df_1["ob_code"].iloc[0].endswith("_0123456")
 
     widget.secret_token = "fedcba9876543210"
     assert not _has_cache(widget)
 
-    _, _, df_2 = _validate(widget)
+    _, df_2 = _validate(widget)
     assert df_2["ob_code"].iloc[0].endswith("_fedcba9")
 
 
@@ -211,11 +211,11 @@ def test_a_failed_validation_clears_the_key(
     break_it(widget)
 
     if expected_error == "dates":
-        status, _, _ = widget.validate(
+        status, _ = widget.validate(
             date_begin=DATE_END, date_end=DATE_BEGIN, single_exptime=900.0
         )
     else:
-        status, _, _ = _validate(widget)
+        status, _ = _validate(widget)
 
     assert status is None
     assert widget.last_validation_key is None

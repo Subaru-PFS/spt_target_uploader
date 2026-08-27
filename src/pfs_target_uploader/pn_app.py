@@ -348,7 +348,7 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
-        validation_status, df_input, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
@@ -434,7 +434,7 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
-        validation_status, df_input_, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
@@ -586,7 +586,7 @@ def target_uploader_app(use_panel_cli=False):
             config,
         )
 
-        validation_status, df_input, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
