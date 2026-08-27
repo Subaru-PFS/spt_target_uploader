@@ -40,12 +40,13 @@ cd "${PROJECT_ROOT}"
 
 RUNNER_TYPE="${1:-auto}"
 
-# Read KEY from a .env file, stripping comments and surrounding quotes.
+# Read KEY ($1) from a .env file ($2): print its value with surrounding quotes
+# stripped, or nothing. Commented lines (leading '#') never match. Always exits
+# 0 -- a missing file or absent key must not abort the script under `set -e`,
+# so callers can fall back to a default.
 read_env() {
-    grep -E "^[[:space:]]*$1=" "$2" 2>/dev/null \
-        | grep -vE "^[[:space:]]*#" \
-        | tail -1 \
-        | sed -E "s/^[[:space:]]*$1=//; s/^[\"']//; s/[\"'][[:space:]]*\$//"
+    [ -f "$2" ] || return 0
+    sed -nE "s/^[[:space:]]*$1=[\"']?([^\"']*)[\"']?.*/\1/p" "$2" | tail -1
 }
 
 # 1. Check the .worktreeinclude copy landed.
