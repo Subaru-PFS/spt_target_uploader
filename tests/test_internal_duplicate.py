@@ -1,4 +1,4 @@
-"""Tests for internal-duplication detection with duplicate `ob_code` values.
+"""Tests for validation edge cases and internal-duplication detection.
 
 check_internal_duplicate() used to align its per-row results back onto the
 input DataFrame by matching on the *value* of `ob_code`
@@ -11,10 +11,41 @@ Series cannot be used as a `.map()` mapper. Instead of surfacing the
 Index objects` (see GitHub issue #475).
 """
 
+from datetime import date
+from io import BytesIO
+
 import numpy as np
 import pandas as pd
 
 from pfs_target_uploader.utils.checker import check_internal_duplicate, validate_input
+from pfs_target_uploader.utils.io import load_input
+
+
+def test_validate_input_rejects_header_only_csv_with_clear_error():
+    df, load_status = load_input(
+        BytesIO(
+            b"obj_id,ob_code,ra,dec,exptime,priority,resolution,reference_arm,g_hsc\n"
+        ),
+        format="csv",
+    )
+
+    assert load_status["status"] is True
+
+    validation_status, df_output = validate_input(
+        df,
+        date_begin=date(2026, 9, 1),
+        date_end=date(2027, 2, 28),
+        single_exptime=900.0,
+    )
+
+    assert df_output.empty
+    assert validation_status["status"] is False
+    assert validation_status["required_keys"]["status"] is True
+    assert validation_status["empty"] == {
+        "status": False,
+        "desc_error": "The file contains no data rows.",
+    }
+    assert validation_status["str"]["status"] is None
 
 
 def test_check_internal_duplicate_does_not_crash_on_duplicate_ob_code():

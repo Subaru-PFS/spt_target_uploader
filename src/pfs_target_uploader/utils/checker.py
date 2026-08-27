@@ -1368,6 +1368,7 @@ def validate_input(
 
     validation_status["status"] = False
 
+    validation_status["empty"] = {"status": None}
     validation_status["str"] = {"status": None}
     validation_status["values"] = {"status": None}
     validation_status["flux_columns"] = {"status": None}
@@ -1390,6 +1391,13 @@ def validate_input(
     validation_status["optional_keys"] = dict_optional_keys
 
     if not dict_required_keys["status"]:
+        msg_t_stop()
+        return validation_status, df
+
+    if df.empty:
+        desc = "The file contains no data rows."
+        logger.error(desc)
+        validation_status["empty"] = {"status": False, "desc_error": desc}
         msg_t_stop()
         return validation_status, df
 
