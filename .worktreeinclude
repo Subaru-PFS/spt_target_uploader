@@ -1,0 +1,19 @@
+# Local, gitignored config that Claude Code copies into every new git worktree
+# it creates (`claude --worktree`, `EnterWorktree`, `isolation: worktree`
+# subagents). Uses .gitignore syntax; only files that match here AND are
+# gitignored are copied, so tracked files are never duplicated.
+#
+# Patterns are anchored with a leading "/" so they only pick up the repo-root
+# copies, not stray matches like tmp/bak/.env.shared.
+#
+# Do NOT add .venv/ or data/ here:
+#   .venv/  ~3 GB, and its editable-install .pth points at the src/ tree of the
+#           checkout it was built in -- a copy would import the main checkout
+#           and defeat the worktree's isolation.
+#   data/   ~1.6 GB of runtime output.
+# Run ./scripts/setup-worktree.sh inside the worktree to build these instead.
+
+/.env.shared
+/.env.private
+/.env.docker
+/.python-version

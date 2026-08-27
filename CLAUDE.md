@@ -41,6 +41,13 @@ mkdir -p data/temp
 ./scripts/gen-cli-readme.sh   # Generate CLI docs from typer docstrings
 ```
 
+### Git worktrees
+
+`.worktreeinclude` copies the gitignored config (`.env.shared`, `.env.private`,
+`.env.docker`, `.python-version`) into every new worktree Claude Code creates. It
+cannot carry `.venv/` or `data/`, so inside a fresh worktree run
+`./scripts/setup-worktree.sh` once (`uv sync --all-extras` + `mkdir -p data/temp`).
+
 ### Code Quality
 
 ```bash

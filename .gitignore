@@ -174,6 +174,8 @@ src/pfs_target_uploader/_version.py
 
 # Git worktrees created for isolated feature work
 .worktrees/
+# Claude Code's default worktree location (claude --worktree, EnterWorktree)
+.claude/worktrees/
 
 # Claude Code: personal settings stay local; shared config (.claude/settings.json,
 # skills, agents, hooks) is tracked
