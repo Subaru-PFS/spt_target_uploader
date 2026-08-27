@@ -8,6 +8,7 @@ the order the band's filters are listed in filter_category -- so the tests
 below pin it against a frozen copy of the old implementation.
 """
 
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -321,6 +322,90 @@ def test_the_index_of_the_input_is_preserved():
     _, out = check_fluxcolumns(df)
 
     assert list(out.index) == [10, 20, 30]
+
+
+def test_a_non_contiguous_index_survives_the_whole_validation():
+    """The downstream half of the contract above, checked rather than assumed.
+
+    Preserving the caller's index is only safe if every consumer of the
+    validated frame still selects the rows it means to.  They do it two
+    different ways: with positional numpy arrays (``values``,
+    ``flux_columns``, ``visibility``) and with pandas Series carrying this
+    very index (``flux_range``), both fed to ``df.loc[~mask, :]`` in
+    ValidationResultWidgets.  ``.loc`` reads a boolean *ndarray* by position
+    and a boolean *Series* by label, so the two only agree while the frame
+    keeps the index its masks were built from.
+
+    Same targets, two indexes: a clean RangeIndex and a shuffled,
+    non-contiguous one.  Every verdict must name the same objects.
+    """
+    from pfs_target_uploader.utils.checker import validate_input
+
+    n = 6
+    df = pd.DataFrame(
+        {
+            "ob_code": [f"t{i}" for i in range(n)],
+            "obj_id": list(range(n)),
+            "ra": [150.0, 30.0, 210.0, 90.0, 270.0, 330.0],
+            # The last one never rises high enough from Maunakea, so the
+            # visibility mask has a False in it.
+            "dec": [2.0, 20.0, 40.0, -10.0, 60.0, -75.0],
+            "exptime": [900.0] * n,
+            "priority": [1.0] * n,
+            "resolution": ["L"] * n,
+            "reference_arm": ["r"] * n,
+            # AB 17-20 mag is 5.75e5 down to 3.63e4 nJy. One object below the
+            # band, one above it, and one with no flux at all -- so
+            # flux_range and flux_columns each have a False to misplace.
+            "g_hsc": [1.0e5, 5.0e6, 1.0e3, 2.0e5, 4.0e4, np.nan],
+        }
+    )
+
+    scrambled = df.copy(deep=True)
+    # Non-monotonic and non-contiguous: label order and position order share
+    # nothing, so a mask read the wrong way cannot accidentally agree.
+    scrambled.index = [70, 3, 41, 8, 96, 12]
+
+    kwargs = dict(
+        date_begin=date(2026, 9, 1),
+        # A month rather than a full semester: this runs twice, and the
+        # ephemeris sampling is what the test costs. Alignment does not care
+        # how long the window is.
+        date_end=date(2026, 10, 1),
+        single_exptime=900.0,
+        min_mag=17.0,
+        max_mag=20.0,
+    )
+    status_a, out_a = validate_input(df.copy(deep=True), **kwargs)
+    status_b, out_b = validate_input(scrambled.copy(deep=True), **kwargs)
+
+    assert list(out_a.index) == list(range(n))
+    assert list(out_b.index) == list(scrambled.index)
+
+    masks = ["values", "flux_columns", "flux_range", "visibility"]
+    for name in masks:
+        mask_a = np.asarray(status_a[name]["success"])
+        mask_b = np.asarray(status_b[name]["success"])
+        assert np.array_equal(mask_a, mask_b), name
+
+        # Exactly what ValidationResultWidgets does with each of these.
+        failed_a = out_a.loc[~status_a[name]["success"], :]["ob_code"].tolist()
+        failed_b = out_b.loc[~status_b[name]["success"], :]["ob_code"].tolist()
+        assert failed_a == failed_b, name
+        # And it landed there by position, not by label -- the property the
+        # whole pipeline leans on, stated once instead of inferred from the
+        # two runs happening to agree.
+        assert failed_b == out_b.iloc[np.flatnonzero(~mask_b)]["ob_code"].tolist()
+
+    # A check that never fails cannot detect a misalignment, so make sure the
+    # two that are supposed to have False entries actually do.
+    assert out_a.loc[~status_a["flux_range"]["success"], :]["ob_code"].tolist() == [
+        "t1",
+        "t2",
+    ]
+    assert out_a.loc[~status_a["flux_columns"]["success"], :]["ob_code"].tolist() == [
+        "t5"
+    ]
 
 
 def test_an_empty_frame_does_not_crash():
