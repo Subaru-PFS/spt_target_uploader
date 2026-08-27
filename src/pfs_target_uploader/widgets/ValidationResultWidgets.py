@@ -394,9 +394,13 @@ class ValidationResultWidgets:
         cb_validate() with no try/except around it, so that KeyError escapes
         the callback and leaves the user on a spinner that never stops.
 
-        So: every section below tests ``is None`` before it touches anything
-        but ``status``.  Keep that up when adding a check -- do not assume the
-        checks above yours have run just because they do today.
+        So the convention below is ``if ...["status"] is None: pass`` ahead of
+        the True and False branches, and it is what to copy when adding a
+        check -- do not assume the ones above yours have run just because they
+        do today.  Two sections are deliberately not in that form:
+        ``required_keys`` and ``optional_keys`` run before any early return
+        and so are never None, and ``empty`` tests ``is False`` positively,
+        which is None-safe for the same reason.
 
         The three ``return``s further down are a separate matter.  They stop
         the render at a failure rather than reporting checks below it, and
@@ -606,11 +610,12 @@ class ValidationResultWidgets:
             self.warning_pane.append(self.warning_text_flux)
 
         # Flux range (AB magnitude based - only check if flux columns were successfully detected)
-        if (
-            validation_status["flux_columns"]["status"]
-            and "flux_range" in validation_status
-            and validation_status["flux_range"]["status"] is not None
-        ):
+        # None covers two cases here: the check never ran, and no magnitude
+        # limits were configured so validate_input() skipped it. Neither has
+        # anything to report.
+        if validation_status["flux_range"]["status"] is None:
+            pass
+        elif validation_status["flux_columns"]["status"]:
             if validation_status["flux_range"]["status"]:
                 # Success case: all flux values within range
                 min_mag = validation_status["flux_range"]["min_mag"]
