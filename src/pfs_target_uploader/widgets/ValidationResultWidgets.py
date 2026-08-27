@@ -398,6 +398,13 @@ class ValidationResultWidgets:
             for desc in validation_status["required_keys"]["desc_error"]:
                 self.error_text_keys.object += f"- <font size='3'>{desc}</font>\n"
             self.error_pane.append(self.error_text_keys)
+        elif validation_status["empty"]["status"] is False:
+            self.append_title("error")
+            self.error_text_keys.object = "<font size=4><u>Input data</u></font>\n"
+            self.error_text_keys.object += (
+                f"- <font size='3'>{validation_status['empty']['desc_error']}</font>\n"
+            )
+            self.error_pane.append(self.error_text_keys)
 
         # Warnings on missing optional keys
         if not validation_status["optional_keys"]["status"]:

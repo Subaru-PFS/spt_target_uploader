@@ -460,6 +460,21 @@ def target_uploader_app(use_panel_cli=False):
             panel_timer.timer(on=False, time_limit=False)
             return
 
+        # Validation can stop before the visibility step is ever reached
+        # (missing required columns, a header-only file, out-of-range values).
+        # Render that error in the panels the way cb_validate does, instead of
+        # falling into the visibility check below whose "0 visible targets"
+        # message would be misleading here.
+        if validation_status["visibility"]["status"] is None:
+            logger.error("Validation failed before the visibility check")
+            render_validation_results(df_validated, validation_status)
+            tab_panels.active = 1
+            tab_panels.visible = True
+            _toggle_widgets(button_set, disabled=False)
+            _toggle_widgets(widget_set, disabled=False)
+            panel_timer.timer(on=False, time_limit=False)
+            return
+
         if not validation_status["visibility"]["status"]:
             logger.error("No visible object is found")
             pn.state.notifications.error(
