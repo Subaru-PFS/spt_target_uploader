@@ -27,6 +27,12 @@ import pytest
 from pfs_target_uploader.utils.checker import validate_input
 
 DATA = Path(__file__).resolve().parent / "data"
+PUBLISHED = Path(__file__).resolve().parents[1] / "docs" / "docs" / "examples"
+
+# Everything in docs/docs/examples/ that is a target list. The other two files
+# there are a pointing list and an admin proposal-ID list, neither of which
+# validate_input() takes.
+NOT_TARGET_LISTS = {"example_ppclist.csv", "example_admin_pslID.csv"}
 
 # A window in which the fixtures' northern targets are observable from Maunakea
 # and the southern ones in not_visible.csv are not.
@@ -200,3 +206,31 @@ def test_every_early_return_path_is_covered():
         early_return_checks.add(CHECKS[first_unreached - 1])
 
     assert early_return_checks == {"required_keys", "empty", "str", "values"}
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(p for p in PUBLISHED.glob("*.csv") if p.name not in NOT_TARGET_LISTS),
+    ids=lambda p: p.name,
+)
+def test_published_example_passes_validation(path):
+    """Every example list the docs site offers must survive validation.
+
+    These are what users download and copy, so one that the uploader rejects
+    is worse than no example at all.  Three of them had gone stale exactly
+    that way: `reference_arm` became a required column and the files, which
+    predate it, were never updated -- so they had been failing on a missing
+    required column, silently, for as long as that column has existed.
+    """
+    df = pd.read_csv(path)
+    validation_status, _ = validate_input(df, date_begin=DATE_BEGIN, date_end=DATE_END)
+
+    failed = [
+        k
+        for k in CHECKS
+        if validation_status[k]["status"] is not None
+        and not validation_status[k]["status"]
+        # Warning-only checks; a published example is allowed to trip them.
+        and k not in ("flux_values", "internal_duplication")
+    ]
+    assert not failed, f"{path.name} fails: {failed}"
