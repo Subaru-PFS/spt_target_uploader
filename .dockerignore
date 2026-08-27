@@ -9,8 +9,6 @@ __pypackages__/
 # Data and temporary files
 data/
 tmp/
-!tmp/bak/
-!tmp/bak/app.py
 *.sqlite
 
 # Git and version control

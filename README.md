@@ -17,10 +17,12 @@ cd spt_target_uploader
 # Install dependencies with uv (recommended)
 uv sync                  # Install all dependencies
 uv sync --extra dev      # Install with dev tools (black, ruff, etc.)
+uv sync --extra docs     # Install with mkdocs, needed by ./scripts/build-doc.sh and serve-doc.sh
 
 # Or with pip
 pip install -e .
 pip install -e .[dev]    # With dev tools
+pip install -e .[docs]   # With mkdocs, needed to build documentation manually
 
 # Setup environment configuration files
 cp .env.shared.example .env.shared
@@ -113,6 +115,65 @@ labeled with it as well (`highs_BuildProblem`, `highs_Solve`, ...).
 # Or start admin app (development)
 ./scripts/serve-app-admin.sh    # Auto-detect runner
 ```
+
+### Running with Docker
+
+The container image ([`Dockerfile`](./Dockerfile)) needs no Gurobi license: it defaults
+to the open-source [HiGHS](https://highs.dev/) backend
+(see [ILP solver for the pointing simulation](#ilp-solver-for-the-pointing-simulation) above).
+It targets `linux/amd64` only — PyQt5, a transitive dependency, has no `linux/arm64` wheels.
+
+```sh
+# Build and run with docker compose (recommended)
+docker compose up --build
+```
+
+Or manually:
+
+```sh
+docker build --platform linux/amd64 -t pfs_target_uploader .
+docker run --rm -p 8080:8080 -v "$(pwd)/data:/app/data" pfs_target_uploader
+```
+
+Open the uploader at <http://localhost:8080/>.
+
+Configuration is generated at container startup by
+[`scripts/docker-entrypoint.sh`](./scripts/docker-entrypoint.sh) from environment variables
+(the app itself only reads `.env.shared`, not `os.environ`, so this script is what bridges
+`docker run -e ...` / `docker compose`'s `environment:` to it). The main variables:
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `SOLVER_BACKEND` | `highs` | Set to `gurobi` if you have a license (see below) |
+| `OUTPUT_DIR` | `/app/data` | Mount a volume here to persist uploads |
+| `PORT` | `8080` | |
+| `PREFIX` | (empty) | URL prefix, e.g. `uploader/` behind a reverse proxy |
+| `MAX_EXETIME`, `CLUSTERING_ALGORITHM`, `LOG_LEVEL`, `UPLOADID_DB`, `ANN_FILE`, `MIN_FLUXMAG_*`, `MAX_FLUXMAG` | see [Configuration](#configuration) | Same meaning as in `.env.shared` |
+
+If `UPLOADID_DB` is set and the database file does not exist yet, the entrypoint creates
+it automatically (equivalent to `pfs-uploader-cli uid2sqlite`, see
+[Preparing database](#preparing-database)).
+
+To bypass config generation entirely, bind-mount your own file:
+`-v "$(pwd)/.env.shared:/app/.env.shared:ro"` (the entrypoint leaves an existing
+`.env.shared` untouched).
+
+To switch to Gurobi, mount a license file and set both `SOLVER_BACKEND=gurobi` and
+`GRB_LICENSE_FILE`:
+
+```sh
+docker run --rm -p 8080:8080 \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/gurobi.lic:/app/gurobi.lic:ro" \
+  -e SOLVER_BACKEND=gurobi \
+  -e GRB_LICENSE_FILE=/app/gurobi.lic \
+  pfs_target_uploader
+```
+
+`gurobipy` ships in the image regardless of `SOLVER_BACKEND` (the app imports it
+unconditionally), so no rebuild is needed to switch backends. See
+[`scripts/build-container.sh`](./scripts/build-container.sh) for building/pushing to a
+registry or deploying to Google Cloud Run.
 
 Open the target uploader at <http://localhost:5008/>.
 Uploaded files will be stored under `data` with the following structure.

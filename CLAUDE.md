@@ -29,7 +29,7 @@ Rules:
 `uv` is the primary tool (pip also works; scripts auto-detect uv > venv).
 
 ```bash
-uv sync --all-extras        # Install all dependencies (extras: dev, profilers)
+uv sync --all-extras        # Install all dependencies (extras: dev, profilers, docs)
 cp .env.shared.example .env.shared    # Main config
 cp .env.private.example .env.private  # Credentials (not tracked)
 mkdir -p data/temp
@@ -125,6 +125,10 @@ Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
 - Use `loguru` for logging (not stdlib `logging`)
 - HEALPix visibility checking (`visibility_checker_healpix()`) is the default; legacy checkers exist only for validation — details in the `internals` skill
 - Panel Tabulator with dynamic styles: set `.style` **before** `.value` (reverse order raises an `iloc` error on Panel 1.8.x)
+- `utils/config.py`'s `load_app_config()` only reads `.env.shared` via `dotenv_values()` — it never reads `os.environ`. Docker: `scripts/docker-entrypoint.sh` generates `.env.shared` from environment variables at container startup (`SOLVER_BACKEND` defaults to `highs` there, unlike the `.env.shared.example` default of `gurobi`, since the container ships no license); see the `deployment` skill
+- The `Dockerfile`'s `python-builder` stage prunes `pfs-instdata`'s `data/pfi/modules/` down to `ALL/ALL.xml` (~1.3GB of unused historical calibration snapshots removed; see the comment above that `RUN` for how this was verified). It relies on `utils/ppp.py`'s `CobraCoach(loadModel=True, ...)` call never passing a `version`/`moduleVersion` argument. If `pfs-instdata`'s pin moves and the build starts failing with `FileNotFoundError` from `cobraCoach.py`'s `loadModel()`, either add the newly-needed path to that `RUN` step's keep-list or drop the prune entirely
+- Same Dockerfile stage also `uv pip uninstall`s `opencv-python`/`twisted`/`psycopg2-binary`/`psycopg`/`psycopg-binary`/`opdb` — hard dependencies of `ics-cobraCharmer`/`ics-utils` that this app never imports (verified by tracing `sys.modules` after importing both Panel apps and after a full `CobraCoach`+`Bench` construction). If a new code path needs one, `uv sync` alone won't bring it back — see the comment above that `RUN`
+- `mkdocs`/`mkdocs-material`/`mkdocs-macros-plugin`/`mkdocs-video`/`myst-parser` live in the `docs` extra (`pyproject.toml`), not the base dependencies — a plain `uv sync` (including the Docker build) does not install them. Use `uv sync --extra docs` for `./scripts/build-doc.sh` / `serve-doc.sh` locally; the Docker docs-builder stage and the GitHub Actions doc workflows each `pip install` their own separate mkdocs env and are unaffected either way
 - Do not hand-edit `uv.lock` (regenerate with `uv sync`/`uv lock`)
 - `uv.lock` is the single source of truth for dependencies: the Docker build installs from it via `uv sync --frozen`, so there is no `requirements.txt` to keep in step
 - `docs/` is the MkDocs project root (`docs/mkdocs.yml`, source under `docs/docs/`, build output under `docs/site/`). Never place `superpowers` skill output (plans, specs, design docs) under `docs/` — it does not belong in the documentation site. Save plans to `.claude/superpowers/plans/` and specs/design docs to `.claude/superpowers/specs/` instead (gitignored, not tracked).

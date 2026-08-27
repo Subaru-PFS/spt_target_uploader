@@ -1,0 +1,67 @@
+# docker-compose.yml
+#
+# Local/self-hosted deployment of the PFS Target Uploader web app.
+# Defaults to the HiGHS ILP solver, so `docker compose up --build` works
+# out of the box with no Gurobi license.
+#
+# Usage:
+#   docker compose up --build
+#   docker compose up -d --build        # detached
+#
+# Override any setting via a `.env` file in this directory (docker compose
+# reads it automatically) or via `VAR=value docker compose up`.
+#
+# See scripts/docker-entrypoint.sh for the full list of environment
+# variables consumed at startup and their defaults.
+
+services:
+  uploader:
+    build:
+      context: .
+      platforms:
+        - linux/amd64
+      args:
+        # Baked in at build time; setuptools-scm has no git metadata inside
+        # the build context otherwise. Pass a real tag/version if you want
+        # it reflected in the running app instead of the 0.0.0 fallback.
+        SETUPTOOLS_SCM_PRETEND_VERSION: ${SETUPTOOLS_SCM_PRETEND_VERSION:-0.0.0}
+    platform: linux/amd64
+    image: pfs_target_uploader:local
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    volumes:
+      - ./data:/app/data
+      # Bind-mount a real .env.shared instead to skip generation entirely:
+      # - ./.env.shared:/app/.env.shared:ro
+    environment:
+      # ILP solver for the pointing simulation: "highs" (default here, no
+      # license needed) or "gurobi" (needs a license -- see the commented
+      # block below).
+      SOLVER_BACKEND: ${SOLVER_BACKEND:-highs}
+      OUTPUT_DIR: /app/data
+      MAX_EXETIME: ${MAX_EXETIME:-1800}
+      CLUSTERING_ALGORITHM: ${CLUSTERING_ALGORITHM:-FAST_HDBSCAN}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PORT: ${PORT:-8080}
+      # Defaults to localhost:${PORT} inside the entrypoint if left unset.
+      # Set this explicitly if you access the app via a different host/port
+      # than what the container sees (e.g. behind a reverse proxy).
+      # ALLOW_WEBSOCKET_ORIGIN: localhost:8080
+      # PREFIX: uploader/
+      # USE_XHEADERS: "true"
+      # UPLOADID_DB: upload_id.sqlite
+      # ANN_FILE: user_announcement.md
+
+      # --- To switch to Gurobi instead, uncomment and also uncomment the
+      #     gurobi.lic volume mount below ---
+      # SOLVER_BACKEND: gurobi
+      # GRB_LICENSE_FILE: /app/gurobi.lic
+    # volumes:
+    #   - ./gurobi.lic:/app/gurobi.lic:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, urllib.request; port = os.environ.get('PORT', '8080'); prefix = os.environ.get('PREFIX', '').strip('/'); path = f'/{prefix}/' if prefix else '/'; urllib.request.urlopen(f'http://localhost:{port}{path}').read()"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3

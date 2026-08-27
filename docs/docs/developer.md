@@ -36,7 +36,12 @@ mkdir -p data/temp/
 
 ### Build documentation
 
+`mkdocs` and its plugins live in the `docs` extra, not the base install, so building the
+documentation needs an extra install step.
+
 ```sh
+pip install -e ".[docs]"
+
 cd docs
 mkdocs build
 cd ..

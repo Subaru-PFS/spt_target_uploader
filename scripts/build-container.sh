@@ -18,7 +18,8 @@
 #   DOCKER_IMAGE      Docker image name (default: pfs_target_uploader)
 #   DOCKER_TAG        Docker image tag (default: latest)
 #   DOCKER_PUSH       Set to "true" to push to Docker Hub (default: false)
-#   DOCKER_PLATFORMS  Build platforms (default: linux/amd64,linux/arm64)
+#   DOCKER_PLATFORMS  Build platforms (default: linux/amd64; PyQt5 has no
+#                     linux/arm64 wheels, so arm64 is not supported)
 #
 # Examples:
 #   # Build locally only
@@ -50,7 +51,9 @@ DOCKER_USER="${DOCKER_USER:-myuser}"
 DOCKER_IMAGE="${DOCKER_IMAGE:-pfs_target_uploader}"
 DOCKER_TAG="${DOCKER_TAG:-latest}"
 DOCKER_PUSH="${DOCKER_PUSH:-false}"
-DOCKER_PLATFORMS="${DOCKER_PLATFORMS:-linux/amd64,linux/arm64}"
+# PyQt5 (pulled in transitively via ics-cobraCharmer) has no linux/arm64
+# wheels, so only linux/amd64 is supported here.
+DOCKER_PLATFORMS="${DOCKER_PLATFORMS:-linux/amd64}"
 
 show_help() {
     echo "Usage: $0 [-p] [-d] [-g]"
@@ -92,13 +95,24 @@ docker_image() {
     # Build docker image
     local image_name="${DOCKER_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}"
 
+    # Derive the version from git metadata (same logic setuptools-scm would
+    # use from a checkout) so the image reports something more useful than
+    # the Dockerfile's 0.0.0 fallback. Run via uvx in an ephemeral env since
+    # setuptools-scm is a build-time-only dependency, not part of .venv.
+    local scm_version="0.0.0"
+    if command -v uvx &> /dev/null; then
+        scm_version="$(uvx --from setuptools-scm setuptools-scm 2>/dev/null || echo 0.0.0)"
+    fi
+
     echo "Building Docker image: ${image_name}"
     echo "Platforms: ${DOCKER_PLATFORMS}"
+    echo "Version (SETUPTOOLS_SCM_PRETEND_VERSION): ${scm_version}"
 
     if [ "${DOCKER_PUSH}" = "true" ]; then
         echo "Push to Docker Hub: enabled"
         docker buildx build \
             --platform="${DOCKER_PLATFORMS}" \
+            --build-arg SETUPTOOLS_SCM_PRETEND_VERSION="${scm_version}" \
             -t "${image_name}" \
             --push .
         echo "Successfully built and pushed: ${image_name}"
@@ -106,6 +120,7 @@ docker_image() {
         echo "Push to Docker Hub: disabled (set DOCKER_PUSH=true to enable)"
         docker buildx build \
             --platform="${DOCKER_PLATFORMS}" \
+            --build-arg SETUPTOOLS_SCM_PRETEND_VERSION="${scm_version}" \
             -t "${image_name}" \
             --load .
         echo "Successfully built locally: ${image_name}"

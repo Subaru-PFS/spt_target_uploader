@@ -1597,12 +1597,7 @@ dependencies = [
     { name = "ics-cobracharmer" },
     { name = "ics-cobraops" },
     { name = "loguru" },
-    { name = "mkdocs" },
-    { name = "mkdocs-macros-plugin" },
-    { name = "mkdocs-material", extra = ["imaging"] },
-    { name = "mkdocs-video" },
     { name = "multiprocess" },
-    { name = "myst-parser" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "panel" },
@@ -1626,6 +1621,13 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "ty" },
+]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-macros-plugin" },
+    { name = "mkdocs-material", extra = ["imaging"] },
+    { name = "mkdocs-video" },
+    { name = "myst-parser" },
 ]
 profilers = [
     { name = "memray" },
@@ -1654,12 +1656,12 @@ requires-dist = [
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.14.0" },
     { name = "loguru", specifier = ">=0.7.2" },
     { name = "memray", marker = "extra == 'profilers'", specifier = ">=1.10.0" },
-    { name = "mkdocs", specifier = ">=1.4.3,<2.0.0" },
-    { name = "mkdocs-macros-plugin", specifier = ">=0.7.0" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.4" },
-    { name = "mkdocs-video", specifier = ">=1.5.0" },
+    { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.4.3,<2.0.0" },
+    { name = "mkdocs-macros-plugin", marker = "extra == 'docs'", specifier = ">=0.7.0" },
+    { name = "mkdocs-material", extras = ["imaging"], marker = "extra == 'docs'", specifier = ">=9.5.4" },
+    { name = "mkdocs-video", marker = "extra == 'docs'", specifier = ">=1.5.0" },
     { name = "multiprocess", specifier = ">=0.70.15" },
-    { name = "myst-parser", specifier = ">=2.0.0" },
+    { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=2.0.0" },
     { name = "numpy", specifier = ">=2.4.0" },
     { name = "pandas", specifier = ">=2.0.3,<3.0.0" },
     { name = "panel", specifier = ">=1.8.0,<1.9.0" },
@@ -1680,7 +1682,7 @@ requires-dist = [
     { name = "ty", marker = "extra == 'dev'" },
     { name = "typer", specifier = ">=0.12.3" },
 ]
-provides-extras = ["dev", "profilers"]
+provides-extras = ["dev", "profilers", "docs"]
 
 [[package]]
 name = "pfs-tron-actorcore"

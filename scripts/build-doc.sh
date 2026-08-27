@@ -27,7 +27,9 @@ cd "${PROJECT_ROOT}"
 
 # Define CLI command and runner configurations
 CLI_CMD="mkdocs"
-UV_RUNNER="uv run ${CLI_CMD}"
+# mkdocs lives in the "docs" extra (pyproject.toml), not the base install,
+# so a plain `uv sync` / `uv run` doesn't have it.
+UV_RUNNER="uv run --extra docs ${CLI_CMD}"
 VENV_RUNNER="${PROJECT_ROOT}/.venv/bin/${CLI_CMD}"
 
 # Parse command-line argument
@@ -46,7 +48,7 @@ case "${RUNNER_TYPE}" in
     venv)
         if [ ! -f "${VENV_RUNNER}" ]; then
             echo "Error: ${CLI_CMD} not found in .venv/bin/" >&2
-            echo "Please run 'uv sync' first" >&2
+            echo "Please run 'uv sync --extra docs' first" >&2
             exit 1
         fi
         RUNNER="${VENV_RUNNER}"
@@ -59,7 +61,7 @@ case "${RUNNER_TYPE}" in
             RUNNER="${VENV_RUNNER}"
         else
             echo "Error: Cannot find ${CLI_CMD}" >&2
-            echo "Please install dependencies using 'uv sync'" >&2
+            echo "Please install dependencies using 'uv sync --extra docs'" >&2
             exit 1
         fi
         ;;
