@@ -536,6 +536,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
             min_mag=effective_min_mag,
             max_mag=config.max_fluxmag,
         )
