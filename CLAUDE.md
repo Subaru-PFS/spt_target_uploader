@@ -97,7 +97,7 @@ Package root: `src/pfs_target_uploader/`
 
 ### File Formats
 
-- **Input CSV** required columns: `obj_id`, `ra`, `dec`, `tract`, `patch`, `target_type_id`; optional flux/magnitude and priority columns
+- **Input CSV** required columns (`utils/__init__.py`, `required_keys`): `obj_id`, `ob_code`, `ra`, `dec`, `priority`, `exptime`, `resolution`, `reference_arm`. Optional (`optional_keys`, defaults substituted when absent): `pmra`, `pmdec`, `parallax`, `tract`, `patch`. Flux/magnitude columns are detected by name against `filter_category`, not listed as keys
 - **Outputs**: `target_<id>.ecsv` (targets + visibility flags), `ppc_<id>.ecsv` (pointing centers), `psl_<id>.ecsv` (pointing summary), `ppp_figure_<id>.html` (plots), `README.txt`
 
 ## Configuration
@@ -108,7 +108,11 @@ Package root: `src/pfs_target_uploader/`
 
 ## Testing
 
-Automated tests are minimal (`tests/` is essentially empty). Verify changes by:
+`uv run pytest tests/` — currently ~70 tests, around 30 s (the visibility check dominates; HEALPix results are cached per sky pixel, so the first list at a given patch of sky is slow and nearby ones are not).
+
+`tests/data/` holds small single-defect target lists, one per validation outcome, including one per early return in `validate_input()`. See `tests/data/README.md` before hand-building a DataFrame to reach a particular validation result. Pass explicit `date_begin`/`date_end` when calling `validate_input()` in a test — it otherwise defaults to "next semester relative to now", which makes visibility results depend on the day the suite runs.
+
+Coverage is still partial, so also verify changes by:
 
 - Running the CLI (`pfs-uploader-cli validate` / `simulate`) against example lists in `tmp/example_lists/`
 - Manual testing via the web interface (`./scripts/serve-app.sh`)
