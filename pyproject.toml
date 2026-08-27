@@ -141,6 +141,9 @@ ignore = [
 package-dir = { "" = "src" }
 include-package-data = true
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.setuptools_scm]
 version_file = "src/pfs_target_uploader/_version.py"
 fallback_version = "0.0.0+unknown"
