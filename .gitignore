@@ -183,3 +183,7 @@ src/pfs_target_uploader/_version.py
 
 # superpowers skill output (plans, specs) - working docs, not part of docs/ (MkDocs root)
 .claude/superpowers/
+
+# tests/data/ holds tracked validation fixtures; the leading `data/` rule
+# above is meant for the app OUTPUT_DIR at the repo root, not this one.
+!/tests/data/
