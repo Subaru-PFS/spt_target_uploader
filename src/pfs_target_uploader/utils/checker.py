@@ -750,8 +750,32 @@ def check_values(df, logger=logger):
     return dict_values
 
 
+def _warn_unusable_entries(column, series, finite, mask, logger):
+    """Report cells that hold something, but not a finite number.
+
+    ``pd.to_numeric(errors="coerce")`` turns unparseable text into NaN, which
+    is then indistinguishable from an empty cell.  Without this warning the
+    object either falls through to the band's next column or is reported as
+    "flux missing", and in neither case does the user learn which value was
+    discarded.  ``mask`` restricts the report to a subset of rows (used for
+    error columns, where only the objects that actually adopted the column
+    matter).
+    """
+    unusable = ~finite & series.notna().to_numpy()
+    if mask is not None:
+        unusable &= mask
+    n_bad = int(np.count_nonzero(unusable))
+    if n_bad == 0:
+        return
+    examples = series.to_numpy()[unusable][:3].tolist()
+    logger.warning(
+        f"{column}: {n_bad} entry(ies) hold a value that is not a finite "
+        f"number and are read as missing, e.g. {examples}"
+    )
+
+
 def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
-    logger.info("Initialize flux columns")
+    logger.info("Detecting flux columns")
     t_start = time.time()
 
     dfout = df.copy(deep=True)
@@ -780,6 +804,7 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
             # which already names the objects that came up empty.
             flux = pd.to_numeric(df[column], errors="coerce").to_numpy(dtype=float)
             finite = np.isfinite(flux)
+            _warn_unusable_entries(column, df[column], finite, None, logger)
 
             n_skipped = int(np.count_nonzero(finite & assigned))
             if n_skipped > 0:
@@ -803,7 +828,11 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
                 flux_error = pd.to_numeric(df[error_column], errors="coerce").to_numpy(
                     dtype=float
                 )
-                has_error = take & np.isfinite(flux_error)
+                error_finite = np.isfinite(flux_error)
+                _warn_unusable_entries(
+                    error_column, df[error_column], error_finite, take, logger
+                )
+                has_error = take & error_finite
                 flux_error_of_band[has_error] = flux_error[has_error]
 
             assigned |= take
