@@ -11,7 +11,7 @@
 #
 #   1. sanity-check that .worktreeinclude did its job (.env.shared present)
 #   2. uv sync --all-extras   (or fall back to pip install -e ".[dev,profilers]")
-#   3. mkdir -p data/temp
+#   3. mkdir -p $OUTPUT_DIR/temp   (OUTPUT_DIR read from .env.shared, default "data")
 #   4. create an empty $OUTPUT_DIR/$UPLOADID_DB if .env.shared configures one
 #      (the main app calls load_app_config(validate_db=True) and raises
 #      FileNotFoundError on startup when the file is missing)
@@ -57,19 +57,21 @@ if [ ! -f ".env.shared" ]; then
     echo "  (and cp .env.private.example .env.private for the admin app)" >&2
 fi
 
-# 2. Install dependencies. CLI_RUNNER is how we invoke pfs-uploader-cli afterwards.
+# 2. Install dependencies. CLI_RUNNER / MKDOCS are the command prefixes used for
+#    the remaining steps ("uv run ..." under uv, bare on PATH under pip -- mkdocs
+#    and pfs-uploader-cli are both installed either way).
 install_with_uv() {
     echo "==> uv sync --all-extras"
     uv sync --all-extras
     CLI_RUNNER="uv run pfs-uploader-cli"
-    DOC_BUILDER="./scripts/build-doc.sh uv"
+    MKDOCS="uv run mkdocs"
 }
 
 install_with_pip() {
     echo "==> pip install -e \".[dev,profilers]\""
     pip install -e ".[dev,profilers]"
     CLI_RUNNER="pfs-uploader-cli"
-    DOC_BUILDER="./scripts/build-doc.sh venv"
+    MKDOCS="mkdocs"
 }
 
 case "${RUNNER_TYPE}" in
@@ -125,11 +127,12 @@ if [ -n "${UPLOADID_DB}" ]; then
 fi
 
 # 5. Build the documentation site that serve-app.sh serves as a static dir.
+#    docs/ is the MkDocs project root (mkdocs.yml lives there).
 if [ -f "docs/site/index.html" ]; then
     echo "==> docs/site already built"
 else
-    echo "==> ${DOC_BUILDER}"
-    ${DOC_BUILDER}
+    echo "==> mkdocs build"
+    ( cd docs && ${MKDOCS} build )
 fi
 
 echo

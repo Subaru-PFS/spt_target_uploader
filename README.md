@@ -34,7 +34,8 @@ mkdir -p data/temp/
 
 Working in a Claude Code git worktree? `.worktreeinclude` copies the `.env.*`
 files in automatically; just run `./scripts/setup-worktree.sh` in the worktree to
-install dependencies and create `data/temp/`.
+install dependencies, set up the `$OUTPUT_DIR/` runtime directories, and build
+the docs site.
 
 ### Build documentation
 
