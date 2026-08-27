@@ -1400,6 +1400,7 @@ def validate_input(
         validation_status["empty"] = {"status": False, "desc_error": desc}
         msg_t_stop()
         return validation_status, df
+    validation_status["empty"] = {"status": True}
 
     # check string values
     logger.info("[Strings] Checking string values")
