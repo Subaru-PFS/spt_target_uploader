@@ -72,12 +72,38 @@ class FileInputWidgets(param.Parameterized):
         self.file_input.filename = None
         self.file_input.mime_type = None
         self.file_input.value = None
+        self.invalidate_cache()
+
+    def invalidate_cache(self):
+        """Drop the memoized validation result.
+
+        Callers outside this class need this after anything that makes the
+        entry unreachable -- cb_submit assigning a fresh upload ID, for one,
+        which changes the key so the old entry could never be hit again while
+        still pinning its frames for the life of the session.
+        """
         self._cached_key = None
         self._cached_result = None
         self.last_validation_key = None
 
-    def _cache_key(self, date_begin, date_end, single_exptime, min_mag, max_mag):
+    def _cache_key(
+        self,
+        filename,
+        mime_type,
+        value,
+        date_begin,
+        date_end,
+        single_exptime,
+        min_mag,
+        max_mag,
+    ):
         """Identity of everything validate() reads.
+
+        The file's identity is passed in rather than read from the widget:
+        validate() runs in a worker thread while the browser can still deliver
+        a new upload, and reading the widget again at the end would file this
+        run's result under the *next* file's key -- a wrong result that would
+        then stick for the rest of the session.
 
         The raw bytes go in rather than a digest of them. Comparing the key
         tuples goes through PyObject_RichCompareBool, which short-circuits on
@@ -88,17 +114,19 @@ class FileInputWidgets(param.Parameterized):
         already holds a reference to these bytes, and the surrounding code
         compares them the same way.
 
-        secret_token is part of the key because validate() stamps its first 7
-        characters onto every ob_code, and cb_submit assigns a fresh token
-        after an upload. Without it, a re-validation after a submit would hand
-        back ob_codes carrying the previous upload's ID. It is here to be
-        compared, not generated -- the upload ID itself comes from
-        assign_secret_token() and is untouched by the cache.
+        secret_token is read from the instance, not passed in, because it is
+        the one component that legitimately changes mid-call: the block below
+        reassigns it for a new file. It is part of the key because validate()
+        stamps its first 7 characters onto every ob_code, and cb_submit
+        assigns a fresh token after an upload -- without it, a re-validation
+        after a submit would hand back ob_codes carrying the previous upload's
+        ID. It is here to be compared, not generated; the upload ID itself
+        comes from assign_secret_token() and is untouched by the cache.
         """
         return (
-            self.file_input.filename,
-            self.file_input.mime_type,
-            self.file_input.value,
+            filename,
+            mime_type,
+            value,
             self.secret_token,
             date_begin,
             date_end,
@@ -106,6 +134,10 @@ class FileInputWidgets(param.Parameterized):
             min_mag,
             max_mag,
         )
+
+    def _cache_hit(self, key):
+        """The single definition of "this key is already validated"."""
+        return self._cached_result is not None and key == self._cached_key
 
     def has_cached_validation(
         self,
@@ -115,11 +147,26 @@ class FileInputWidgets(param.Parameterized):
         min_mag=None,
         max_mag=None,
     ):
-        """True when validate() with these arguments would skip the real work."""
-        if self._cached_result is None:
-            return False
-        return self._cached_key == self._cache_key(
-            date_begin, date_end, single_exptime, min_mag, max_mag
+        """True when validate() with these arguments would skip the real work.
+
+        Callers use this to decide whether to blank the panels first. It shares
+        _cache_hit() with validate() so the two cannot drift; note that it does
+        not model validate()'s date-range guard, which sits ahead of the cache
+        check. That is harmless only because a matching key implies the cached
+        run's dates, which already satisfied begin < end. Any *new* early
+        return added ahead of the cache check has to be mirrored here.
+        """
+        return self._cache_hit(
+            self._cache_key(
+                self.file_input.filename,
+                self.file_input.mime_type,
+                self.file_input.value,
+                date_begin,
+                date_end,
+                single_exptime,
+                min_mag,
+                max_mag,
+            )
         )
 
     def validate(
@@ -136,22 +183,48 @@ class FileInputWidgets(param.Parameterized):
             pn.state.notifications.error(
                 "Date Begin must be before Date End.", duration=0
             )
+            self.last_validation_key = None
             return None, None, None
 
+        # Snapshot the file's identity once, up front. Everything below runs
+        # in a worker thread (asyncio.to_thread) and a large list takes tens of
+        # seconds, during which the browser can still deliver a new upload.
+        # Re-reading the widget later would mix two files within one call.
+        filename = self.file_input.filename
+        mime_type = self.file_input.mime_type
+        value = self.file_input.value
+
+        def cache_key():
+            return self._cache_key(
+                filename,
+                mime_type,
+                value,
+                date_begin,
+                date_end,
+                single_exptime,
+                min_mag,
+                max_mag,
+            )
+
         # cb_validate, cb_PPP and cb_submit all validate the same inputs in
-        # turn; only the first of them has to do the work. The "very large
-        # list" notification below is skipped along with it, which is fine --
-        # the user has already been shown it once for this file.
-        cache_key = self._cache_key(
-            date_begin, date_end, single_exptime, min_mag, max_mag
-        )
-        if self._cached_result is not None and cache_key == self._cached_key:
+        # turn; only the first of them has to do the work.
+        if self._cache_hit(cache_key()):
             logger.info(
                 "Inputs are unchanged since the last validation; reusing the result."
             )
             logger.info(f"Upload ID: {self.secret_token}")
-            self.last_validation_key = cache_key
+            self.last_validation_key = cache_key()
             validation_status, df_input, df_output = self._cached_result
+            # Re-raised rather than assumed still on screen: every callback
+            # clears the notifications before calling us, so the copy shown
+            # after the first validation is gone by the time the user starts
+            # the multi-minute simulation this warns about.
+            if df_input.index.size >= warn_threshold:
+                pn.state.notifications.info(
+                    "The number of objects is very large. "
+                    "It may take a long time to process.",
+                    duration=0,
+                )
             return (
                 copy.deepcopy(validation_status),
                 df_input.copy(deep=True),
@@ -160,9 +233,9 @@ class FileInputWidgets(param.Parameterized):
 
         # update the upload ID when the input file is different from previous validation.
         if (
-            (self.file_input.filename != self.previous_filename)
-            or (self.file_input.value != self.previous_value)
-            or (self.file_input.mime_type != self.previous_mime_type)
+            (filename != self.previous_filename)
+            or (value != self.previous_value)
+            or (mime_type != self.previous_mime_type)
         ):
 
             self.secret_token = assign_secret_token(
@@ -171,12 +244,12 @@ class FileInputWidgets(param.Parameterized):
 
             logger.info("New file detected.")
             logger.info(f"    Upload ID updated: {self.secret_token}")
-            logger.info(f"    Filename: {self.file_input.filename}")
-            logger.info(f"    MIME Type: {self.file_input.mime_type}")
+            logger.info(f"    Filename: {filename}")
+            logger.info(f"    MIME Type: {mime_type}")
 
-            self.previous_filename = self.file_input.filename
-            self.previous_value = self.file_input.value
-            self.previous_mime_type = self.file_input.mime_type
+            self.previous_filename = filename
+            self.previous_value = value
+            self.previous_mime_type = mime_type
         else:
             logger.info("Identical to the previous validation.")
             logger.info(
@@ -186,13 +259,11 @@ class FileInputWidgets(param.Parameterized):
 
         logger.info(f"Upload ID: {self.secret_token}")
 
-        if self.file_input.filename is not None:
-            logger.info(f"{self.file_input.filename} is selected.")
-            file_format = os.path.splitext(self.file_input.filename)[-1].replace(
-                ".", ""
-            )
+        if filename is not None:
+            logger.info(f"{filename} is selected.")
+            file_format = os.path.splitext(filename)[-1].replace(".", "")
             df_input, dict_load = load_input(
-                BytesIO(self.file_input.value),
+                BytesIO(value),
                 format=file_format,
             )
             # if the input file cannot be read, raise a sticky error notifications
@@ -201,6 +272,7 @@ class FileInputWidgets(param.Parameterized):
                     f"Cannot load the input file. Please check the content. Error: {dict_load['error']}",
                     duration=0,
                 )
+                self.last_validation_key = None
                 return None, None, None
 
             if df_input.index.size >= warn_threshold:
@@ -211,6 +283,7 @@ class FileInputWidgets(param.Parameterized):
         else:
             logger.info("No file selected.")
             pn.state.notifications.error("Please select a CSV file.")
+            self.last_validation_key = None
             return None, None, None
 
         try:
@@ -248,14 +321,17 @@ class FileInputWidgets(param.Parameterized):
                 f"Please check the content of the file. Error: {e}",
                 duration=0,
             )
+            self.last_validation_key = None
             return None, None, None
 
-        # Recomputed rather than reusing cache_key from the top: a new file
-        # reassigns secret_token above, which is part of the key.
-        self._cached_key = self._cache_key(
-            date_begin, date_end, single_exptime, min_mag, max_mag
-        )
+        # Recomputed rather than reusing the key from the top: a new file
+        # reassigns secret_token above, which is part of the key. The file's
+        # identity still comes from the snapshot taken before the work began.
+        self._cached_key = cache_key()
         self._cached_result = (validation_status, df_input, df_output)
+        # Every failure path above sets this to None, so it always describes
+        # the most recent call: a key on success, None on failure. The render
+        # gate in pn_app reads it and depends on that being true.
         self.last_validation_key = self._cached_key
 
         # Callers get a private copy in both paths: run_ppp() writes

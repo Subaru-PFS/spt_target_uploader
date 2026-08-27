@@ -103,7 +103,22 @@ def target_uploader_app(use_panel_cli=False):
     # work on a 30,000-row list. None means "nothing trustworthy on screen".
     rendered_validation = {"key": None}
 
+    def reset_validation_panels():
+        """The only sanctioned way to blank the validation panels.
+
+        The render gate is correct only while "the panels were blanked"
+        implies "the key was cleared". Routing every reset through here keeps
+        that from being a rule spread across four call sites -- forget it once
+        and the gate refuses to redraw a panel it believes is still current,
+        which the user cannot recover from without reloading the page.
+        """
+        panel_status.reset()
+        panel_results.reset()
+        rendered_validation["key"] = None
+
     def render_validation_results(df_validated, validation_status):
+        # last_validation_key describes the most recent validate() call: a key
+        # on success, None on failure. Never a stale key from an earlier run.
         key = panel_input.last_validation_key
         if key is not None and key == rendered_validation["key"]:
             logger.info(
@@ -319,9 +334,7 @@ def target_uploader_app(use_panel_cli=False):
             min_mag=effective_min_mag,
             max_mag=config.max_fluxmag,
         ):
-            panel_status.reset()
-            panel_results.reset()
-            rendered_validation["key"] = None
+            reset_validation_panels()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
@@ -407,8 +420,7 @@ def target_uploader_app(use_panel_cli=False):
             min_mag=effective_min_mag,
             max_mag=config.max_fluxmag,
         ):
-            panel_status.reset()
-            rendered_validation["key"] = None
+            reset_validation_panels()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
@@ -581,11 +593,7 @@ def target_uploader_app(use_panel_cli=False):
 
             tab_panels.visible = False
 
-            panel_status.reset()
-            panel_results.reset()
-            # The panels have just been blanked, so whatever the render gate
-            # believed is on screen no longer is.
-            rendered_validation["key"] = None
+            reset_validation_panels()
 
             _toggle_widgets(widget_set, disabled=False)
             _toggle_widgets(button_set, disabled=False)
@@ -692,6 +700,10 @@ def target_uploader_app(use_panel_cli=False):
             output_dir=config.output_dir,
             use_db=config.use_uid_db,
         )
+        # The token is part of the cache key, so that entry can never be hit
+        # again -- but it would keep its frames alive until the next
+        # validation, which for an idle session is never.
+        panel_input.invalidate_cache()
 
         panel_timer.timer(on=False, time_limit=False)
 

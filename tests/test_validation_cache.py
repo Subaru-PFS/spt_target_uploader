@@ -26,7 +26,7 @@ CSV = b"""obj_id,ob_code,ra,dec,exptime,priority,resolution,reference_arm,g_hsc
 
 
 @pytest.fixture
-def widget(monkeypatch):
+def widget(monkeypatch, tmp_path):
     """A FileInputWidgets with a loaded file and a fixed upload ID."""
     import panel as pn
 
@@ -43,6 +43,9 @@ def widget(monkeypatch):
 
     w = FileInputWidgets()
     w.use_db = False
+    # Swapping the file mid-test sends validate() down the "new file" branch,
+    # which mints a fresh upload ID by globbing this directory.
+    w.output_dir = str(tmp_path)
     w.file_input.filename = "targets.csv"
     w.file_input.mime_type = "text/csv"
     w.file_input.value = CSV
@@ -150,4 +153,142 @@ def test_reset_clears_the_cache(widget):
     _validate(widget)
     widget.reset()
     assert widget.last_validation_key is None
+    assert not _has_cache(widget)
+
+
+def test_invalidate_cache_drops_the_entry(widget):
+    """cb_submit calls this after assigning a fresh upload ID: the entry can
+    never be hit again, but would pin its frames until the session ends."""
+    _validate(widget)
+    assert _has_cache(widget)
+
+    widget.invalidate_cache()
+
+    assert widget._cached_result is None
+    assert widget.last_validation_key is None
+    assert not _has_cache(widget)
+
+
+@pytest.mark.parametrize(
+    "break_it, expected_error",
+    [
+        # date_begin >= date_end
+        (lambda w: None, "dates"),
+        # unreadable content
+        # Raw bytes: pandas happily parses most malformed text, so this has
+        # to be something read_csv genuinely refuses.
+        (lambda w: setattr(w.file_input, "value", bytes(range(256))), "load"),
+        # nothing selected
+        (lambda w: setattr(w.file_input, "filename", None), "no file"),
+    ],
+    ids=["bad-dates", "unreadable", "no-file"],
+)
+def test_a_failed_validation_clears_the_key(
+    widget, monkeypatch, break_it, expected_error
+):
+    """last_validation_key must describe the *most recent* call.
+
+    pn_app's render gate reads it to decide whether the panels already show
+    the current result. If a failure left the previous run's key in place, the
+    gate would suppress every later attempt to render that result and the user
+    could only recover by reloading the page.
+    """
+    import panel as pn
+
+    class _Quiet:
+        def error(self, message, **kwargs):
+            pass
+
+        def info(self, message, **kwargs):
+            pass
+
+    _validate(widget)
+    assert widget.last_validation_key is not None
+
+    monkeypatch.setattr(
+        type(pn.state), "notifications", property(lambda self: _Quiet())
+    )
+    break_it(widget)
+
+    if expected_error == "dates":
+        status, _, _ = widget.validate(
+            date_begin=DATE_END, date_end=DATE_BEGIN, single_exptime=900.0
+        )
+    else:
+        status, _, _ = _validate(widget)
+
+    assert status is None
+    assert widget.last_validation_key is None
+
+
+def test_a_cache_hit_re_raises_the_large_list_notice(widget, monkeypatch):
+    """Every callback clears notifications before validating, so the notice
+    raised on the first run is gone by the time the user starts the
+    multi-minute simulation it warns about."""
+    import panel as pn
+
+    seen = []
+
+    class _Recording:
+        def error(self, message, **kwargs):
+            raise AssertionError(message)
+
+        def info(self, message, **kwargs):
+            seen.append(message)
+
+    monkeypatch.setattr(
+        type(pn.state), "notifications", property(lambda self: _Recording())
+    )
+
+    # Threshold of 1 makes the two-row fixture "very large".
+    widget.validate(
+        date_begin=DATE_BEGIN,
+        date_end=DATE_END,
+        single_exptime=900.0,
+        min_mag=12.0,
+        max_mag=25.0,
+        warn_threshold=1,
+    )
+    first = len([m for m in seen if "very large" in m])
+    assert first == 1
+
+    widget.validate(
+        date_begin=DATE_BEGIN,
+        date_end=DATE_END,
+        single_exptime=900.0,
+        min_mag=12.0,
+        max_mag=25.0,
+        warn_threshold=1,
+    )
+    assert len([m for m in seen if "very large" in m]) == 2
+
+
+def test_a_file_swapped_in_mid_validation_does_not_poison_the_cache(
+    widget, monkeypatch
+):
+    """validate() runs in a worker thread while the browser can still deliver
+    a new upload. Reading the widget again at the end would file this run's
+    result under the *next* file's key, and every later validation of that
+    file would return the wrong targets -- for the rest of the session.
+    """
+    # sys.modules, not a plain import: widgets/__init__.py rebinds this name
+    # on the package to the *class*.
+    import sys
+
+    module = sys.modules["pfs_target_uploader.widgets.FileInputWidgets"]
+    original = module.validate_input
+    other = CSV.replace(b"150.0", b"170.0")
+
+    def swap_then_validate(*args, **kwargs):
+        # Stand in for the upload landing while the worker thread is busy.
+        widget.file_input.value = other
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(module, "validate_input", swap_then_validate)
+    _validate(widget)
+    monkeypatch.setattr(module, "validate_input", original)
+
+    # The result belongs to the ORIGINAL bytes, so the swapped-in file must
+    # not be served from cache.
+    assert widget.file_input.value == other
     assert not _has_cache(widget)
