@@ -516,6 +516,11 @@ def target_uploader_app(use_panel_cli=False):
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
 
+        # Clear stale notifications up front, as cb_validate() and cb_PPP() do.
+        # Clearing after panel_input.validate() has run would wipe the sticky
+        # notifications it raises to report a failure.
+        pn.state.notifications.clear()
+
         panel_timer.timer(on=True, time_limit=False)
 
         # do the validation again and again (input file can be different)
@@ -547,13 +552,9 @@ def target_uploader_app(use_panel_cli=False):
             _toggle_widgets(button_set, disabled=False)
 
             if validation_status is None:
-                # panel_input.validate() already raised a sticky notification
-                # (missing file, bad dates, or an unexpected validation
-                # error) -- clearing it here would hide it from the user.
                 panel_timer.timer(on=False, time_limit=False)
                 return
             else:
-                pn.state.notifications.clear()
                 panel_status.show_results(df_validated, validation_status)
                 panel_results.show_results(df_validated, validation_status)
                 panel_targets.show_results(df_validated)

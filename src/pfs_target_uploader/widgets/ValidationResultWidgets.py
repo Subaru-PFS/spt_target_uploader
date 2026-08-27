@@ -816,11 +816,6 @@ class ValidationResultWidgets:
             self.error_table_dups.visible = True
 
         # internal duplication
-        # `status` is `None` when this check was never reached (e.g. an
-        # earlier required/str/value failure returned before it ran) --
-        # that must not be rendered as a duplicate-free "info" pane, and
-        # must also not fall through the `else` below as a spurious
-        # "duplicates found" warning against missing flags/nn_sep data.
         if validation_status["internal_duplication"]["status"] is None:
             pass
         elif validation_status["internal_duplication"]["status"]:

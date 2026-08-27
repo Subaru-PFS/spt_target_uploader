@@ -41,6 +41,31 @@ def test_check_internal_duplicate_does_not_crash_on_duplicate_ob_code():
     assert np.isnan(result["nn_sep"][3])
 
 
+def test_check_internal_duplicate_aligns_flags_to_row_position():
+    """The duplicated pair sits away from the start of the frame (positions 1
+    and 3), unlike every other test here where duplicates happen to occupy
+    positions 0 and 1. That shape is indistinguishable from a compacted
+    `0..n_dups-1` index, so it alone pins the invariant the fix relies on:
+    dupcheck_internal() must return results indexed by input row position,
+    not just by row order."""
+    df = pd.DataFrame(
+        {
+            "ob_code": ["iso1", "dup", "iso2", "dup"],
+            "ra": [160.0, 150.0, 170.0, 150.0],
+            "dec": [-10.0, 2.0, 30.0, 2.0],
+            "resolution": ["L", "L", "L", "L"],
+        }
+    )
+
+    result = check_internal_duplicate(df)
+
+    assert list(result["flags"]) == [False, True, False, True]
+    assert result["nn_sep"][1] == 0.0
+    assert result["nn_sep"][3] == 0.0
+    assert np.isnan(result["nn_sep"][0])
+    assert np.isnan(result["nn_sep"][2])
+
+
 def test_check_internal_duplicate_all_isolated_when_ob_code_is_unique():
     """Non-regression: widely separated targets with unique `ob_code` are
     still reported as fully isolated."""

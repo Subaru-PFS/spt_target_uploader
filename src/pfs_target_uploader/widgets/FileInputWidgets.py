@@ -153,10 +153,14 @@ class FileInputWidgets(param.Parameterized):
             if validation_status["required_keys"]["status"]:
                 df_output.insert(1, "obj_id_str", df_output["obj_id"].astype(str))
 
-            # append first 7 characters of secret_token to ob_codes
-            df_output["ob_code"] = df_output["ob_code"].apply(
-                lambda x: f"{x}_{self.secret_token[:7]}"
-            )
+                # append first 7 characters of secret_token to ob_codes
+                # `ob_code` is itself a required column, so this must stay
+                # behind the same guard as `obj_id` above -- a list that is
+                # missing `ob_code` would otherwise raise here and the
+                # "Missing required columns" error panel would never render.
+                df_output["ob_code"] = df_output["ob_code"].apply(
+                    lambda x: f"{x}_{self.secret_token[:7]}"
+                )
         except Exception as e:
             # A bug in validate_input() (or in how its output is consumed
             # here) must not leave the UI stuck with disabled widgets and no
