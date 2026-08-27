@@ -117,7 +117,13 @@ echo "==> ${OUTPUT_DIR}/temp ready"
 #    .worktreeinclude cannot carry it (it lives under the wholly-ignored data/).
 UPLOADID_DB="$(read_env UPLOADID_DB .env.shared)"
 if [ -n "${UPLOADID_DB}" ]; then
-    DB_PATH="${OUTPUT_DIR}/${UPLOADID_DB}"
+    # uid2sqlite resolves the path as os.path.join(output_dir, dbfile), which
+    # drops output_dir when dbfile is absolute -- mirror that here so the
+    # existence check looks where uid2sqlite will actually write.
+    case "${UPLOADID_DB}" in
+        /*) DB_PATH="${UPLOADID_DB}" ;;
+        *)  DB_PATH="${OUTPUT_DIR}/${UPLOADID_DB}" ;;
+    esac
     if [ -f "${DB_PATH}" ]; then
         echo "==> ${DB_PATH} already present"
     else
