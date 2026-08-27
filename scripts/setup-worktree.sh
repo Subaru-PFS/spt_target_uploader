@@ -21,12 +21,16 @@
 # It is idempotent, so re-running it is safe.
 #
 # Usage:
-#   ./scripts/setup-worktree.sh [uv|venv]
+#   ./scripts/setup-worktree.sh [uv|pip]
 #
 # Arguments:
 #   uv     - force 'uv sync'
-#   venv   - force 'pip install -e' into the active environment
+#   pip    - force 'pip install -e' into the active environment
 #   (none) - auto-detect (priority: uv > pip)
+#
+# ('pip', not 'venv': unlike serve-app.sh / build-doc.sh this installs rather
+#  than running an existing tool, and it uses whatever pip is active, not
+#  ./.venv/bin/pip.)
 #
 
 set -euo pipefail
@@ -82,7 +86,7 @@ case "${RUNNER_TYPE}" in
         fi
         install_with_uv
         ;;
-    venv)
+    pip)
         if ! command -v pip &> /dev/null; then
             echo "Error: 'pip' not found in PATH (activate the environment first)" >&2
             exit 1
@@ -102,7 +106,7 @@ case "${RUNNER_TYPE}" in
         ;;
     *)
         echo "Error: Invalid runner type '${RUNNER_TYPE}'" >&2
-        echo "Usage: $0 [uv|venv]" >&2
+        echo "Usage: $0 [uv|pip]" >&2
         exit 1
         ;;
 esac

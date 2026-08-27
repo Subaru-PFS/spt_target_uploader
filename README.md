@@ -32,10 +32,10 @@ mkdir -p data/
 mkdir -p data/temp/
 ```
 
-Working in a Claude Code git worktree? `.worktreeinclude` copies the `.env.*`
-files in automatically; just run `./scripts/setup-worktree.sh` in the worktree to
-install dependencies, set up the `$OUTPUT_DIR/` runtime directories, and build
-the docs site.
+Working in a Claude Code git worktree? `.worktreeinclude` copies the gitignored
+config (`.env.*`, `.python-version`) in automatically; just run
+`./scripts/setup-worktree.sh` in the worktree to install dependencies, set up the
+`$OUTPUT_DIR/` runtime directories, and build the docs site.
 
 ### Build documentation
 
