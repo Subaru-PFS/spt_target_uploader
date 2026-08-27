@@ -40,7 +40,9 @@ def test_validate_input_rejects_header_only_csv_with_clear_error():
 
     assert df_output.empty
     assert validation_status["status"] is False
-    assert validation_status["required_keys"]["status"] is True
+    # check_keys() reports status via np.all(), i.e. a numpy bool -- test for
+    # truthiness rather than identity to `True`.
+    assert validation_status["required_keys"]["status"]
     assert validation_status["empty"] == {
         "status": False,
         "desc_error": "The file contains no data rows.",
