@@ -142,6 +142,47 @@ def test_first_column_of_a_band_wins_not_the_filter_category_order():
     assert_same_result(df)
 
 
+def test_fallback_within_a_band_is_decided_per_object():
+    """Two columns of the same band, each missing for different objects.
+
+    The band's winner is chosen per object, not once for the whole column:
+    an object whose leftmost column is NaN falls through to the next one.
+    The flux *error* has to follow the column that actually won -- picking
+    g_hsc_error for an object served by g_sdss would attach the wrong
+    uncertainty to the flux.
+    """
+    df = pd.DataFrame(
+        {
+            "ob_code": ["r0", "r1", "r2", "r3"],
+            "obj_id": [1, 2, 3, 4],
+            "ra": [150.0] * 4,
+            "dec": [2.0] * 4,
+            "exptime": [900.0] * 4,
+            "priority": [1.0] * 4,
+            "resolution": ["L"] * 4,
+            "reference_arm": ["r"] * 4,
+            "g_hsc": [10.0, np.nan, 11.0, np.nan],
+            # An error is present even where the flux is missing, so picking
+            # the wrong column's error would go unnoticed without this.
+            "g_hsc_error": [1.0, 0.9, 1.1, 0.8],
+            "g_sdss": [np.nan, 20.0, 21.0, np.nan],
+            "g_sdss_error": [2.0, 2.1, 2.2, 2.3],
+        }
+    )
+
+    dict_flux, out = check_fluxcolumns(df.copy(deep=True))
+
+    assert out["filter_g"].tolist() == ["g_hsc", "g_sdss", "g_hsc", None]
+    assert out["flux_g"].tolist()[:3] == [10.0, 20.0, 11.0]
+    assert np.isnan(out["flux_g"].tolist()[3])
+    assert out["flux_error_g"].tolist()[:3] == [1.0, 2.1, 1.1]
+    assert np.isnan(out["flux_error_g"].tolist()[3])
+    assert list(dict_flux["success"]) == [True, True, True, False]
+    assert sorted(dict_flux["filters"]) == ["g_hsc", "g_sdss"]
+
+    assert_same_result(df)
+
+
 def test_multiple_bands_match_reference():
     df = pd.DataFrame(
         {
@@ -182,3 +223,46 @@ def test_real_example_lists_match_reference(path):
     df, dict_load = load_input(path, format="csv")
     assert dict_load["status"]
     assert_same_result(df)
+
+
+def test_duplicate_filter_warning_is_emitted_once_per_column():
+    """The old code warned once per row; on a 30k list that was 30k lines."""
+    n = 50
+    df = pd.DataFrame(
+        {
+            "ob_code": [f"ob{i}" for i in range(n)],
+            "obj_id": np.arange(n),
+            "ra": np.full(n, 150.0),
+            "dec": np.full(n, 2.0),
+            "exptime": np.full(n, 900.0),
+            "priority": np.full(n, 1.0),
+            "resolution": ["L"] * n,
+            "reference_arm": ["r"] * n,
+            "g_hsc": np.full(n, 10.0),
+            "g_ps1": np.full(n, 20.0),
+        }
+    )
+
+    messages = []
+    handler_id = logger.add(
+        lambda m: messages.append(m.record["message"]), level="WARNING"
+    )
+    try:
+        check_fluxcolumns(df)
+    finally:
+        logger.remove(handler_id)
+
+    skipped = [m for m in messages if "g_ps1 is skipped" in m]
+    assert len(skipped) == 1
+    assert f"{n} object(s)" in skipped[0]
+
+
+def test_non_numeric_flux_reads_as_missing_instead_of_raising():
+    """It used to raise an uncaught TypeError out of np.isfinite."""
+    df = pd.DataFrame({**BASE_COLUMNS, "g_hsc": [10.0, "bogus", 30.0]})
+
+    dict_flux, out = check_fluxcolumns(df)
+
+    assert list(dict_flux["success"]) == [True, False, True]
+    assert dict_flux["status"] is False
+    assert out["filter_g"].tolist() == ["g_hsc", None, "g_hsc"]
