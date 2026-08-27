@@ -98,6 +98,45 @@ def target_uploader_app(use_panel_cli=False):
     panel_input.output_dir = config.output_dir
     panel_input.use_db = config.use_uid_db
 
+    # Which validation result the three panels currently display. cb_validate
+    # and cb_PPP both render the same data, and that is 2.7 s of Tabulator
+    # work on a 30,000-row list. None means "nothing trustworthy on screen".
+    rendered_validation = {"key": None}
+
+    def reset_validation_panels():
+        """The only sanctioned way to blank the validation panels.
+
+        The render gate is correct only while "the panels were blanked"
+        implies "the key was cleared". Routing every reset through here keeps
+        that from being a rule spread across four call sites -- forget it once
+        and the gate refuses to redraw a panel it believes is still current,
+        which the user cannot recover from without reloading the page.
+
+        It blanks the same three panels render_validation_results() writes.
+        Leaving panel_targets out (as the code did before these two became a
+        pair) strands the previous file's rows in the "Input list" tab on
+        every path that resets and then early-returns -- cb_PPP's "0 visible
+        targets", above all, which does not hide the tabs either.
+        """
+        panel_status.reset()
+        panel_results.reset()
+        panel_targets.reset()
+        rendered_validation["key"] = None
+
+    def render_validation_results(df_validated, validation_status):
+        # last_validation_key describes the most recent validate() call: a key
+        # on success, None on failure. Never a stale key from an earlier run.
+        key = panel_input.last_validation_key
+        if key is not None and key == rendered_validation["key"]:
+            logger.info(
+                "Validation panels already show this result; skipping the re-render."
+            )
+            return
+        panel_status.show_results(df_validated, validation_status)
+        panel_results.show_results(df_validated, validation_status)
+        panel_targets.show_results(df_validated)
+        rendered_validation["key"] = key
+
     button_set = [
         panel_input.file_input,
         panel_validate_button.validate,
@@ -286,21 +325,30 @@ def target_uploader_app(use_panel_cli=False):
 
         tab_panels.visible = False
 
-        panel_status.reset()
-        panel_results.reset()
+        # Select min_mag based on observation type
+        # (computed before the resets below, which need it too)
+        effective_min_mag = get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            config,
+        )
+
+        # Blank the panels only when a real validation is about to run: a
+        # cached one returns instantly, so there is nothing stale to hide.
+        if not panel_input.has_cached_validation(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=config.max_fluxmag,
+        ):
+            reset_validation_panels()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
 
         panel_timer.timer(on=True, time_limit=False)
 
-        # Select min_mag based on observation type
-        effective_min_mag = get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value,
-            config,
-        )
-
-        validation_status, df_input, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
@@ -331,9 +379,7 @@ def target_uploader_app(use_panel_cli=False):
                 disabled=True,
             )
 
-        panel_status.show_results(df_validated, validation_status)
-        panel_targets.show_results(df_validated)
-        panel_results.show_results(df_validated, validation_status)
+        render_validation_results(df_validated, validation_status)
 
         panel_ppp.df_input = df_validated
         try:
@@ -364,21 +410,31 @@ def target_uploader_app(use_panel_cli=False):
 
         placeholder_floatpanel.objects = []
 
-        # reset some panels
-        panel_status.reset()
+        # Select min_mag based on observation type
+        # (computed before the resets below, which need it too)
+        effective_min_mag = get_min_fluxmag_for_obstype(
+            panel_obs_type.obs_type.value,
+            config,
+        )
+
+        # reset some panels -- but only when a real validation is about to
+        # run, otherwise the status pane would be blanked and then skipped
+        # by the render gate below.
+        if not panel_input.has_cached_validation(
+            date_begin=panel_dates.date_begin.value,
+            date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
+            min_mag=effective_min_mag,
+            max_mag=config.max_fluxmag,
+        ):
+            reset_validation_panels()
         panel_ppp.reset()
 
         pn.state.notifications.clear()
 
         panel_timer.timer(on=True, time_limit=False)
 
-        # Select min_mag based on observation type
-        effective_min_mag = get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value,
-            config,
-        )
-
-        validation_status, df_input_, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
@@ -415,9 +471,7 @@ def target_uploader_app(use_panel_cli=False):
             panel_timer.timer(on=False, time_limit=False)
             return
 
-        panel_status.show_results(df_validated, validation_status)
-        panel_results.show_results(df_validated, validation_status)
-        panel_targets.show_results(df_validated)
+        render_validation_results(df_validated, validation_status)
 
         panel_timer.timer(on=False, time_limit=False)
 
@@ -532,10 +586,11 @@ def target_uploader_app(use_panel_cli=False):
             config,
         )
 
-        validation_status, df_input, df_validated = await asyncio.to_thread(
+        validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
             date_begin=panel_dates.date_begin.value,
             date_end=panel_dates.date_end.value,
+            single_exptime=panel_obs_type.single_exptime.value,
             min_mag=effective_min_mag,
             max_mag=config.max_fluxmag,
         )
@@ -545,8 +600,7 @@ def target_uploader_app(use_panel_cli=False):
 
             tab_panels.visible = False
 
-            panel_status.reset()
-            panel_results.reset()
+            reset_validation_panels()
 
             _toggle_widgets(widget_set, disabled=False)
             _toggle_widgets(button_set, disabled=False)
@@ -555,9 +609,7 @@ def target_uploader_app(use_panel_cli=False):
                 panel_timer.timer(on=False, time_limit=False)
                 return
             else:
-                panel_status.show_results(df_validated, validation_status)
-                panel_results.show_results(df_validated, validation_status)
-                panel_targets.show_results(df_validated)
+                render_validation_results(df_validated, validation_status)
                 tab_panels.visible = True
                 panel_timer.timer(on=False, time_limit=False)
                 return
@@ -655,6 +707,10 @@ def target_uploader_app(use_panel_cli=False):
             output_dir=config.output_dir,
             use_db=config.use_uid_db,
         )
+        # The token is part of the cache key, so that entry can never be hit
+        # again -- but it would keep its frames alive until the next
+        # validation, which for an idle session is never.
+        panel_input.invalidate_cache()
 
         panel_timer.timer(on=False, time_limit=False)
 

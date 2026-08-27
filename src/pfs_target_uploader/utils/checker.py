@@ -750,70 +750,101 @@ def check_values(df, logger=logger):
     return dict_values
 
 
+def _warn_unusable_entries(column, series, finite, mask, logger):
+    """Report cells that hold something, but not a finite number.
+
+    ``pd.to_numeric(errors="coerce")`` turns unparseable text into NaN, which
+    is then indistinguishable from an empty cell.  Without this warning the
+    object either falls through to the band's next column or is reported as
+    "flux missing", and in neither case does the user learn which value was
+    discarded.  ``mask`` restricts the report to a subset of rows (used for
+    error columns, where only the objects that actually adopted the column
+    matter).
+    """
+    unusable = ~finite & series.notna().to_numpy()
+    if mask is not None:
+        unusable &= mask
+    n_bad = int(np.count_nonzero(unusable))
+    if n_bad == 0:
+        return
+    examples = series.to_numpy()[unusable][:3].tolist()
+    logger.warning(
+        f"{column}: {n_bad} entry(ies) hold a value that is not a finite "
+        f"number and are read as missing, e.g. {examples}"
+    )
+
+
 def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
-    # initialize filter/flux columns
-    logger.info("Initialize flux columns")
-    for band in filter_category.keys():
-        df[f"filter_{band}"] = None
-        df[f"flux_{band}"] = np.nan
-        df[f"flux_error_{band}"] = np.nan
-
-    def assign_filter_category(k):
-        for band in filter_category.keys():
-            if k in filter_category[band]:
-                return band
-        return None
-
+    logger.info("Detecting flux columns")
     t_start = time.time()
 
-    def detect_fluxcolumns(s):
-        filters_found_one = []
-        is_found_filter = False
-        for c in s.keys():
-            b = assign_filter_category(c)
-            if b is not None:
-                if np.isfinite(s[c]):
-                    if s[f"filter_{b}"] is not None:
-                        logger.warning(
-                            f"filter_{b} has already been filled. {c} filter for {s['ob_code']} is skipped."
-                        )
-                        continue
+    dfout = df.copy(deep=True)
+    n_rows = len(dfout)
 
-                    flux = s[c]
-                    logger.debug(
-                        f"{b} band filter column ({c}) found for OB {s['ob_code']} as {flux}"
-                    )
-                    is_found_filter = True
-                    filters_found_one.append(c)
-                    s[f"filter_{b}"] = c
-                    s[f"flux_{b}"] = flux
+    # One "did this object get any flux at all" flag per row, OR-ed across bands.
+    is_found = np.zeros(n_rows, dtype=bool)
+    filters_found = []
 
-                    try:
-                        if np.isfinite(s[f"{c}_error"]):
-                            flux_error = s[f"{c}_error"]
-                            s[f"flux_error_{b}"] = flux_error
-                            logger.debug(
-                                f"{b} band flux error ({c}_error) found as {flux_error}"
-                            )
-                    except KeyError:
-                        pass
-                    except TypeError:
-                        pass
+    for band, band_filters in filter_category.items():
+        # DataFrame column order sets the priority, not the order the band's
+        # filters happen to be listed in filter_category: the old row loop
+        # iterated over the record dict's keys, which follow the frame.
+        candidates = [c for c in df.columns if c in band_filters]
 
-        return s, is_found_filter, filters_found_one
+        filter_of_band = np.full(n_rows, None, dtype=object)
+        flux_of_band = np.full(n_rows, np.nan)
+        flux_error_of_band = np.full(n_rows, np.nan)
+        assigned = np.zeros(n_rows, dtype=bool)
 
-    vfunc_fluxcolumns = np.vectorize(
-        detect_fluxcolumns, otypes=[dict, bool, np.ndarray]
-    )
-    input_list_of_dicts = df.to_dict(orient="records")
-    output_list_of_dicts, is_found, filters_found = vfunc_fluxcolumns(
-        input_list_of_dicts
-    )
-    dfout = pd.DataFrame.from_records(output_list_of_dicts)
+        for column in candidates:
+            # errors="coerce" rather than a bare np.isfinite: a stray
+            # non-numeric entry used to raise an uncaught TypeError and kill
+            # validation with an opaque traceback. Reading it as "no flux"
+            # lets the object be reported through dict_flux["status"] below,
+            # which already names the objects that came up empty.
+            flux = pd.to_numeric(df[column], errors="coerce").to_numpy(dtype=float)
+            finite = np.isfinite(flux)
+            _warn_unusable_entries(column, df[column], finite, None, logger)
+
+            n_skipped = int(np.count_nonzero(finite & assigned))
+            if n_skipped > 0:
+                # Aggregated on purpose. The old code warned once per row,
+                # which meant tens of thousands of identical lines on a large
+                # list -- and cost real time writing them.
+                logger.warning(
+                    f"filter_{band} has already been filled by an earlier column; "
+                    f"{column} is skipped for {n_skipped} object(s)."
+                )
+
+            take = finite & ~assigned
+            if not take.any():
+                continue
+
+            filter_of_band[take] = column
+            flux_of_band[take] = flux[take]
+
+            error_column = f"{column}_error"
+            if error_column in df.columns:
+                flux_error = pd.to_numeric(df[error_column], errors="coerce").to_numpy(
+                    dtype=float
+                )
+                error_finite = np.isfinite(flux_error)
+                _warn_unusable_entries(
+                    error_column, df[error_column], error_finite, take, logger
+                )
+                has_error = take & error_finite
+                flux_error_of_band[has_error] = flux_error[has_error]
+
+            assigned |= take
+            filters_found.append(column)
+
+        dfout[f"filter_{band}"] = filter_of_band
+        dfout[f"flux_{band}"] = flux_of_band
+        dfout[f"flux_error_{band}"] = flux_error_of_band
+        is_found |= assigned
+
+    filters_found_unique = np.unique(filters_found)
     t_stop = time.time()
-
-    filters_found_flatten = [item for sublist in filters_found for item in sublist]
-    filters_found_unique = np.unique(filters_found_flatten)
 
     logger.info(f"Flux column detection finished in {t_stop - t_start:.2f} [s]")
 
@@ -843,8 +874,6 @@ def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
             dfout.drop(columns=[f"flux_{k}"], inplace=True)
         elif dfout.loc[:, f"flux_error_{k}"].isna().all():
             dfout.drop(columns=[f"flux_error_{k}"], inplace=True)
-
-    logger.info(f"{dfout}")
 
     return dict_flux, dfout
 
