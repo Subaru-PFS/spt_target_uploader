@@ -149,6 +149,15 @@ def test_fixture_triggers_expected_outcome(
     assert actual == expected
     assert bool(validation_status["status"]) is expected_overall
 
+    # optional_keys is outside CHECKS -- it never gates an early return, so it
+    # has no place in the ordered chain (see conftest).  Pinned here so it is
+    # covered somewhere: the fixtures are deliberately minimal and carry none
+    # of pmra/pmdec/parallax/tract/patch, which is what makes this False.  A
+    # fixture that grew one would flip it and change the warning pane
+    # show_results() renders.
+    assert not validation_status["optional_keys"]["status"]
+    assert len(validation_status["optional_keys"]["desc_warning"]) == 5
+
 
 def test_every_early_return_path_is_covered():
     """The fixture set must keep one input per early return in validate_input().

@@ -23,8 +23,20 @@ DATA = Path(__file__).resolve().parent / "data"
 DATE_BEGIN = date(2026, 2, 1)
 DATE_END = date(2026, 7, 31)
 
-# Every check validate_input() pre-seeds, in the order it fills them in.
-# The single source of truth -- derive subsets from it rather than retyping.
+# The checks validate_input() runs in sequence, in order.  Nine of them are
+# pre-seeded with {"status": None} at checker.py:1371-1379; required_keys is
+# assigned at 1390, before any return can happen.  Single source of truth --
+# derive subsets from it rather than retyping.
+#
+# optional_keys is deliberately not here.  It is a check, and show_results()
+# reads its fields unguarded, but it is assigned at checker.py:1391 alongside
+# required_keys and never gates an early return, so it has no position in the
+# chain.  Giving it one would break the inference in
+# test_every_early_return_path_is_covered, which reads the entry before the
+# first unreached check as the one that failed: with optional_keys sitting
+# between required_keys and empty -- and never None, because it always runs --
+# that inference would name optional_keys instead of required_keys.
+# test_example_target_lists.py asserts its status separately.
 CHECKS = [
     "required_keys",
     "empty",
