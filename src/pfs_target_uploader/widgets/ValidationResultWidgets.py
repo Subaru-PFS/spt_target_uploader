@@ -383,6 +383,26 @@ class ValidationResultWidgets:
         return out_of_range_bands
 
     def show_results(self, df, validation_status):
+        """Render a validation_status produced by validate_input().
+
+        A check's status is True (passed), False (failed), or None -- the
+        value validate_input() seeds every check with and leaves in place for
+        the ones it never reached, because it returned early at an earlier
+        failure.  Only True and False mean the check's other fields
+        (``success``, ``flags``, ``filters``, ...) exist; on None they are
+        absent and touching one raises KeyError.  This method is called from
+        cb_validate() with no try/except around it, so that KeyError escapes
+        the callback and leaves the user on a spinner that never stops.
+
+        So: every section below tests ``is None`` before it touches anything
+        but ``status``.  Keep that up when adding a check -- do not assume the
+        checks above yours have run just because they do today.
+
+        The three ``return``s further down are a separate matter.  They stop
+        the render at a failure rather than reporting checks below it, and
+        they use ``not status``, which is also True for None; that is how an
+        input rejected at the `empty` check stops before the `str` section.
+        """
         # reset title panes
         self.reset()
 
@@ -520,7 +540,9 @@ class ValidationResultWidgets:
 
         # flux columns
         # TODO: show a list of detected/undetected flux columns
-        if validation_status["flux_columns"]["status"]:
+        if validation_status["flux_columns"]["status"] is None:
+            pass
+        elif validation_status["flux_columns"]["status"]:
             self.append_title("info")
             self.info_text_flux.object = "<font size=4><u>Flux information</u></font>\n\n<font size=3>All `ob_code`s have at least one flux information. The detected filters are the following: </font>"
             for f in validation_status["flux_columns"]["filters"]:
@@ -552,7 +574,9 @@ class ValidationResultWidgets:
             self.error_table_flux.visible = True
 
         # Flux values (only check if flux columns were successfully detected)
-        if (
+        if validation_status["flux_values"]["status"] is None:
+            pass
+        elif (
             validation_status["flux_columns"]["status"]
             and validation_status["flux_values"]["status"]
         ):
@@ -748,7 +772,9 @@ class ValidationResultWidgets:
 
         # Visibility
         # TODO: add begin_date and end_date in the message
-        if validation_status["visibility"]["status"]:
+        if validation_status["visibility"]["status"] is None:
+            pass
+        elif validation_status["visibility"]["status"]:
             if np.all(validation_status["visibility"]["success"]):
                 self.append_title("info")
                 self.info_text_visibility.object = (
@@ -793,7 +819,9 @@ class ValidationResultWidgets:
             self.error_pane.append(self.error_text_visibility)
 
         # Duplication
-        if validation_status["unique"]["status"]:
+        if validation_status["unique"]["status"] is None:
+            pass
+        elif validation_status["unique"]["status"]:
             self.append_title("info")
             self.info_text_dups.object = (
                 "<font size=4><u>Uniqueness of `ob_code` and `(obj_id, resolution)`</u></font>\n\n"
