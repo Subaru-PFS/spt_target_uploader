@@ -1394,6 +1394,28 @@ def validate_input(
         msg_t_stop()
         return validation_status, df
 
+    # Every check below indexes the frame by column name, and a duplicated
+    # name makes df[col] a DataFrame rather than a Series.  Each consumer then
+    # fails in its own opaque way -- check_values() with "Cannot apply ufunc
+    # <ufunc 'logical_and'> to mixed DataFrame and Series inputs",
+    # check_fluxcolumns() with "arg must be a list, tuple, 1-d array, or
+    # Series" -- and neither names the column.  In the web app that reaches
+    # the catch-all handler in FileInputWidgets.validate(); in the CLI it is a
+    # bare traceback.
+    #
+    # Unreachable from a file: pd.read_csv mangles CSV duplicates to `ra.1`
+    # and astropy Tables forbid duplicate names.  Only a caller building a
+    # frame in memory can get here, so name the offenders rather than quietly
+    # repairing the frame.  (check_fluxcolumns() used to round-trip through
+    # to_dict(orient="records"), where the last duplicate silently won; the
+    # vectorized version has no such accidental tolerance.)
+    duplicated_columns = sorted(set(df.columns[df.columns.duplicated()]))
+    if duplicated_columns:
+        raise ValueError(
+            "validate_input() cannot read a frame with duplicate column "
+            f"name(s): {duplicated_columns}"
+        )
+
     if df.empty:
         desc = "The file contains no data rows."
         logger.error(desc)

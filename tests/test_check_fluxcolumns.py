@@ -473,3 +473,65 @@ def test_non_numeric_flux_reads_as_missing_instead_of_raising():
     assert list(dict_flux["success"]) == [True, False, True]
     assert dict_flux["status"] is False
     assert out["filter_g"].tolist() == ["g_hsc", None, "g_hsc"]
+
+
+@pytest.mark.parametrize("duplicated", ["ra", "g_hsc", "g_hsc_error"])
+def test_validate_input_refuses_a_duplicate_column_naming_exactly_it(duplicated):
+    """A duplicated name makes ``df[col]`` a DataFrame, and each consumer then
+    fails in its own opaque way: ``check_values()`` with "Cannot apply ufunc
+    <ufunc 'logical_and'> to mixed DataFrame and Series inputs",
+    ``check_fluxcolumns()`` with "arg must be a list, tuple, 1-d array, or
+    Series".  Neither names the column, and both surface as the catch-all
+    handler in ``FileInputWidgets.validate()`` or a bare CLI traceback.
+
+    No input file gets here: ``pd.read_csv`` mangles CSV duplicates to
+    ``ra.1`` and astropy Tables forbid duplicate names.  Only a caller
+    building a frame in memory can, so the frame is refused by name rather
+    than quietly repaired.  (Before the check_fluxcolumns vectorization, a
+    duplicate flux column was collapsed by ``to_dict(orient="records")`` and
+    the last one silently won.)
+
+    ``ra`` is in the parameters because the guard has to sit above the flux
+    detector to catch it: ``check_values()`` runs first and fails first, on
+    the more plausible duplicate of the two.
+
+    The regex pins the *bracketed list*, not a bare substring: ``g_hsc`` is a
+    substring of ``g_hsc_error``, so a looser match would pass even if the
+    guard reported the wrong one of the two.
+    """
+    from pfs_target_uploader.utils.checker import validate_input
+
+    columns = [*BASE_COLUMNS, "g_hsc", "g_hsc_error", duplicated]
+    df = pd.DataFrame(
+        [["a", 1, 150.0, 2.0, 900.0, 1.0, "L", "r", 1.0e5, 1.0e3, 150.0]],
+        columns=columns,
+    )
+
+    with pytest.raises(ValueError, match=rf"\['{duplicated}'\]"):
+        validate_input(df, date_begin=date(2026, 9, 1), date_end=date(2026, 10, 1))
+
+
+def test_a_filter_listed_under_two_bands_is_refused():
+    """check_fluxcolumns() loops per band, so a filter listed twice would
+    populate *every* band listing it; the row loop it replaced returned the
+    first band and populated only that one.  utils/__init__.py enforces the
+    one-to-one mapping at import time -- this pins that the guard fires.
+    """
+    from pfs_target_uploader.utils import _check_bands_disjoint
+
+    with pytest.raises(ValueError, match="g_gaia"):
+        _check_bands_disjoint({"g": ["g_hsc", "g_gaia"], "r": ["g_gaia"]})
+
+
+def test_the_shipped_filter_category_is_disjoint():
+    """The test above only proves the helper works on a synthetic dict; this
+    one covers the literal the app actually runs on.
+
+    utils/__init__.py makes the same call at import, so a bad edit fails the
+    whole suite at collection -- but deleting *that call* would leave the
+    suite green and let a later non-disjoint edit ship unnoticed, since CI
+    runs no pytest.  This asserts the mapping independently of the call site.
+    """
+    from pfs_target_uploader.utils import _check_bands_disjoint, filter_category
+
+    _check_bands_disjoint(filter_category)
