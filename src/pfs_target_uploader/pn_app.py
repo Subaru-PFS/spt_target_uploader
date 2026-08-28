@@ -38,6 +38,46 @@ def _toggle_widgets(widgets: list, disabled: bool = True):
         w.disabled = disabled
 
 
+def relock_run_config_widgets(
+    obs_type,
+    *,
+    single_exptime,
+    pointing_list,
+    date_begin,
+    date_end,
+    run_ppp_button,
+    submit_button,
+):
+    """Re-disable the sidebar inputs that define a pending simulation result.
+
+    cb_validate, cb_PPP and cb_submit re-enable the whole sidebar when they
+    finish. This re-applies the locks that must outlast that blanket
+    re-enable:
+
+    - queue / filler pin ``single_exptime`` and the user pointing list to
+      their fixed values regardless of anything else; filler also keeps the
+      Simulate button off.
+    - Whenever a result the user could Submit is on screen (``submit_button``
+      enabled), ``single_exptime``, the pointing list and both date pickers
+      freeze too. All four feed cb_submit's re-validation and the validation
+      cache key, so moving any of them between Simulate and Submit makes
+      cb_submit write a ``target_<id>.ecsv`` whose visibility flags disagree
+      with the ``psl_*``/``ppc_*`` products of the run being submitted
+      (issue #486). Re-Validate / re-Simulate disables Submit, which lifts
+      this freeze.
+
+    Only ever disables; each callback owns the matching re-enable.
+    """
+    if obs_type == "filler":
+        _toggle_widgets([run_ppp_button], disabled=True)
+    if obs_type in ("queue", "filler"):
+        _toggle_widgets([single_exptime, pointing_list], disabled=True)
+    if not submit_button.disabled:
+        _toggle_widgets(
+            [single_exptime, pointing_list, date_begin, date_end], disabled=True
+        )
+
+
 def target_uploader_app(use_panel_cli=False):
     pn.state.notifications.position = "bottom-left"
 
@@ -149,6 +189,17 @@ def target_uploader_app(use_panel_cli=False):
         panel_dates.date_end,
         panel_ppcinput.file_input,
     ]
+
+    def relock_config_widgets():
+        relock_run_config_widgets(
+            panel_obs_type.obs_type.value,
+            single_exptime=panel_obs_type.single_exptime,
+            pointing_list=panel_ppcinput.file_input,
+            date_begin=panel_dates.date_begin,
+            date_end=panel_dates.date_end,
+            run_ppp_button=panel_ppp_button.PPPrun,
+            submit_button=panel_submit_button.submit,
+        )
 
     placeholder_floatpanel = pn.Column(height=0, width=0)
     placeholder_announcement = pn.Column(height=0, width=0)
@@ -364,20 +415,12 @@ def target_uploader_app(use_panel_cli=False):
             panel_timer.timer(on=False, time_limit=False)
             return
 
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
+        # Runs while Submit is still disabled (it is re-enabled at the end of
+        # this callback), so a plain Validate leaves single_exptime and the
+        # dates editable -- re-validating is how the user unfreezes them after
+        # a simulation. cb_PPP calls this *after* enabling Submit, so a
+        # successful simulation freezes them instead.
+        relock_config_widgets()
 
         render_validation_results(df_validated, validation_status)
 
@@ -558,20 +601,7 @@ def target_uploader_app(use_panel_cli=False):
 
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
+        relock_config_widgets()
 
         panel_timer.timer(on=False, time_limit=True)
 
@@ -696,20 +726,7 @@ def target_uploader_app(use_panel_cli=False):
         _toggle_widgets(widget_set, disabled=False)
         _toggle_widgets(button_set, disabled=False)
         _toggle_widgets([panel_submit_button.submit], disabled=True)
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
+        relock_config_widgets()
 
         if config.use_uid_db:
             await asyncio.to_thread(
