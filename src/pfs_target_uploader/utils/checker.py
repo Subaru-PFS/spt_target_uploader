@@ -774,42 +774,9 @@ def _warn_unusable_entries(column, series, finite, mask, logger):
     )
 
 
-def _reject_duplicate_flux_columns(df, filter_category):
-    """Refuse a frame carrying two columns of the same flux (or error) name.
-
-    ``df[column]`` hands back a DataFrame for a duplicated name, and the
-    ``pd.to_numeric`` below then raises "arg must be a list, tuple, 1-d array,
-    or Series" -- untraceable from the catch-all handler in
-    ``FileInputWidgets.validate()`` or a bare CLI traceback.
-
-    No input file gets here: ``pd.read_csv`` mangles CSV duplicates to
-    ``g_hsc.1`` and astropy Tables forbid duplicate names.  Only a caller
-    building a frame in memory can, which makes it a caller bug worth naming
-    rather than repairing.  (The pre-vectorization code round-tripped through
-    ``to_dict(orient="records")``, where the last duplicate silently won.)
-
-    Scoped to the columns this function actually reads: a duplicated ``ra`` is
-    a broken frame too, but not one flux detection can say anything useful
-    about.
-    """
-    read_here = {c for band_filters in filter_category.values() for c in band_filters}
-    read_here |= {f"{c}_error" for c in read_here}
-
-    offenders = sorted(
-        {c for c in df.columns[df.columns.duplicated()] if c in read_here}
-    )
-    if offenders:
-        raise ValueError(
-            "check_fluxcolumns() cannot read a frame with duplicate flux "
-            f"column name(s): {offenders}"
-        )
-
-
 def check_fluxcolumns(df, filter_category=filter_category, logger=logger):
     logger.info("Detecting flux columns")
     t_start = time.time()
-
-    _reject_duplicate_flux_columns(df, filter_category)
 
     dfout = df.copy(deep=True)
     n_rows = len(dfout)
@@ -1426,6 +1393,28 @@ def validate_input(
     if not dict_required_keys["status"]:
         msg_t_stop()
         return validation_status, df
+
+    # Every check below indexes the frame by column name, and a duplicated
+    # name makes df[col] a DataFrame rather than a Series.  Each consumer then
+    # fails in its own opaque way -- check_values() with "Cannot apply ufunc
+    # <ufunc 'logical_and'> to mixed DataFrame and Series inputs",
+    # check_fluxcolumns() with "arg must be a list, tuple, 1-d array, or
+    # Series" -- and neither names the column.  In the web app that reaches
+    # the catch-all handler in FileInputWidgets.validate(); in the CLI it is a
+    # bare traceback.
+    #
+    # Unreachable from a file: pd.read_csv mangles CSV duplicates to `ra.1`
+    # and astropy Tables forbid duplicate names.  Only a caller building a
+    # frame in memory can get here, so name the offenders rather than quietly
+    # repairing the frame.  (check_fluxcolumns() used to round-trip through
+    # to_dict(orient="records"), where the last duplicate silently won; the
+    # vectorized version has no such accidental tolerance.)
+    duplicated_columns = sorted(set(df.columns[df.columns.duplicated()]))
+    if duplicated_columns:
+        raise ValueError(
+            "validate_input() cannot read a frame with duplicate column "
+            f"name(s): {duplicated_columns}"
+        )
 
     if df.empty:
         desc = "The file contains no data rows."
