@@ -32,7 +32,6 @@ dependencies = [
   "panel>=1.8.0,<1.9.0",
   "pfs-instdata @ git+https://github.com/Subaru-PFS/pfs_instdata.git@1.8.71",
   "pfs-utils @ git+https://github.com/Subaru-PFS/pfs_utils.git@7.4.22",
-  "psutil>=6.0.0",
   "python-dotenv>=1.0.0",
   # Pinned to a tag: a bare URL tracks master, and an upgrade previously moved
   # qplan across the commit that relocated EphemerisCache into spot, breaking
@@ -53,7 +52,20 @@ dynamic = ["version"]
 pfs-uploader-cli = "pfs_target_uploader.cli.cli_main:app"
 
 [project.optional-dependencies]
-dev = ["black>=23.7.0", "ruff>=0.5.0", "ty", "ipython>=8.14.0", "pytest>=8.0.0"]
+# psutil is test-only: utils/process_group.py cleans up PPP with os.killpg, so
+# nothing under src/ imports psutil any more -- only tests/test_process_group.py,
+# to inspect process state. This does not keep psutil out of the Docker image:
+# lsst-utils (via pfs-datamodel <- ics-utils/pfs-utils) still pulls it in, so
+# `uv sync --frozen --no-dev` installs it anyway. It is declared here so the
+# runtime list states what the app actually imports.
+dev = [
+  "black>=23.7.0",
+  "ruff>=0.5.0",
+  "ty",
+  "ipython>=8.14.0",
+  "pytest>=8.0.0",
+  "psutil>=6.0.0",
+]
 profilers = ["pyinstrument>=4.6.0", "snakeviz>=2.2.0", "memray>=1.10.0"]
 # Only scripts/build-doc.sh and scripts/serve-doc.sh need this locally; the
 # Docker docs-builder stage and the GitHub Actions doc-build workflows each
