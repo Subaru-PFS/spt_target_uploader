@@ -23,6 +23,7 @@ Rules:
 1. Create feature branches off `dev-main` (e.g. `issue/<number>-<description>`, `fix/<description>`).
 2. **Open PRs against `dev-main`, not `main`** (`gh pr create --base dev-main`). Feature branches must never target `main` directly.
 3. A release is a single PR from `dev-main` into `main`. Only target `main` when the user explicitly asks for a release PR.
+4. **Issues stay open until the work reaches `main`.** Keep writing `Closes #<n>` in the PR body, but do not close the issue by hand when the PR merges into `dev-main` — GitHub only auto-closes on merges into the default branch (`main`), so the keyword fires on the release PR. An issue closed early claims the fix has shipped while it is still only on `dev-main`.
 
 ## Setup and Commands
 
