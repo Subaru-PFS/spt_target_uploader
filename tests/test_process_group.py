@@ -1,6 +1,8 @@
 import multiprocessing as mp
 import os
 import signal
+import subprocess
+import sys
 import time
 
 import psutil
@@ -70,6 +72,37 @@ def _fork_a_replacement_on_sigterm(pid_file):
         _record_pid(pid_file, pid)
 
     _sleep_until_self_destruct()
+
+
+def _fork_a_grandchild_then_die_abruptly(pid_file):
+    """Fork one child, then exit without running any cleanup.
+
+    A crash or os._exit() skips multiprocessing's atexit finalizers, so the
+    KDE pool would outlive PPPrunStart the same way -- leaving a leaderless
+    group whose members nothing walks any more.
+    """
+    pid = os.fork()
+    if pid == 0:
+        _plain_sleeper_child()
+    _record_pid(pid_file, pid)
+    os._exit(0)
+
+
+class _InterruptOnFirstJoin:
+    """A real process whose first join() raises, standing in for a second Ctrl-C."""
+
+    def __init__(self, proc):
+        self._proc = proc
+        self._joins = 0
+
+    def __getattr__(self, name):
+        return getattr(self._proc, name)
+
+    def join(self, timeout=None):
+        self._joins += 1
+        if self._joins == 1:
+            raise KeyboardInterrupt
+        return self._proc.join(timeout)
 
 
 def _ignore_sigterm_until_self_destruct(ready_file):
@@ -170,6 +203,49 @@ def test_terminate_process_group_escalates_to_sigkill(tmp_path):
     ), f"waited {elapsed:.1f} s: a child that ignores SIGTERM was not killed"
 
 
+def test_terminate_process_group_kills_what_a_dead_leader_left_behind(tmp_path):
+    # The leader can die on its own between the caller's is_alive() check and
+    # this call, or crash outright -- either way its group members are still
+    # running and nothing else can name them.
+    pid_file = tmp_path / "grandchild.txt"
+    pid_file.touch()
+    proc = start_in_process_group(
+        _fork_a_grandchild_then_die_abruptly,
+        args=(str(pid_file),),
+        name="test-crasher",
+    )
+    assert _wait_until(lambda: len(_read_pids(pid_file)) >= 1), "no grandchild forked"
+    assert _wait_until(lambda: not proc.is_alive()), "leader never exited"
+    orphan = _read_pids(pid_file)[0]
+    assert _is_running(orphan), "grandchild should outlive its leader here"
+
+    terminate_process_group(proc)
+
+    assert _wait_until(
+        lambda: not _is_running(orphan), timeout=5.0
+    ), "a dead leader's group members were left running"
+
+
+def test_terminate_process_group_escalates_even_when_the_wait_is_interrupted(tmp_path):
+    # A second Ctrl-C lands while terminate_process_group() waits out the
+    # SIGTERM. The escalation still has to happen, or a child that ignores
+    # SIGTERM is orphaned -- exactly what this function exists to prevent.
+    ready_file = tmp_path / "ready"
+    proc = start_in_process_group(
+        _ignore_sigterm_until_self_destruct,
+        args=(str(ready_file),),
+        name="test-interrupted",
+    )
+    assert _wait_until(ready_file.exists), "child never installed its SIGTERM handler"
+
+    with pytest.raises(KeyboardInterrupt):
+        terminate_process_group(_InterruptOnFirstJoin(proc), timeout=1.0)
+
+    assert _wait_until(
+        lambda: not _is_running(proc.pid), timeout=5.0
+    ), "SIGKILL escalation was skipped when the wait was interrupted"
+
+
 def test_terminate_process_group_falls_back_for_a_child_that_leads_no_group():
     # A child is briefly still in our own group between start() and the
     # setpgrp() call in the entrypoint. Cleanup during that window must fall
@@ -201,22 +277,21 @@ def test_signal_group_tolerates_a_zombie_only_group():
     # Reproduces a crash seen in manual CLI testing: by the time SIGKILL is
     # sent, SIGTERM has already killed every real member and none has been
     # reaped yet. On macOS, killpg on a group whose only members are zombies
-    # raises EPERM rather than ESRCH (same quirk _wait_for_group_to_clear
-    # already tolerates) -- _signal_group must tolerate it too, not just the
-    # "group is entirely gone" case.
-    pid = os.fork()
-    if pid == 0:
-        os.setpgrp()
-        os._exit(0)
+    # raises EPERM rather than ESRCH, so _signal_group has to tolerate more
+    # than the "group is entirely gone" case.
+    #
+    # start_new_session gives the child its own group without forking this
+    # multi-threaded pytest process; never wait()ing on it leaves the zombie.
+    child = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True)
 
     try:
         assert _wait_until(
-            lambda: psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
+            lambda: psutil.Process(child.pid).status() == psutil.STATUS_ZOMBIE
         ), "child never became a zombie"
 
-        _signal_group(pid, signal.SIGKILL)  # must not raise
+        _signal_group(child.pid, signal.SIGKILL)  # must not raise
     finally:
-        os.waitpid(pid, 0)
+        child.wait()
 
 
 def test_terminate_process_group_accepts_an_already_exited_process():

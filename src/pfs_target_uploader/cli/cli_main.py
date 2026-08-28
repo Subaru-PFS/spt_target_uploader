@@ -288,6 +288,10 @@ def simulate(
         # ppp_run leads its own process group, so it no longer shares our
         # terminal's foreground group and Ctrl-C does not reach it -- clean
         # it up ourselves before propagating, or it is orphaned instead.
+        #
+        # Unlike the timeout path below, this deliberately does not drain the
+        # queue: Ctrl-C means "abort this run", whereas --max-exec-time is a
+        # planned budget whose partial plan is the point of the exercise.
         terminate_process_group(ppp_run)
         raise
 

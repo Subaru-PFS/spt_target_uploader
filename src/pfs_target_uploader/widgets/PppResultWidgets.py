@@ -320,30 +320,31 @@ class PppResultWidgets:
             ),
         )
 
-        try:
-            # Wait max_exetime for PPP
-            ppp_run.join(max_exetime if max_exetime > 0 else None)
+        # Wait max_exetime for PPP
+        #
+        # No KeyboardInterrupt handling here: run_ppp() is called through
+        # asyncio.to_thread (pn_app.py), and CPython delivers SIGINT only to
+        # the main thread, so a handler on this one could never fire. One
+        # consequence is worth knowing: because ppp_run leads its own process
+        # group it no longer shares the server's foreground group, so Ctrl-C
+        # on a dev server does not reach PPP -- it keeps running until it
+        # finishes or hits max_exetime. Closing that needs cleanup driven
+        # from the main thread, not from here.
+        ppp_run.join(max_exetime if max_exetime > 0 else None)
 
-            if ppp_run.is_alive():
-                # if ppp is still running after max_exetime, kill it
-                logger.warning("Pointing simulation failed (run out of time)")
-                pn.state.notifications.error(
-                    f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
-                    duration=0,  # ever
-                )
+        if ppp_run.is_alive():
+            # if ppp is still running after max_exetime, kill it
+            logger.warning("Pointing simulation failed (run out of time)")
+            pn.state.notifications.error(
+                f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
+                duration=0,  # ever
+            )
 
-                terminate_process_group(ppp_run)
-
-                timed_out = True
-            else:
-                timed_out = False
-        except KeyboardInterrupt:
-            # ppp_run leads its own process group, so it no longer shares the
-            # server's foreground group and a SIGINT here does not reach it
-            # -- clean it up ourselves before the server exits, or it is
-            # orphaned instead.
             terminate_process_group(ppp_run)
-            sys.exit(0)
+
+            timed_out = True
+        else:
+            timed_out = False
 
         latest = drain_ppp_queue(ppp_run_results)
 

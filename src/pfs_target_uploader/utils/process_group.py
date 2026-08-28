@@ -15,7 +15,6 @@ microsecond earlier.
 import multiprocessing as mp
 import os
 import signal
-import time
 
 from loguru import logger
 
@@ -39,34 +38,21 @@ def _signal_group(pgid, sig):
 
     Every member is our own descendant running as us, so a permission error
     cannot mean someone else's process: macOS raises EPERM rather than ESRCH
-    for a real signal too (not just signal 0, see _wait_for_group_to_clear)
     when the group's only remaining members are zombies not yet reaped --
     e.g. SIGTERM already killed them and SIGKILL follows before anything
     reaps them. Those are dead and hold nothing, so treat it like ESRCH.
+    EPERM also means the signal was *not* delivered, so tolerating it cannot
+    disturb anything we did not already own.
     """
     try:
         os.killpg(pgid, sig)
-    except (ProcessLookupError, PermissionError):
+    except ProcessLookupError:
         pass
-
-
-def _wait_for_group_to_clear(pgid, timeout, interval=0.02):
-    """Block until no member of ``pgid`` is left, or ``timeout`` runs out.
-
-    Signal 0 reports whether the group still has a member. A killed process
-    leaves the group as soon as it is reaped, and an orphan is reaped by init
-    as soon as its parent is gone, so this normally returns within a tick.
-    See _signal_group for why a PermissionError here also means clear.
-    """
-    deadline = time.monotonic() + timeout
-    while True:
-        try:
-            os.killpg(pgid, 0)
-        except (ProcessLookupError, PermissionError):
-            return True
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(interval)
+    except PermissionError:
+        logger.debug(
+            f"killpg({pgid}, {sig}) refused with EPERM;"
+            " treating the group as already dead"
+        )
 
 
 def terminate_process_group(proc, timeout=5.0):
@@ -75,19 +61,34 @@ def terminate_process_group(proc, timeout=5.0):
     Escalates to ``SIGKILL`` for anything still standing ``timeout`` seconds
     after the ``SIGTERM``. The group outlives its leader as long as it has
     members, so the second signal still reaches a grandchild that ignored the
-    first one -- or one the child forked while it was being terminated. Waits
-    for the group to empty before returning, so callers can rely on nothing
-    being left behind.
+    first one -- or one the child forked while it was being terminated.
+
+    SIGKILL cannot be blocked, so every member is dead once this returns.
+    Reaping them is init's job, and waiting for it here would hang wherever
+    PID 1 does not reap (a container with no init and no supervisor loop).
     """
-    if proc.pid is None or not proc.is_alive():
+    if proc.pid is None:
         proc.join()
         return
 
     pgid = proc.pid
 
+    if not proc.is_alive():
+        # The leader is gone, but a crash or os._exit() skips multiprocessing's
+        # finalizers, so its pool can still be running in the group it left
+        # behind -- and with the leader dead, nothing else can name those
+        # processes. proc.pid is a child's pid, never the pgid of our own
+        # group, so this is safe to send blind; it reaches nothing if the
+        # group is already empty.
+        _signal_group(pgid, signal.SIGKILL)
+        proc.join()
+        return
+
     try:
         leads_own_group = os.getpgid(proc.pid) == pgid
     except ProcessLookupError:
+        # Exited between the check above and here; same reasoning as above.
+        _signal_group(pgid, signal.SIGKILL)
         proc.join()
         return
 
@@ -105,13 +106,12 @@ def terminate_process_group(proc, timeout=5.0):
         proc.join()
         return
 
-    _signal_group(pgid, signal.SIGTERM)
-    proc.join(timeout)
-    _signal_group(pgid, signal.SIGKILL)
-    proc.join()
-
-    if not _wait_for_group_to_clear(pgid, timeout):
-        logger.warning(
-            f"process group {pgid} ({proc.name}) still has members"
-            f" {timeout:.0f} s after SIGKILL"
-        )
+    try:
+        _signal_group(pgid, signal.SIGTERM)
+        proc.join(timeout)
+    finally:
+        # Escalate even if the wait was cut short -- a second Ctrl-C during
+        # cleanup would otherwise leave the group half-signalled, orphaning
+        # whatever ignored the SIGTERM.
+        _signal_group(pgid, signal.SIGKILL)
+        proc.join()
