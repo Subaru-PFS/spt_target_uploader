@@ -82,6 +82,16 @@ ppc_datatype = {
 }
 
 
+# The mapping must stay one-to-one: no filter may appear under two bands.
+# check_fluxcolumns() works one band at a time and would populate *every* band
+# that lists a filter, where the row loop it replaced returned the first
+# matching band and populated only that one.
+#
+# The Gaia entries are the ones most likely to look like a typo worth
+# "correcting" by adding a second entry.  They are deliberate, and follow
+# effective wavelength rather than the band letter: BP (~330-680 nm) sits with
+# g, G is broad (~330-1050 nm) but centred near r, and RP (~630-1050 nm) sits
+# with i.  Adding g_gaia to "g" would break the invariant below.
 filter_category = {
     "g": ["g_hsc", "g_ps1", "g_sdss", "bp_gaia"],
     "r": ["r_old_hsc", "r2_hsc", "r_ps1", "r_sdss", "g_gaia"],
@@ -90,6 +100,29 @@ filter_category = {
     "y": ["y_hsc", "y_ps1"],
     "j": [],
 }
+
+
+def _check_bands_disjoint(categories: dict) -> None:
+    """Raise if any filter is listed under more than one band.
+
+    Enforced at import rather than in a test: the test suite does not run in
+    CI, so a bad edit to the literal above would otherwise reach the app and
+    show up as a filter quietly counted twice.  ``raise`` rather than
+    ``assert`` so ``python -O`` cannot strip it.
+    """
+    band_of_filter = {}
+    for band, band_filters in categories.items():
+        for name in band_filters:
+            if name in band_of_filter:
+                raise ValueError(
+                    f"filter_category must map each filter to one band, but "
+                    f"{name!r} is listed under both {band_of_filter[name]!r} "
+                    f"and {band!r}"
+                )
+            band_of_filter[name] = band
+
+
+_check_bands_disjoint(filter_category)
 
 
 # filter_names = [

@@ -473,3 +473,65 @@ def test_non_numeric_flux_reads_as_missing_instead_of_raising():
     assert list(dict_flux["success"]) == [True, False, True]
     assert dict_flux["status"] is False
     assert out["filter_g"].tolist() == ["g_hsc", None, "g_hsc"]
+
+
+@pytest.mark.parametrize("duplicated", ["g_hsc", "g_hsc_error"])
+def test_a_duplicate_flux_column_is_refused_by_name(duplicated):
+    """``df[col]`` yields a DataFrame when the name is duplicated, and
+    ``pd.to_numeric`` then raises "arg must be a list, tuple, 1-d array, or
+    Series" -- too opaque to trace back from the web app's catch-all handler
+    or a CLI traceback.
+
+    No input file reaches this: ``pd.read_csv`` mangles CSV duplicates to
+    ``g_hsc.1`` and astropy Tables forbid duplicate names.  Only a caller
+    building a frame in memory can, so the frame is refused by name rather
+    than quietly repaired.  (Before the vectorization, ``to_dict`` collapsed
+    duplicates and the last one silently won.)
+    """
+    columns = [*BASE_COLUMNS, "g_hsc", "g_hsc_error", duplicated]
+    df = pd.DataFrame(
+        [["a", 1, 150.0, 2.0, 900.0, 1.0, "L", "r", 10.0, 1.0, 11.0]],
+        columns=columns,
+    )
+
+    with pytest.raises(ValueError, match=duplicated):
+        check_fluxcolumns(df)
+
+
+def test_a_duplicate_non_flux_column_is_not_this_functions_business():
+    """The guard covers only the columns check_fluxcolumns() reads.  A frame
+    with two ``ra`` columns is broken too, but not in a way this function
+    touches, and claiming otherwise would send the reader to the wrong place.
+    """
+    df = pd.DataFrame(
+        [["a", 1, 150.0, 150.0, 2.0, 900.0, 1.0, "L", "r", 10.0]],
+        columns=[
+            "ob_code",
+            "obj_id",
+            "ra",
+            "ra",
+            "dec",
+            "exptime",
+            "priority",
+            "resolution",
+            "reference_arm",
+            "g_hsc",
+        ],
+    )
+
+    dict_flux, out = check_fluxcolumns(df)
+
+    assert dict_flux["status"] is True
+    assert out["filter_g"].tolist() == ["g_hsc"]
+
+
+def test_a_filter_listed_under_two_bands_is_refused():
+    """check_fluxcolumns() loops per band, so a filter listed twice would
+    populate *every* band listing it; the row loop it replaced returned the
+    first band and populated only that one.  utils/__init__.py enforces the
+    one-to-one mapping at import time -- this pins that the guard fires.
+    """
+    from pfs_target_uploader.utils import _check_bands_disjoint
+
+    with pytest.raises(ValueError, match="g_gaia"):
+        _check_bands_disjoint({"g": ["g_hsc", "g_gaia"], "r": ["g_gaia"]})
