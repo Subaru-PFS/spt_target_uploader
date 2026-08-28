@@ -5,13 +5,13 @@ import sys
 
 import numpy as np
 import panel as pn
-import psutil
 from astropy import units as u
 from astropy.table import Table
 from loguru import logger
 
 from ..utils.io import upload_file
 from ..utils.ppp import PPPrunStart, drain_ppp_queue, ppp_result
+from ..utils.process_group import start_in_process_group, terminate_process_group
 
 
 class PppResultWidgets:
@@ -299,8 +299,11 @@ class PppResultWidgets:
 
         ppp_run_results = mp.Manager().Queue()
 
-        ppp_run = mp.Process(
-            target=PPPrunStart,
+        # PPPrunStart runs in its own process group (see process_group.py) so
+        # that on timeout, terminate_process_group() can clean up the whole
+        # tree -- including its KDE worker pool -- in one race-free sweep.
+        ppp_run = start_in_process_group(
+            PPPrunStart,
             name="PPP",
             args=(
                 tb_visible,
@@ -317,44 +320,30 @@ class PppResultWidgets:
             ),
         )
 
-        # start run PPP
-        ppp_run.start()
+        try:
+            # Wait max_exetime for PPP
+            ppp_run.join(max_exetime if max_exetime > 0 else None)
 
-        # Wait max_exetime for PPP
-        ppp_run.join(max_exetime if max_exetime > 0 else None)
+            if ppp_run.is_alive():
+                # if ppp is still running after max_exetime, kill it
+                logger.warning("Pointing simulation failed (run out of time)")
+                pn.state.notifications.error(
+                    f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
+                    duration=0,  # ever
+                )
 
-        if ppp_run.is_alive():
-            # if ppp is still running after max_exetime, kill it
-            logger.warning("Pointing simulation failed (run out of time)")
-            pn.state.notifications.error(
-                f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
-                duration=0,  # ever
-            )
+                terminate_process_group(ppp_run)
 
-            # Terminate child processes related to ppp_run (otherwise ppp_run.terminate will report BrokenPipeError)
-            for ps in mp.active_children():
-                current_process = psutil.Process(ps.pid)
-                children_process = current_process.children(recursive=True)
-
-                if len(children_process) > 0:
-                    # only kill ppp_run, not ppp_run_results (or kill it as well?? need FIX)
-                    for child_ in children_process:
-                        psutil.Process(child_.pid).terminate()
-
-            # Terminate PPP
-            ppp_run.terminate()
-
-            # Cleanup
-            try:
-                ppp_run.join()
-            except KeyboardInterrupt:
-                ppp_run.terminate()
-                ppp_run.join()
-                sys.exit(0)
-
-            timed_out = True
-        else:
-            timed_out = False
+                timed_out = True
+            else:
+                timed_out = False
+        except KeyboardInterrupt:
+            # ppp_run leads its own process group, so it no longer shares the
+            # server's foreground group and a SIGINT here does not reach it
+            # -- clean it up ourselves before the server exits, or it is
+            # orphaned instead.
+            terminate_process_group(ppp_run)
+            sys.exit(0)
 
         latest = drain_ppp_queue(ppp_run_results)
 

@@ -10,7 +10,6 @@ from typing import Annotated, Any
 
 import pandas as pd
 import panel as pn
-import psutil
 import typer
 from astropy.table import Table
 from dotenv import load_dotenv
@@ -20,6 +19,7 @@ from ..utils.checker import validate_input
 from ..utils.db import bulk_insert_uid_db, create_uid_db, remove_duplicate_uid_db
 from ..utils.io import load_input, upload_file
 from ..utils.ppp import PPPrunStart, drain_ppp_queue, ppp_result
+from ..utils.process_group import start_in_process_group, terminate_process_group
 from ..widgets import StatusWidgets
 
 app = typer.Typer(
@@ -260,8 +260,11 @@ def simulate(
 
     ppp_run_results = mp.Manager().Queue()
 
-    ppp_run = mp.Process(
-        target=PPPrunStart,
+    # PPPrunStart runs in its own process group (see process_group.py) so
+    # that on timeout, terminate_process_group() can clean up the whole
+    # tree -- including its KDE worker pool -- in one race-free sweep.
+    ppp_run = start_in_process_group(
+        PPPrunStart,
         name="PPP",
         args=(
             tb_visible,
@@ -278,11 +281,15 @@ def simulate(
         ),
     )
 
-    # start run PPP
-    ppp_run.start()
-
     # Wait max_exetime for PPP
-    ppp_run.join(max_exec_time if max_exec_time > 0 else None)
+    try:
+        ppp_run.join(max_exec_time if max_exec_time > 0 else None)
+    except KeyboardInterrupt:
+        # ppp_run leads its own process group, so it no longer shares our
+        # terminal's foreground group and Ctrl-C does not reach it -- clean
+        # it up ourselves before propagating, or it is orphaned instead.
+        terminate_process_group(ppp_run)
+        raise
 
     timed_out = ppp_run.is_alive()
 
@@ -293,21 +300,7 @@ def simulate(
             " reporting the pointings fixed so far"
         )
 
-        # Terminate child processes related to ppp_run (otherwise ppp_run.terminate will report BrokenPipeError)
-        for ps in mp.active_children():
-            current_process = psutil.Process(ps.pid)
-            children_process = current_process.children(recursive=True)
-
-            if len(children_process) > 0:
-                # only kill ppp_run, not ppp_run_results (or kill it as well?? need FIX)
-                for child_ in children_process:
-                    psutil.Process(child_.pid).terminate()
-
-        # Terminate PPP
-        ppp_run.terminate()
-
-        # Cleanup
-        ppp_run.join()
+        terminate_process_group(ppp_run)
 
     # PPP queues a snapshot every time it fixes a pointing, so the queue holds
     # a usable partial plan even when the run was cut short -- which is what
