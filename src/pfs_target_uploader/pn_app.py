@@ -227,7 +227,13 @@ def target_uploader_app(use_panel_cli=False):
         config = pending_run["config"]
         return config is None or config["target_input"] == target_input_identity()
 
-    def discard_pending_run_if_target_input_changed(_event):
+    # Takes *args: this watches three parameters, and a browser upload changes
+    # all three in one batched param.update(), which param delivers as one call
+    # carrying one Event per changed parameter. A single-argument signature
+    # raises TypeError there, and the exception aborts param's watcher loop
+    # before the binding that enables Validate/Simulate can run -- the file
+    # arrives and every button stays disabled.
+    def discard_pending_run_if_target_input_changed(*_events):
         _toggle_widgets([panel_submit_button.submit], disabled=True)
         if target_input_matches_pending_run():
             return
