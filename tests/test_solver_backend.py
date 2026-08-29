@@ -150,3 +150,23 @@ def test_run_ppp_reports_failure_when_the_child_produces_nothing(monkeypatch):
     # 2 renders as "no fiber assigned"; 1 is reserved for a timeout.
     assert widget.status_ == 2
     assert notifications.errors
+
+
+def test_reset_discards_all_previous_ppp_outputs():
+    """A new validation must not package products from a discarded run."""
+    from pfs_target_uploader.widgets.PppResultWidgets import PppResultWidgets
+
+    widget = PppResultWidgets()
+    widget.nppc = object()
+    widget.p_result_fig = object()
+    widget.p_result_ppc = object()
+    widget.p_result_tab = object()
+    widget.single_exptime = 1800
+
+    widget.reset()
+
+    assert widget.nppc is None
+    assert widget.p_result_fig is None
+    assert widget.p_result_ppc is None
+    assert widget.p_result_tab is None
+    assert widget.single_exptime == 900

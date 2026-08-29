@@ -67,6 +67,10 @@ class PppResultWidgets:
         )
 
         self.ppp_figure = pn.Column()
+        self.nppc = None
+        self.p_result_fig = None
+        self.p_result_ppc = None
+        self.p_result_tab = None
 
         self.ppp_alert = pn.Column()
 
@@ -80,6 +84,11 @@ class PppResultWidgets:
         self.ppp_figure.clear()
         self.ppp_figure.visible = False
         self.ppp_status = False
+        self.nppc = None
+        self.p_result_fig = None
+        self.p_result_ppc = None
+        self.p_result_tab = None
+        self.single_exptime = 900
         self.df_input = None
         self.df_summary = None
         self.origname = None
@@ -224,7 +233,7 @@ class PppResultWidgets:
         self.ppp_figure.append(self.ppp_alert)
         self.ppp_figure.append(pn.Row(self.reqtime, self.summary_text))
 
-        if self.p_result_tab is not None:
+        if self.p_result_tab is not None and self.p_result_ppc is not None:
             self.export_button = pn.widgets.FileDownload(
                 name="Export the results",
                 callback=pn.bind(
@@ -423,11 +432,11 @@ class PppResultWidgets:
 
         self.df_input["single_exptime"] = single_exptime
 
-        try:
+        if self.p_result_tab is not None and self.p_result_ppc is not None:
             df_psl = self.p_result_tab.value
             df_ppc = self.p_result_ppc.value
             ppp_fig = self.p_result_fig
-        except AttributeError:
+        else:
             df_psl = None
             df_ppc = None
             ppp_fig = None
