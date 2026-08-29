@@ -233,6 +233,7 @@ def target_uploader_app(use_panel_cli=False):
             return
         logger.info("Discarding the simulation result because the target list changed.")
         reset_simulation_result()
+        notify_target_input_changed_after_simulation()
         _toggle_widgets(widget_set, disabled=False)
         relock_config_widgets()
 
