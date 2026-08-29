@@ -246,7 +246,7 @@ def target_uploader_app(use_panel_cli=False):
     def notify_target_input_changed_after_simulation():
         notifications = pn.state.notifications
         if notifications is not None:
-            notifications.error(
+            notifications.warning(
                 "The target list changed after the simulation. "
                 "Validate and simulate it again before submitting.",
                 duration=0,
