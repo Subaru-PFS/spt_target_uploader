@@ -43,6 +43,8 @@ The procedure is briefly listed below:
       | ppc_priority | float    |        | Priority of the pointing center in the list |
       | ppc_code     | str      |        | Name of the pointing center                 |
 
+  After a simulation, you can change the observation type, observing period, unit exposure time, or pointing list to compare alternative plans. The previous result remains displayed. If the configuration differs from the displayed result, **Submit** is shown in yellow as a warning; run **Simulate** again to submit a result for the new configuration.
+
 <figure markdown>
   ![Config queue](images/ppp_queue.png){ width="300"}
   ![Config classical](images/ppp_classical_custom.png){ width="300" }
@@ -164,4 +166,5 @@ In the PPP calculation, the following parameters are fixed.
 | Maximum number of pointings            |   200 |         |
 
 [^1]: Overhead time charged for individual exposure such as readout, slew the telescope, field acquisition, and guide star acquisition.
+
 [^2]: Overhead time to obtain calibration data and focusing. Current best estimate is 1.2 h per night. That is, 1.2 h is charged for every 8.8 h individual exposures.

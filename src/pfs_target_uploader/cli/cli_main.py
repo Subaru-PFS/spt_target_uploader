@@ -439,9 +439,17 @@ def start_app(
     # pn.state.notifications.position = "bottom-left"
 
     if app == "uploader":
-        from ..pn_app import target_uploader_app as panel_app
+        from ..pn_app import (
+            target_uploader_app as panel_app,
+        )
+        from ..pn_app import (
+            terminate_active_ppp_runs,
+        )
     elif app == "admin":
         from ..pn_admin import list_files_app as panel_app
+
+        def terminate_active_ppp_runs():
+            return None
 
     if allow_websocket_origin is None:
         allow_websocket_origin = ["localhost"]
@@ -484,26 +492,29 @@ def start_app(
         kwargs: dict[str, Any] = {}  # dict(cookie_secret=cookie_secret)
 
     # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
-    pn.serve(
-        panel_app,
-        port=port,
-        prefix=prefix,
-        use_xheaders=use_xheaders,
-        num_procs=num_procs,
-        websocket_origin=allow_websocket_origin,
-        session_token_expiration=session_token_expiration,
-        static_dirs=static_dirs_dict,
-        show=False,
-        autoreload=autoreload,
-        # Increase the maximum websocket message size allowed by Bokeh
-        websocket_max_message_size=max_upload_size * 1024 * 1024,
-        # Increase the maximum buffer size allowed by Tornado
-        http_server_kwargs={
-            "max_buffer_size": max_upload_size * 1024 * 1024,
-            # "user_xheaders": use_xheaders,
-        },
-        **kwargs,
-    )
+    try:
+        pn.serve(
+            panel_app,
+            port=port,
+            prefix=prefix,
+            use_xheaders=use_xheaders,
+            num_procs=num_procs,
+            websocket_origin=allow_websocket_origin,
+            session_token_expiration=session_token_expiration,
+            static_dirs=static_dirs_dict,
+            show=False,
+            autoreload=autoreload,
+            # Increase the maximum websocket message size allowed by Bokeh
+            websocket_max_message_size=max_upload_size * 1024 * 1024,
+            # Increase the maximum buffer size allowed by Tornado
+            http_server_kwargs={
+                "max_buffer_size": max_upload_size * 1024 * 1024,
+                # "user_xheaders": use_xheaders,
+            },
+            **kwargs,
+        )
+    finally:
+        terminate_active_ppp_runs()
 
 
 @app.command(help="Generate a SQLite database of upload_id")

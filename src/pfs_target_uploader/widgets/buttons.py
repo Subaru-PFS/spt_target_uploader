@@ -102,10 +102,10 @@ class SubmitButtonWidgets:
 
     def enable_button(self, ppp_status):
         if ppp_status:
-            self.submit.stylesheets = []
-            self.submit.stylesheets = [stylesheet]
-            self.submit.disabled = False
+            self.set_warning(False)
         else:
-            self.submit.stylesheets = []
-            self.submit.stylesheets = [stylesheet_warning]
-            self.submit.disabled = False
+            self.set_warning(True)
+
+    def set_warning(self, warning):
+        self.submit.stylesheets = [stylesheet_warning if warning else stylesheet]
+        self.submit.disabled = False

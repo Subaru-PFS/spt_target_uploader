@@ -2,7 +2,8 @@
 
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
+import weakref
+from datetime import UTC, datetime, timedelta, timezone
 from pprint import pformat
 
 import gurobipy
@@ -32,10 +33,51 @@ from .widgets import (
     ValidationResultWidgets,
 )
 
+_active_ppp_widgets = weakref.WeakSet()
+
+
+def terminate_active_ppp_runs():
+    """Stop PPP processes still running in any active web-app session."""
+    for panel_ppp in list(_active_ppp_widgets):
+        panel_ppp.terminate_active_ppp()
+
 
 def _toggle_widgets(widgets: list, disabled: bool = True):
     for w in widgets:
         w.disabled = disabled
+
+
+def run_config_matches(completed_config, current_config):
+    """Return whether the editable inputs still match a completed PPP run."""
+    return completed_config == current_config
+
+
+def relock_run_config_widgets(
+    obs_type_widgets,
+    ppc_input_widgets,
+    date_widgets,
+    ppp_button_widgets,
+):
+    """Re-apply sidebar constraints that are inherent to an observation mode.
+
+    cb_validate, cb_PPP and cb_submit re-enable the whole sidebar when they
+    finish. This re-applies only the locks that must outlast that blanket
+    re-enable:
+
+    - queue / filler pin ``single_exptime`` and the user pointing list to
+      their fixed values regardless of anything else; filler also keeps the
+      Simulate button off.
+
+    Only ever disables; each callback owns the matching re-enable.
+    """
+    obs_type = obs_type_widgets.obs_type.value
+    if obs_type == "filler":
+        _toggle_widgets([ppp_button_widgets.PPPrun], disabled=True)
+    if obs_type in ("queue", "filler"):
+        _toggle_widgets(
+            [obs_type_widgets.single_exptime, ppc_input_widgets.file_input],
+            disabled=True,
+        )
 
 
 def target_uploader_app(use_panel_cli=False):
@@ -92,6 +134,10 @@ def target_uploader_app(use_panel_cli=False):
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
     panel_ppp = PppResultWidgets()
+    _active_ppp_widgets.add(panel_ppp)
+    pn.state.on_session_destroyed(
+        lambda _session_context: panel_ppp.terminate_active_ppp()
+    )
 
     panel_input.reset()
     panel_input.db_path = config.db_path
@@ -102,6 +148,7 @@ def target_uploader_app(use_panel_cli=False):
     # and cb_PPP both render the same data, and that is 2.7 s of Tabulator
     # work on a 30,000-row list. None means "nothing trustworthy on screen".
     rendered_validation = {"key": None}
+    pending_run = {"config": None, "stale": False}
 
     def reset_validation_panels():
         """The only sanctioned way to blank the validation panels.
@@ -137,6 +184,12 @@ def target_uploader_app(use_panel_cli=False):
         panel_targets.show_results(df_validated)
         rendered_validation["key"] = key
 
+    def reset_simulation_result():
+        """Discard a PPP result that can no longer be submitted."""
+        pending_run["config"] = None
+        pending_run["stale"] = False
+        panel_ppp.reset()
+
     button_set = [
         panel_input.file_input,
         panel_validate_button.validate,
@@ -150,6 +203,101 @@ def target_uploader_app(use_panel_cli=False):
         panel_ppcinput.file_input,
     ]
 
+    def relock_config_widgets():
+        relock_run_config_widgets(
+            panel_obs_type,
+            panel_ppcinput,
+            panel_dates,
+            panel_ppp_button,
+        )
+
+    def restore_controls():
+        _toggle_widgets(widget_set, disabled=False)
+        _toggle_widgets(button_set, disabled=False)
+        relock_config_widgets()
+
+    def target_input_identity():
+        return (
+            panel_input.file_input.filename,
+            panel_input.file_input.mime_type,
+            panel_input.file_input.value,
+        )
+
+    def current_run_config():
+        observation_type = panel_obs_type.obs_type.value
+        return {
+            "observation_type": observation_type,
+            "date_begin": panel_dates.date_begin.value,
+            "date_end": panel_dates.date_end.value,
+            "single_exptime": panel_obs_type.single_exptime.value,
+            "min_mag": get_min_fluxmag_for_obstype(observation_type, config),
+            "max_mag": config.max_fluxmag,
+            "target_input": target_input_identity(),
+            "pointing_input": (
+                panel_ppcinput.file_input.filename,
+                panel_ppcinput.file_input.value,
+            ),
+        }
+
+    def target_input_matches_pending_run():
+        run_config = pending_run["config"]
+        return (
+            run_config is None or run_config["target_input"] == target_input_identity()
+        )
+
+    def pending_run_matches_current_config():
+        run_config = pending_run["config"]
+        return run_config is not None and run_config_matches(
+            run_config, current_run_config()
+        )
+
+    def notify_config_changed_after_simulation():
+        notifications = pn.state.notifications
+        if notifications is not None:
+            notifications.warning(
+                "The simulation result uses different configuration values. "
+                "Simulate again before submitting.",
+                duration=5000,
+            )
+
+    def refresh_pending_run_submission_state(*_events):
+        """Mark a prior result when Config no longer matches its input snapshot."""
+        if pending_run["config"] is None:
+            return
+
+        is_current = pending_run_matches_current_config()
+        was_stale = pending_run["stale"]
+        pending_run["stale"] = not is_current
+        panel_submit_button.set_warning(not is_current)
+
+        if not is_current and not was_stale:
+            notify_config_changed_after_simulation()
+
+    # Takes *args: this watches three parameters, and a browser upload changes
+    # all three in one batched param.update(), which param delivers as one call
+    # carrying one Event per changed parameter. A single-argument signature
+    # raises TypeError there, and the exception aborts param's watcher loop
+    # before the binding that enables Validate/Simulate can run -- the file
+    # arrives and every button stays disabled.
+    def discard_pending_run_if_target_input_changed(*_events):
+        _toggle_widgets([panel_submit_button.submit], disabled=True)
+        if target_input_matches_pending_run():
+            return
+        logger.info("Discarding the simulation result because the target list changed.")
+        reset_simulation_result()
+        notify_target_input_changed_after_simulation()
+        _toggle_widgets(widget_set, disabled=False)
+        relock_config_widgets()
+
+    def notify_target_input_changed_after_simulation():
+        notifications = pn.state.notifications
+        if notifications is not None:
+            notifications.warning(
+                "The target list changed after the simulation. "
+                "Validate and simulate it again before submitting.",
+                duration=0,
+            )
+
     placeholder_floatpanel = pn.Column(height=0, width=0)
     placeholder_announcement = pn.Column(height=0, width=0)
 
@@ -162,7 +310,7 @@ def target_uploader_app(use_panel_cli=False):
     #
     # If the observatin type is 'queue' or 'classical', enable the validate and simulate buttons.
     # If the observation type is 'filler', enable only the validate button.
-    def enable_buttons_by_fileinput(v, pv, obs_type):
+    def enable_buttons_by_fileinput(v, obs_type):
         if v is None:
             logger.info("Buttons are disabled because no file is uploaded.")
             _toggle_widgets(
@@ -189,11 +337,6 @@ def target_uploader_app(use_panel_cli=False):
                 [panel_ppp_button.PPPrun],
                 disabled=True,
             )
-        if (v is not None) and (v != pv):
-            _toggle_widgets(
-                [panel_submit_button.submit],
-                disabled=True,
-            )
 
     # if the observation type is 'classical', enable the exposure time widget.
     # if the observation type is 'queue' or 'filler', disable the exposure time widget and reset the file input widget.
@@ -211,11 +354,23 @@ def target_uploader_app(use_panel_cli=False):
     fileinput_watcher = pn.bind(
         enable_buttons_by_fileinput,
         panel_input.file_input,
-        panel_input.previous_value,
         panel_obs_type.obs_type,
     )
 
     ppcinput_watcher = pn.bind(toggle_classical_mode, panel_obs_type.obs_type)
+    panel_input.file_input.param.watch(
+        discard_pending_run_if_target_input_changed,
+        ["filename", "mime_type", "value"],
+    )
+    panel_obs_type.obs_type.param.watch(refresh_pending_run_submission_state, "value")
+    panel_obs_type.single_exptime.param.watch(
+        refresh_pending_run_submission_state, "value"
+    )
+    panel_dates.date_begin.param.watch(refresh_pending_run_submission_state, "value")
+    panel_dates.date_end.param.watch(refresh_pending_run_submission_state, "value")
+    panel_ppcinput.file_input.param.watch(
+        refresh_pending_run_submission_state, ["filename", "value"]
+    )
 
     # bundle panels in the sidebar
     sidebar_column = pn.Column(
@@ -325,24 +480,26 @@ def target_uploader_app(use_panel_cli=False):
 
         tab_panels.visible = False
 
-        # Select min_mag based on observation type
-        # (computed before the resets below, which need it too)
+        observation_type = panel_obs_type.obs_type.value
         effective_min_mag = get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value,
+            observation_type,
             config,
         )
+        validation_args = {
+            "date_begin": panel_dates.date_begin.value,
+            "date_end": panel_dates.date_end.value,
+            "single_exptime": panel_obs_type.single_exptime.value,
+            "min_mag": effective_min_mag,
+            "max_mag": config.max_fluxmag,
+        }
 
         # Blank the panels only when a real validation is about to run: a
         # cached one returns instantly, so there is nothing stale to hide.
         if not panel_input.has_cached_validation(
-            date_begin=panel_dates.date_begin.value,
-            date_end=panel_dates.date_end.value,
-            single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=effective_min_mag,
-            max_mag=config.max_fluxmag,
+            **validation_args,
         ):
             reset_validation_panels()
-        panel_ppp.reset()
+        reset_simulation_result()
 
         pn.state.notifications.clear()
 
@@ -350,34 +507,14 @@ def target_uploader_app(use_panel_cli=False):
 
         validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
-            date_begin=panel_dates.date_begin.value,
-            date_end=panel_dates.date_end.value,
-            single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=effective_min_mag,
-            max_mag=config.max_fluxmag,
+            **validation_args,
         )
 
-        _toggle_widgets(widget_set, disabled=False)
-        _toggle_widgets(button_set, disabled=False)
+        restore_controls()
 
         if validation_status is None:
             panel_timer.timer(on=False, time_limit=False)
             return
-
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
 
         render_validation_results(df_validated, validation_status)
 
@@ -385,8 +522,7 @@ def target_uploader_app(use_panel_cli=False):
         try:
             panel_ppp.df_summary = panel_status.df_summary
         except AttributeError as e:
-            logger.error(f"{str(e)}")
-            pass
+            logger.error(f"{e!s}")
 
         tab_panels.active = 1
         tab_panels.visible = True
@@ -396,7 +532,7 @@ def target_uploader_app(use_panel_cli=False):
         if validation_status["status"]:
             ready_to_submit = (
                 panel_ppp.ppp_status
-                if panel_obs_type.obs_type.value in ["queue", "classical"]
+                if observation_type in ["queue", "classical"]
                 else True
             )
             # panel_submit_button.enable_button(panel_ppp.ppp_status)
@@ -410,25 +546,26 @@ def target_uploader_app(use_panel_cli=False):
 
         placeholder_floatpanel.objects = []
 
-        # Select min_mag based on observation type
-        # (computed before the resets below, which need it too)
-        effective_min_mag = get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value,
-            config,
-        )
+        run_config = current_run_config()
+        validation_args = {
+            key: run_config[key]
+            for key in (
+                "date_begin",
+                "date_end",
+                "single_exptime",
+                "min_mag",
+                "max_mag",
+            )
+        }
 
         # reset some panels -- but only when a real validation is about to
         # run, otherwise the status pane would be blanked and then skipped
         # by the render gate below.
         if not panel_input.has_cached_validation(
-            date_begin=panel_dates.date_begin.value,
-            date_end=panel_dates.date_end.value,
-            single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=effective_min_mag,
-            max_mag=config.max_fluxmag,
+            **validation_args,
         ):
             reset_validation_panels()
-        panel_ppp.reset()
+        reset_simulation_result()
 
         pn.state.notifications.clear()
 
@@ -436,16 +573,12 @@ def target_uploader_app(use_panel_cli=False):
 
         validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
-            date_begin=panel_dates.date_begin.value,
-            date_end=panel_dates.date_end.value,
-            single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=effective_min_mag,
-            max_mag=config.max_fluxmag,
+            **validation_args,
         )
         df_ppc = await asyncio.to_thread(panel_ppcinput.validate)
 
         if df_ppc is None:
-            _toggle_widgets(button_set, disabled=False)
+            restore_controls()
             panel_timer.timer(on=False, time_limit=False)
             return
         elif not df_ppc.empty:
@@ -455,8 +588,7 @@ def target_uploader_app(use_panel_cli=False):
             )
 
         if validation_status is None:
-            _toggle_widgets(button_set, disabled=False)
-            _toggle_widgets(widget_set, disabled=False)
+            restore_controls()
             panel_timer.timer(on=False, time_limit=False)
             return
 
@@ -470,8 +602,7 @@ def target_uploader_app(use_panel_cli=False):
             render_validation_results(df_validated, validation_status)
             tab_panels.active = 1
             tab_panels.visible = True
-            _toggle_widgets(button_set, disabled=False)
-            _toggle_widgets(widget_set, disabled=False)
+            restore_controls()
             panel_timer.timer(on=False, time_limit=False)
             return
 
@@ -481,8 +612,7 @@ def target_uploader_app(use_panel_cli=False):
                 "Cannot simulate pointing for 0 visible targets",
                 duration=0,
             )
-            _toggle_widgets(button_set, disabled=False)
-            _toggle_widgets(widget_set, disabled=False)
+            restore_controls()
             panel_timer.timer(on=False, time_limit=False)
             return
 
@@ -496,16 +626,15 @@ def target_uploader_app(use_panel_cli=False):
         try:
             panel_timer.timer(on=True, time_limit=True)
 
-            panel_ppp.origname = panel_input.file_input.filename
-            panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
-            panel_ppp.origdata = panel_input.file_input.value
-            panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
+            panel_ppp.origname = run_config["target_input"][0]
+            panel_ppp.origname_ppc = run_config["pointing_input"][0]
+            panel_ppp.origdata = run_config["target_input"][2]
+            panel_ppp.origdata_ppc = run_config["pointing_input"][1]
             panel_ppp.df_summary = panel_status.df_summary
 
             if not validation_status["status"]:
                 logger.error("Validation failed")
-                _toggle_widgets(button_set, disabled=False)
-                _toggle_widgets(widget_set, disabled=False)
+                restore_controls()
                 panel_timer.timer(on=False, time_limit=True)
                 return
 
@@ -526,7 +655,7 @@ def target_uploader_app(use_panel_cli=False):
                 df_validated,
                 df_ppc,
                 validation_status,
-                single_exptime=panel_obs_type.single_exptime.value,
+                single_exptime=run_config["single_exptime"],
                 clustering_algorithm=config.clustering_algorithm,
                 quiet=config.ppp_quiet,
                 max_exetime=config.max_exetime,
@@ -539,39 +668,22 @@ def target_uploader_app(use_panel_cli=False):
 
             tab_panels.active = 2
 
-            # enable the submit button only with the successful validation
-            if validation_status["status"]:
-                panel_submit_button.enable_button(panel_ppp.ppp_status)
-                panel_submit_button.submit.disabled = False
-
             if panel_ppp.nppc is None:
                 logger.error("Pointing simulation failed")
-                _toggle_widgets(button_set, disabled=False)
-                _toggle_widgets(widget_set, disabled=False)
+                restore_controls()
                 _toggle_widgets([panel_submit_button.submit], disabled=True)
                 panel_timer.timer(on=False, time_limit=True)
                 return
 
-        except gurobipy.GurobiError as e:
-            pn.state.notifications.error(f"{str(e)}", duration=0)
-            pass
+            pending_run["config"] = run_config
+            pending_run["stale"] = False
+            panel_submit_button.enable_button(panel_ppp.ppp_status)
+            panel_submit_button.submit.disabled = False
 
-        _toggle_widgets(widget_set, disabled=False)
-        _toggle_widgets(button_set, disabled=False)
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
+        except gurobipy.GurobiError as e:
+            pn.state.notifications.error(f"{e!s}", duration=0)
+
+        restore_controls()
 
         panel_timer.timer(on=False, time_limit=True)
 
@@ -585,6 +697,15 @@ def target_uploader_app(use_panel_cli=False):
         logger.info("Submit button clicked.")
         logger.info("Validation before actually writing to the storage")
 
+        submission_config = pending_run["config"]
+        has_pending_run = submission_config is not None
+        if has_pending_run and not target_input_matches_pending_run():
+            logger.error("Target list changed after the simulation result was created")
+            notify_target_input_changed_after_simulation()
+            reset_simulation_result()
+            restore_controls()
+            panel_timer.timer(on=False, time_limit=False)
+            return
         # Clear stale notifications up front, as cb_validate() and cb_PPP() do.
         # Clearing after panel_input.validate() has run would wipe the sticky
         # notifications it raises to report a failure.
@@ -592,23 +713,40 @@ def target_uploader_app(use_panel_cli=False):
 
         panel_timer.timer(on=True, time_limit=False)
 
-        # do the validation again and again (input file can be different)
-        # and I don't know how to implement to return value
-        # from callback to another function (sorry)
-        # Select min_mag based on observation type
-        effective_min_mag = get_min_fluxmag_for_obstype(
-            panel_obs_type.obs_type.value,
-            config,
-        )
+        if submission_config is None:
+            observation_type = panel_obs_type.obs_type.value
+            effective_min_mag = get_min_fluxmag_for_obstype(observation_type, config)
+            submission_config = {
+                "observation_type": observation_type,
+                "date_begin": panel_dates.date_begin.value,
+                "date_end": panel_dates.date_end.value,
+                "single_exptime": panel_obs_type.single_exptime.value,
+                "min_mag": effective_min_mag,
+                "max_mag": config.max_fluxmag,
+            }
+        validation_args = {
+            key: submission_config[key]
+            for key in (
+                "date_begin",
+                "date_end",
+                "single_exptime",
+                "min_mag",
+                "max_mag",
+            )
+        }
 
         validation_status, df_validated = await asyncio.to_thread(
             panel_input.validate,
-            date_begin=panel_dates.date_begin.value,
-            date_end=panel_dates.date_end.value,
-            single_exptime=panel_obs_type.single_exptime.value,
-            min_mag=effective_min_mag,
-            max_mag=config.max_fluxmag,
+            **validation_args,
         )
+
+        if has_pending_run and pending_run["config"] is not submission_config:
+            logger.error("Simulation result changed while it was validated")
+            notify_target_input_changed_after_simulation()
+            reset_simulation_result()
+            restore_controls()
+            panel_timer.timer(on=False, time_limit=False)
+            return
 
         if (validation_status is None) or (not validation_status["status"]):
             logger.error("Validation failed for some reason")
@@ -616,9 +754,9 @@ def target_uploader_app(use_panel_cli=False):
             tab_panels.visible = False
 
             reset_validation_panels()
+            reset_simulation_result()
 
-            _toggle_widgets(widget_set, disabled=False)
-            _toggle_widgets(button_set, disabled=False)
+            restore_controls()
 
             if validation_status is None:
                 panel_timer.timer(on=False, time_limit=False)
@@ -632,10 +770,11 @@ def target_uploader_app(use_panel_cli=False):
         panel_ppp.df_input = df_validated
         panel_ppp.df_summary = panel_status.df_summary
         panel_ppp.origname = panel_input.file_input.filename
-        panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
         panel_ppp.origdata = panel_input.file_input.value
-        panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
-        panel_ppp.upload_time = datetime.now(timezone.utc)
+        if pending_run["config"] is None:
+            panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
+            panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
+        panel_ppp.upload_time = datetime.now(UTC)
         panel_ppp.secret_token = panel_input.secret_token
 
         if panel_ppp.status_ == 2:
@@ -648,8 +787,8 @@ def target_uploader_app(use_panel_cli=False):
         outdir, outfile_zip, _ = await asyncio.to_thread(
             panel_ppp.upload,
             outdir_prefix=config.output_dir,
-            single_exptime=panel_obs_type.single_exptime.value,
-            observation_type=panel_obs_type.obs_type.value,
+            single_exptime=submission_config["single_exptime"],
+            observation_type=submission_config["observation_type"],
             ppc_status=ppc_status_,
         )
 
@@ -682,7 +821,7 @@ def target_uploader_app(use_panel_cli=False):
                     url=pn.state.location.href,
                 )
         except Exception as e:
-            logger.error(f"Failed to send an email: {str(e)}")
+            logger.error(f"Failed to send an email: {e!s}")
 
         panel_notes = UploadNoteWidgets(
             panel_ppp.secret_token,
@@ -693,23 +832,9 @@ def target_uploader_app(use_panel_cli=False):
         )
         placeholder_floatpanel[:] = [panel_notes.floatpanel]
 
-        _toggle_widgets(widget_set, disabled=False)
-        _toggle_widgets(button_set, disabled=False)
+        pending_run["config"] = None
+        restore_controls()
         _toggle_widgets([panel_submit_button.submit], disabled=True)
-        if panel_obs_type.obs_type.value == "queue":
-            _toggle_widgets(
-                [panel_obs_type.single_exptime, panel_ppcinput.file_input],
-                disabled=True,
-            )
-        if panel_obs_type.obs_type.value == "filler":
-            _toggle_widgets(
-                [
-                    panel_ppp_button.PPPrun,
-                    panel_obs_type.single_exptime,
-                    panel_ppcinput.file_input,
-                ],
-                disabled=True,
-            )
 
         if config.use_uid_db:
             await asyncio.to_thread(

@@ -150,3 +150,90 @@ def test_run_ppp_reports_failure_when_the_child_produces_nothing(monkeypatch):
     # 2 renders as "no fiber assigned"; 1 is reserved for a timeout.
     assert widget.status_ == 2
     assert notifications.errors
+
+
+def test_reset_discards_all_previous_ppp_outputs():
+    """A new validation must not package products from a discarded run."""
+    from pfs_target_uploader.widgets.PppResultWidgets import PppResultWidgets
+
+    widget = PppResultWidgets()
+    widget.nppc = object()
+    widget.p_result_fig = object()
+    widget.p_result_ppc = object()
+    widget.p_result_tab = object()
+    widget.single_exptime = 1800
+
+    widget.reset()
+
+    assert widget.nppc is None
+    assert widget.p_result_fig is None
+    assert widget.p_result_ppc is None
+    assert widget.p_result_tab is None
+    assert widget.single_exptime == 900
+
+
+def test_terminate_active_ppp_stops_the_registered_process_once(monkeypatch):
+    import importlib
+
+    from pfs_target_uploader.widgets import PppResultWidgets
+
+    ppp_widgets = importlib.import_module(
+        "pfs_target_uploader.widgets.PppResultWidgets"
+    )
+
+    widget = PppResultWidgets()
+    active_process = object()
+    terminated = []
+    widget._ppp_process = active_process
+    monkeypatch.setattr(
+        ppp_widgets,
+        "terminate_process_group",
+        lambda process: terminated.append(process),
+    )
+
+    widget.terminate_active_ppp()
+    widget.terminate_active_ppp()
+
+    assert terminated == [active_process]
+    assert widget._ppp_process is None
+
+
+def test_server_cleanup_terminates_each_active_ppp_widget_once(monkeypatch):
+    from pfs_target_uploader import pn_app
+
+    class _PppWidget:
+        def __init__(self):
+            self.terminations = 0
+
+        def terminate_active_ppp(self):
+            self.terminations += 1
+
+    first = _PppWidget()
+    second = _PppWidget()
+    monkeypatch.setattr(pn_app, "_active_ppp_widgets", {first, second})
+
+    pn_app.terminate_active_ppp_runs()
+
+    assert first.terminations == 1
+    assert second.terminations == 1
+
+
+def test_start_app_cleans_active_ppp_when_panel_server_stops(monkeypatch):
+    import panel as pn
+
+    from pfs_target_uploader import pn_app
+    from pfs_target_uploader.cli import cli_main
+
+    cleanup_calls = []
+    monkeypatch.setattr(pn, "serve", lambda *args, **kwargs: None)
+    monkeypatch.setattr(cli_main.logger, "remove", lambda *args, **kwargs: None)
+    monkeypatch.setattr(cli_main.logger, "add", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        pn_app,
+        "terminate_active_ppp_runs",
+        lambda: cleanup_calls.append(True),
+    )
+
+    cli_main.start_app(cli_main.PanelAppName.uploader, port=0)
+
+    assert cleanup_calls == [True]

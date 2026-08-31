@@ -205,6 +205,8 @@ Numbers of objects and fiberhours for each priority are displayed for the `L` an
 
 You can set the observing period for visibility check. By default, the dates are set to the next semester.
 
+After a pointing simulation, configuration values remain editable to support comparing plans. Changing a configuration value keeps the previous result visible and changes **Submit** to yellow as a warning. Run the simulation again to submit a result for the changed configuration.
+
 ## Main panel (right)
 
 The details of the validation results are shown in the main panel.
@@ -217,15 +219,15 @@ Please modify them to make them acceptable for the uploader.
 Each table of flagged targets has a **Download CSV** button placed between the message and the table.
 Clicking the button downloads the full contents of that table as a CSV file, regardless of the number of rows displayed per page.
 
-| Downloaded file | Contents |
-| --- | --- |
-| `pfs_validation_invalid_string.csv` | Rows with invalid characters in string columns |
-| `pfs_validation_value_errors.csv` | Rows with out-of-range values |
-| `pfs_validation_missing_flux.csv` | Rows with missing flux information |
-| `pfs_validation_flux_out_of_range.csv` | Rows with flux values outside the AB magnitude limits |
-| `pfs_validation_no_visibility.csv` | Rows with no visibility in the observing period |
-| `pfs_validation_duplicate_obcode.csv` | Rows with duplicated `ob_code` or `(obj_id, resolution)` |
-| `pfs_validation_internal_duplication.csv` | Rows flagged as potential coordinate duplicates |
+| Downloaded file                           | Contents                                                 |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `pfs_validation_invalid_string.csv`       | Rows with invalid characters in string columns           |
+| `pfs_validation_value_errors.csv`         | Rows with out-of-range values                            |
+| `pfs_validation_missing_flux.csv`         | Rows with missing flux information                       |
+| `pfs_validation_flux_out_of_range.csv`    | Rows with flux values outside the AB magnitude limits    |
+| `pfs_validation_no_visibility.csv`        | Rows with no visibility in the observing period          |
+| `pfs_validation_duplicate_obcode.csv`     | Rows with duplicated `ob_code` or `(obj_id, resolution)` |
+| `pfs_validation_internal_duplication.csv` | Rows flagged as potential coordinate duplicates          |
 
 !!! note "Flux out-of-range CSV"
 

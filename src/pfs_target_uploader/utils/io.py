@@ -8,7 +8,7 @@ import secrets
 import sys
 import time
 import warnings
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from io import BytesIO, StringIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -135,20 +135,24 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
     if format in ["csv", "ecsv"]:
         try:
             if format == "csv":
+                converters = {
+                    "obj_id": check_bigint,
+                    "priority": check_integer,
+                    "resolution": str,
+                    "tract": check_integer_none,
+                    "patch": check_integer_none,
+                    "equinox": str,
+                    "comment": str,
+                }
                 df_input = pd.read_csv(
                     _strip_full_line_comments(byte_string),
                     encoding="utf8",
-                    dtype=dtype,
-                    converters={
-                        "ob_code": str,
-                        "obj_id": check_bigint,
-                        "priority": check_integer,
-                        "resolution": str,
-                        "tract": check_integer_none,
-                        "patch": check_integer_none,
-                        "equinox": str,
-                        "comment": str,
+                    dtype={
+                        key: value
+                        for key, value in dtype.items()
+                        if key not in converters
                     },
+                    converters=converters,
                 )
                 load_status = True
                 load_error = None
@@ -163,20 +167,24 @@ def load_input(byte_string, format="csv", dtype=None, logger=logger):
                 string_stream = StringIO()
                 df_tmp.to_csv(string_stream, index=False)
                 string_stream.seek(0)
+                converters = {
+                    "obj_id": check_integer,
+                    "priority": check_integer,
+                    "resolution": str,
+                    "tract": check_integer,
+                    "patch": check_integer,
+                    "equinox": str,
+                    "comment": str,
+                }
                 df_input = pd.read_csv(
                     string_stream,
                     encoding="utf8",
-                    dtype=dtype,
-                    converters={
-                        "ob_code": str,
-                        "obj_id": check_integer,
-                        "priority": check_integer,
-                        "resolution": str,
-                        "tract": check_integer,
-                        "patch": check_integer,
-                        "equinox": str,
-                        "comment": str,
+                    dtype={
+                        key: value
+                        for key, value in dtype.items()
+                        if key not in converters
                     },
+                    converters=converters,
                 )
                 load_status = True
                 load_error = None
@@ -216,7 +224,7 @@ def upload_file(
 ):
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
-        upload_time = datetime.now(timezone.utc)
+        upload_time = datetime.now(UTC)
         logger.warning(
             f"upload_time {upload_time.isoformat(timespec='seconds')} is newly generated as None is provided."
         )
