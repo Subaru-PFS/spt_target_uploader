@@ -2,6 +2,7 @@
 
 import multiprocessing as mp
 import sys
+import threading
 
 import numpy as np
 import panel as pn
@@ -71,6 +72,8 @@ class PppResultWidgets:
         self.p_result_fig = None
         self.p_result_ppc = None
         self.p_result_tab = None
+        self._ppp_process = None
+        self._ppp_process_lock = threading.Lock()
 
         self.ppp_alert = pn.Column()
 
@@ -98,6 +101,20 @@ class PppResultWidgets:
         self.upload_time = None
         self.secret_token = None
         self.status_ = 0
+
+    def terminate_active_ppp(self):
+        """Stop the currently running PPP process group, if any."""
+        with self._ppp_process_lock:
+            ppp_process = self._ppp_process
+            self._ppp_process = None
+
+        if ppp_process is not None:
+            terminate_process_group(ppp_process)
+
+    def _clear_active_ppp(self, ppp_process):
+        with self._ppp_process_lock:
+            if self._ppp_process is ppp_process:
+                self._ppp_process = None
 
     def show_results(self):
         logger.info("showing PPP results")
@@ -328,34 +345,32 @@ class PppResultWidgets:
                 solver_backend,
             ),
         )
+        with self._ppp_process_lock:
+            self._ppp_process = ppp_run
 
-        # Wait max_exetime for PPP
-        #
-        # No KeyboardInterrupt handling here: run_ppp() is called through
-        # asyncio.to_thread (pn_app.py), and CPython delivers SIGINT only to
-        # the main thread, so a handler on this one could never fire. One
-        # consequence is worth knowing: because ppp_run leads its own process
-        # group it no longer shares the server's foreground group, so Ctrl-C
-        # on a dev server does not reach PPP -- it keeps running until it
-        # finishes or hits max_exetime. Closing that needs cleanup driven
-        # from the main thread, not from here.
-        ppp_run.join(max_exetime if max_exetime > 0 else None)
+        try:
+            # Ctrl-C is delivered to the server's main thread, while this
+            # method runs in asyncio.to_thread(). The Panel session-destroyed
+            # callback terminates this separate process group on shutdown.
+            ppp_run.join(max_exetime if max_exetime > 0 else None)
 
-        if ppp_run.is_alive():
-            # if ppp is still running after max_exetime, kill it
-            logger.warning("Pointing simulation failed (run out of time)")
-            pn.state.notifications.error(
-                f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
-                duration=0,  # ever
-            )
+            if ppp_run.is_alive():
+                # if ppp is still running after max_exetime, kill it
+                logger.warning("Pointing simulation failed (run out of time)")
+                pn.state.notifications.error(
+                    f"Simulation stops because time ({int(max_exetime):d} sec) is running out.",
+                    duration=0,  # ever
+                )
 
-            terminate_process_group(ppp_run)
+                self.terminate_active_ppp()
 
-            timed_out = True
-        else:
-            timed_out = False
+                timed_out = True
+            else:
+                timed_out = False
 
-        latest = drain_ppp_queue(ppp_run_results)
+            latest = drain_ppp_queue(ppp_run_results)
+        finally:
+            self._clear_active_ppp(ppp_run)
 
         if latest is None:
             # The child died before queueing anything -- a crash, or a

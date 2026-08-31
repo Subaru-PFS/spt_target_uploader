@@ -2,6 +2,7 @@
 
 import asyncio
 import sys
+import weakref
 from datetime import UTC, datetime, timedelta, timezone
 from pprint import pformat
 
@@ -31,6 +32,15 @@ from .widgets import (
     ValidateButtonWidgets,
     ValidationResultWidgets,
 )
+
+_active_ppp_widgets = weakref.WeakSet()
+
+
+def terminate_active_ppp_runs():
+    """Stop PPP processes still running in any active web-app session."""
+    for panel_ppp in list(_active_ppp_widgets):
+        panel_ppp.terminate_active_ppp()
+
 
 def _toggle_widgets(widgets: list, disabled: bool = True):
     for w in widgets:
@@ -124,6 +134,10 @@ def target_uploader_app(use_panel_cli=False):
     panel_results = ValidationResultWidgets()
     panel_targets = TargetWidgets()
     panel_ppp = PppResultWidgets()
+    _active_ppp_widgets.add(panel_ppp)
+    pn.state.on_session_destroyed(
+        lambda _session_context: panel_ppp.terminate_active_ppp()
+    )
 
     panel_input.reset()
     panel_input.db_path = config.db_path
