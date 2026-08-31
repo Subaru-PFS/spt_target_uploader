@@ -2,7 +2,7 @@
 
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pprint import pformat
 
 import gurobipy
@@ -32,10 +32,14 @@ from .widgets import (
     ValidationResultWidgets,
 )
 
-
 def _toggle_widgets(widgets: list, disabled: bool = True):
     for w in widgets:
         w.disabled = disabled
+
+
+def run_config_matches(completed_config, current_config):
+    """Return whether the editable inputs still match a completed PPP run."""
+    return completed_config == current_config
 
 
 def relock_run_config_widgets(
@@ -43,23 +47,16 @@ def relock_run_config_widgets(
     ppc_input_widgets,
     date_widgets,
     ppp_button_widgets,
-    *,
-    has_pending_run,
 ):
-    """Re-disable the sidebar inputs that define a pending simulation result.
+    """Re-apply sidebar constraints that are inherent to an observation mode.
 
     cb_validate, cb_PPP and cb_submit re-enable the whole sidebar when they
-    finish. This re-applies the locks that must outlast that blanket
+    finish. This re-applies only the locks that must outlast that blanket
     re-enable:
 
     - queue / filler pin ``single_exptime`` and the user pointing list to
       their fixed values regardless of anything else; filler also keeps the
       Simulate button off.
-    - An unsubmitted successful simulation freezes the observation type,
-      ``single_exptime``, the pointing list, and both date pickers. The first
-      three define or are archived with its products; the date pickers affect
-      Submit's validation. Re-Validate, re-Simulate, and a new target list
-      discard the result and lift this additional freeze.
 
     Only ever disables; each callback owns the matching re-enable.
     """
@@ -69,17 +66,6 @@ def relock_run_config_widgets(
     if obs_type in ("queue", "filler"):
         _toggle_widgets(
             [obs_type_widgets.single_exptime, ppc_input_widgets.file_input],
-            disabled=True,
-        )
-    if has_pending_run:
-        _toggle_widgets(
-            [
-                obs_type_widgets.obs_type,
-                obs_type_widgets.single_exptime,
-                ppc_input_widgets.file_input,
-                date_widgets.date_begin,
-                date_widgets.date_end,
-            ],
             disabled=True,
         )
 
@@ -148,7 +134,7 @@ def target_uploader_app(use_panel_cli=False):
     # and cb_PPP both render the same data, and that is 2.7 s of Tabulator
     # work on a 30,000-row list. None means "nothing trustworthy on screen".
     rendered_validation = {"key": None}
-    pending_run = {"config": None}
+    pending_run = {"config": None, "stale": False}
 
     def reset_validation_panels():
         """The only sanctioned way to blank the validation panels.
@@ -187,6 +173,7 @@ def target_uploader_app(use_panel_cli=False):
     def reset_simulation_result():
         """Discard a PPP result that can no longer be submitted."""
         pending_run["config"] = None
+        pending_run["stale"] = False
         panel_ppp.reset()
 
     button_set = [
@@ -208,7 +195,6 @@ def target_uploader_app(use_panel_cli=False):
             panel_ppcinput,
             panel_dates,
             panel_ppp_button,
-            has_pending_run=pending_run["config"] is not None,
         )
 
     def restore_controls():
@@ -223,9 +209,55 @@ def target_uploader_app(use_panel_cli=False):
             panel_input.file_input.value,
         )
 
+    def current_run_config():
+        observation_type = panel_obs_type.obs_type.value
+        return {
+            "observation_type": observation_type,
+            "date_begin": panel_dates.date_begin.value,
+            "date_end": panel_dates.date_end.value,
+            "single_exptime": panel_obs_type.single_exptime.value,
+            "min_mag": get_min_fluxmag_for_obstype(observation_type, config),
+            "max_mag": config.max_fluxmag,
+            "target_input": target_input_identity(),
+            "pointing_input": (
+                panel_ppcinput.file_input.filename,
+                panel_ppcinput.file_input.value,
+            ),
+        }
+
     def target_input_matches_pending_run():
-        config = pending_run["config"]
-        return config is None or config["target_input"] == target_input_identity()
+        run_config = pending_run["config"]
+        return (
+            run_config is None or run_config["target_input"] == target_input_identity()
+        )
+
+    def pending_run_matches_current_config():
+        run_config = pending_run["config"]
+        return run_config is not None and run_config_matches(
+            run_config, current_run_config()
+        )
+
+    def notify_config_changed_after_simulation():
+        notifications = pn.state.notifications
+        if notifications is not None:
+            notifications.warning(
+                "The simulation result uses different configuration values. "
+                "Simulate again before submitting.",
+                duration=5000,
+            )
+
+    def refresh_pending_run_submission_state(*_events):
+        """Mark a prior result when Config no longer matches its input snapshot."""
+        if pending_run["config"] is None:
+            return
+
+        is_current = pending_run_matches_current_config()
+        was_stale = pending_run["stale"]
+        pending_run["stale"] = not is_current
+        panel_submit_button.set_warning(not is_current)
+
+        if not is_current and not was_stale:
+            notify_config_changed_after_simulation()
 
     # Takes *args: this watches three parameters, and a browser upload changes
     # all three in one batched param.update(), which param delivers as one call
@@ -295,11 +327,6 @@ def target_uploader_app(use_panel_cli=False):
     # if the observation type is 'classical', enable the exposure time widget.
     # if the observation type is 'queue' or 'filler', disable the exposure time widget and reset the file input widget.
     def toggle_classical_mode(obs_type):
-        config = pending_run["config"]
-        if config is not None:
-            if obs_type != config["observation_type"]:
-                panel_obs_type.obs_type.value = config["observation_type"]
-            return
         if obs_type == "classical":
             panel_obs_type.single_exptime.disabled = False
             panel_ppcinput.file_input.disabled = False
@@ -320,6 +347,15 @@ def target_uploader_app(use_panel_cli=False):
     panel_input.file_input.param.watch(
         discard_pending_run_if_target_input_changed,
         ["filename", "mime_type", "value"],
+    )
+    panel_obs_type.obs_type.param.watch(refresh_pending_run_submission_state, "value")
+    panel_obs_type.single_exptime.param.watch(
+        refresh_pending_run_submission_state, "value"
+    )
+    panel_dates.date_begin.param.watch(refresh_pending_run_submission_state, "value")
+    panel_dates.date_end.param.watch(refresh_pending_run_submission_state, "value")
+    panel_ppcinput.file_input.param.watch(
+        refresh_pending_run_submission_state, ["filename", "value"]
     )
 
     # bundle panels in the sidebar
@@ -472,8 +508,7 @@ def target_uploader_app(use_panel_cli=False):
         try:
             panel_ppp.df_summary = panel_status.df_summary
         except AttributeError as e:
-            logger.error(f"{str(e)}")
-            pass
+            logger.error(f"{e!s}")
 
         tab_panels.active = 1
         tab_panels.visible = True
@@ -497,24 +532,7 @@ def target_uploader_app(use_panel_cli=False):
 
         placeholder_floatpanel.objects = []
 
-        observation_type = panel_obs_type.obs_type.value
-        effective_min_mag = get_min_fluxmag_for_obstype(
-            observation_type,
-            config,
-        )
-        run_config = {
-            "observation_type": observation_type,
-            "date_begin": panel_dates.date_begin.value,
-            "date_end": panel_dates.date_end.value,
-            "single_exptime": panel_obs_type.single_exptime.value,
-            "min_mag": effective_min_mag,
-            "max_mag": config.max_fluxmag,
-            "target_input": target_input_identity(),
-            "pointing_input": (
-                panel_ppcinput.file_input.filename,
-                panel_ppcinput.file_input.value,
-            ),
-        }
+        run_config = current_run_config()
         validation_args = {
             key: run_config[key]
             for key in (
@@ -644,12 +662,12 @@ def target_uploader_app(use_panel_cli=False):
                 return
 
             pending_run["config"] = run_config
+            pending_run["stale"] = False
             panel_submit_button.enable_button(panel_ppp.ppp_status)
             panel_submit_button.submit.disabled = False
 
         except gurobipy.GurobiError as e:
-            pn.state.notifications.error(f"{str(e)}", duration=0)
-            pass
+            pn.state.notifications.error(f"{e!s}", duration=0)
 
         restore_controls()
 
@@ -674,7 +692,6 @@ def target_uploader_app(use_panel_cli=False):
             restore_controls()
             panel_timer.timer(on=False, time_limit=False)
             return
-
         # Clear stale notifications up front, as cb_validate() and cb_PPP() do.
         # Clearing after panel_input.validate() has run would wipe the sticky
         # notifications it raises to report a failure.
@@ -709,13 +726,8 @@ def target_uploader_app(use_panel_cli=False):
             **validation_args,
         )
 
-        if has_pending_run and (
-            pending_run["config"] is not submission_config
-            or not target_input_matches_pending_run()
-        ):
-            logger.error(
-                "Target list changed while the simulation result was validated"
-            )
+        if has_pending_run and pending_run["config"] is not submission_config:
+            logger.error("Simulation result changed while it was validated")
             notify_target_input_changed_after_simulation()
             reset_simulation_result()
             restore_controls()
@@ -748,7 +760,7 @@ def target_uploader_app(use_panel_cli=False):
         if pending_run["config"] is None:
             panel_ppp.origname_ppc = panel_ppcinput.file_input.filename
             panel_ppp.origdata_ppc = panel_ppcinput.file_input.value
-        panel_ppp.upload_time = datetime.now(timezone.utc)
+        panel_ppp.upload_time = datetime.now(UTC)
         panel_ppp.secret_token = panel_input.secret_token
 
         if panel_ppp.status_ == 2:
@@ -795,7 +807,7 @@ def target_uploader_app(use_panel_cli=False):
                     url=pn.state.location.href,
                 )
         except Exception as e:
-            logger.error(f"Failed to send an email: {str(e)}")
+            logger.error(f"Failed to send an email: {e!s}")
 
         panel_notes = UploadNoteWidgets(
             panel_ppp.secret_token,
