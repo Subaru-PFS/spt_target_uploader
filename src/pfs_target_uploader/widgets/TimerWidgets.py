@@ -1,7 +1,69 @@
 #!/usr/bin/env python3
 
 import panel as pn
-import asyncio
+import param
+
+
+class ElapsedTimeDisplay(pn.reactive.ReactiveHTML):
+    """Client-side elapsed-time readout for the Validate / Simulate operations.
+
+    The counter is driven entirely in the browser from ``performance.now()``.
+    The server only flips ``running`` and bumps ``run_id``; it never pushes a
+    per-second update. That is deliberate (issue #500): validation runs in a
+    worker thread that holds the GIL, so a server-driven readout stalls or
+    drifts while the ``LoadingSpinner`` next to it -- a pure CSS animation once
+    started -- keeps spinning. Moving the readout client-side makes it just as
+    independent of the busy server.
+
+    - ``run_id``: bump to (re)start. Restarting a timer that is already running
+      is a bump with ``running`` left true -- several ``pn_app.py`` paths do
+      exactly that.
+    - ``running``: false stops the browser interval. The browser also sets it
+      false itself when a time limit is reached, which is how the stop is
+      handed back to Python (and, via ``TimerWidgets``, to the spinner).
+    - ``limit_seconds``: stop and show "Time's up!" at this many seconds.
+      ``0`` means unlimited.
+    """
+
+    run_id = param.Integer(default=0)
+    running = param.Boolean(default=False)
+    limit_seconds = param.Integer(default=0, bounds=(0, None))
+
+    _template = '<div id="display" style="font-weight: bold">00:00</div>'
+
+    _scripts = {
+        "run_id": """
+            if (state.interval !== undefined) {
+                clearInterval(state.interval)
+                state.interval = undefined
+            }
+            display.textContent = '00:00'
+            if (!data.running) return
+
+            const startedAt = performance.now()
+            const update = () => {
+                const elapsedSeconds = Math.floor((performance.now() - startedAt) / 1000)
+                if (data.limit_seconds > 0 && elapsedSeconds >= data.limit_seconds) {
+                    clearInterval(state.interval)
+                    state.interval = undefined
+                    display.textContent = "Time's up!"
+                    data.running = false
+                    return
+                }
+                const minutes = Math.floor(elapsedSeconds / 60)
+                const seconds = elapsedSeconds % 60
+                display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+            }
+            update()
+            state.interval = setInterval(update, 250)
+        """,
+        "running": """
+            if (!data.running && state.interval !== undefined) {
+                clearInterval(state.interval)
+                state.interval = undefined
+            }
+        """,
+    }
 
 
 class TimerWidgets:
@@ -10,63 +72,30 @@ class TimerWidgets:
         self.loading_spinner = pn.indicators.LoadingSpinner(
             value=False, size=40, margin=(10, 0, 0, -10), color="secondary"
         )
-        self.countdown_text = pn.pane.Markdown(
-            "**00:00**", width=80, margin=(20, 0, 0, -10)
+        self.elapsed_time = ElapsedTimeDisplay(
+            width=80, height=30, margin=(20, 0, 0, -10)
         )
+        # The spinner is on exactly while the readout is running. Driving it
+        # from this one signal covers both stops: the server-side timer(on=False)
+        # and the browser-side stop when limit_seconds is reached.
+        self.elapsed_time.param.watch(self._sync_spinner, "running")
 
         self.pane = pn.Row(
             self.loading_spinner,
-            self.countdown_text,
+            self.elapsed_time,
             width=90,
             height=50,
         )
-        self._stop_flag_c = asyncio.Event()
-        self._stop_flag_cd = asyncio.Event()
-        self._timer_task_c = None
-        self._timer_task_cd = None
 
-    async def _run_countdown(self):
-        await asyncio.sleep(1)
-        self.loading_spinner.value = True
-        for seconds_left in range(0, self.total_seconds, 1):
-            if self._stop_flag_cd.is_set():
-                self.loading_spinner.value = False
-                return
-            mins, secs = divmod(seconds_left, 60)
-            self.countdown_text.object = f"**{mins:02d}:{secs:02d}**"
-            await asyncio.sleep(1)
-        self.loading_spinner.value = False
-        self.countdown_text.object = "**Time's up!**"
-
-    async def _run_count(self):
-        self.loading_spinner.value = True
-        sec_passing = 0
-        while not self._stop_flag_c.is_set():
-            mins, secs = divmod(sec_passing, 60)
-            self.countdown_text.object = f"**{mins:02d}:{secs:02d}**"
-            sec_passing += 1
-            await asyncio.sleep(1)
-        self.loading_spinner.value = False
+    def _sync_spinner(self, event):
+        self.loading_spinner.value = event.new
 
     def timer(self, on=False, time_limit=True):
         if on:
-            if time_limit:
-                # Stop any previous task
-                if self._timer_task_cd is not None and not self._timer_task_cd.done():
-                    self._stop_flag_cd.set()
-                self._stop_flag_cd.clear()  # Reset Event (clear existing)
-                self.countdown_text.object = "**00:00**"  # Reset display
-                self._timer_task_cd = asyncio.create_task(self._run_countdown())
-            else:
-                # Stop any previous task
-                if self._timer_task_c is not None and not self._timer_task_c.done():
-                    self._stop_flag_c.set()
-                self._stop_flag_c.clear()  # Reset Event (clear existing)
-                self.countdown_text.object = "**00:00**"  # Reset display
-                self._timer_task_c = asyncio.create_task(self._run_count())
+            self.elapsed_time.limit_seconds = (
+                max(self.total_seconds, 0) if time_limit else 0
+            )
+            self.elapsed_time.running = True
+            self.elapsed_time.run_id += 1
         else:
-            if self._timer_task_c is not None and not self._timer_task_c.done():
-                self._stop_flag_c.set()
-            if self._timer_task_cd is not None and not self._timer_task_cd.done():
-                self._stop_flag_cd.set()
-            # self.loading_spinner.value = False
+            self.elapsed_time.running = False
