@@ -188,8 +188,8 @@ class ValidationResultWidgets:
         def _dl_kwargs():
             return dict(
                 label="Download CSV",
-                button_type="default",
-                button_style="solid",
+                color="default",
+                variant="solid",
                 icon="download",
                 icon_size="1.25em",
                 visible=False,

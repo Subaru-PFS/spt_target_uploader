@@ -72,8 +72,12 @@ class TimerWidgets:
         self.loading_spinner = pn.indicators.LoadingSpinner(
             value=False, size=40, margin=(10, 0, 0, -10), color="secondary"
         )
+        # Panel 1.9 wraps ReactiveHTML in a `display: contents` element, so the
+        # readout no longer gets the old wrapper's vertical extent and the text
+        # rendered ~10px higher than on 1.8 -- level with the spinner's centre
+        # instead of its lower-right. The larger top margin puts it back.
         self.elapsed_time = ElapsedTimeDisplay(
-            width=80, height=30, margin=(20, 0, 0, -10)
+            width=80, height=30, margin=(30, 0, 0, -10)
         )
         # The spinner is on exactly while the readout is running. Driving it
         # from this one signal covers both stops: the server-side timer(on=False)

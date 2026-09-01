@@ -211,7 +211,7 @@ class PppResultWidgets:
 
         # A number indicator showing the current total ROT
         self.reqtime = pn.indicators.Number(
-            name="Your total request is",
+            label="Your total request is",
             format="{value:.1f} <font size=18>h</font>",
             max_width=300,
             refs=pn.bind(update_reqtime, self.p_result_tab),
@@ -252,7 +252,6 @@ class PppResultWidgets:
 
         if self.p_result_tab is not None and self.p_result_ppc is not None:
             self.export_button = pn.widgets.FileDownload(
-                name="Export the results",
                 callback=pn.bind(
                     stream_export_files,
                     self.p_result_tab.value,
@@ -261,11 +260,12 @@ class PppResultWidgets:
                 ),
                 # filename="pfs_target.zip",
                 filename="",
-                button_style="outline",
-                button_type="primary",
+                variant="outline",
+                color="primary",
                 icon="download",
                 icon_size="1.2em",
                 label="",
+                description="Export the results",
                 max_width=150,
                 height=60,
                 stylesheets=[stylesheet],

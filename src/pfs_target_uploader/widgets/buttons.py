@@ -60,9 +60,9 @@ stylesheet_warning = """
 class ValidateButtonWidgets:
     def __init__(self):
         self.validate = pn.widgets.Button(
-            name="Validate",
-            button_style="outline",
-            button_type="primary",
+            label="Validate",
+            variant="outline",
+            color="primary",
             icon="stethoscope",
             height=60,
             max_width=130,
@@ -74,9 +74,9 @@ class ValidateButtonWidgets:
 class RunPppButtonWidgets:
     def __init__(self):
         self.PPPrun = pn.widgets.Button(
-            name="Simulate",
-            button_style="outline",
-            button_type="primary",
+            label="Simulate",
+            variant="outline",
+            color="primary",
             icon="player-play-filled",
             height=60,
             max_width=130,
@@ -89,9 +89,9 @@ class RunPppButtonWidgets:
 class SubmitButtonWidgets:
     def __init__(self):
         self.submit = pn.widgets.Button(
-            name="Submit",
-            button_style="outline",
-            button_type="primary",
+            label="Submit",
+            variant="outline",
+            color="primary",
             icon="send",
             disabled=True,
             height=60,

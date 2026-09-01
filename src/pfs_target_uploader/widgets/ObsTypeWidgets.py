@@ -56,8 +56,8 @@ class ObsTypeWidgets(param.Parameterized):
         # self.obs_type = pn.widgets.RadioButtonGroup(
         #     options={"Queue": "queue", "Classical": "classical", "Filler": "filler"},
         #     value="queue",
-        #     button_style="outline",
-        #     button_type="primary",
+        #     variant="outline",
+        #     color="primary",
         #     stylesheets=[self.stylesheet],
         # )
         self.obs_type = pn.widgets.RadioBoxGroup(

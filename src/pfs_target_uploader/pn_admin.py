@@ -68,14 +68,14 @@ def list_files_app(use_panel_cli=False):
 
     # range sliders for filtering
     slider_nobj = pn.widgets.EditableRangeSlider(
-        name="N (ob_code)",
+        label="N (ob_code)",
         start=np.floor(df_files_tgt_psl["n_obj"].min() / 10) * 10,
         end=np.ceil(df_files_tgt_psl["n_obj"].max() / 10) * 10,
         step=1,
         width=350,
     )
     slider_fiberhour = pn.widgets.EditableRangeSlider(
-        name="Fiberhour (h)",
+        label="Fiberhour (h)",
         start=np.floor(df_files_tgt_psl["Exptime_tgt (FH)"].min()),
         end=np.ceil(df_files_tgt_psl["Exptime_tgt (FH)"].max()),
         step=1,
@@ -83,14 +83,14 @@ def list_files_app(use_panel_cli=False):
     )
 
     slider_rot_l = pn.widgets.EditableRangeSlider(
-        name="ROT_low (h)",
+        label="ROT_low (h)",
         start=np.floor(df_files_tgt_psl["Time_tot_L (h)"].min()),
         end=np.ceil(df_files_tgt_psl["Time_tot_L (h)"].max()),
         step=1,
         width=350,
     )
     slider_rot_m = pn.widgets.EditableRangeSlider(
-        name="ROT_med (h)",
+        label="ROT_med (h)",
         start=np.floor(df_files_tgt_psl["Time_tot_M (h)"].min()),
         end=np.ceil(df_files_tgt_psl["Time_tot_M (h)"].max()),
         step=1,
@@ -103,7 +103,7 @@ def list_files_app(use_panel_cli=False):
     semesters = ["None"] + semesters
 
     select_box_semester = pn.widgets.Select(
-        name="Semester", options=semesters, value=None, width=200
+        label="Semester", options=semesters, value=None, width=200
     )
 
     # Shared state to track current table instance and dataframe
@@ -428,8 +428,8 @@ def list_files_app(use_panel_cli=False):
                     )
 
                     fd_success = pn.widgets.Button(
-                        name="Time allocated",
-                        button_type="primary",
+                        label="Time allocated",
+                        color="primary",
                         icon="circle-check",
                         icon_size="2em",
                         height=45,
@@ -477,7 +477,7 @@ def list_files_app(use_panel_cli=False):
         return _table_files_tgt_psl
 
     column_checkbox = pn.widgets.MultiChoice(
-        name=" ",
+        label=" ",
         value=[
             "Upload ID",
             "TAC_done",
@@ -500,9 +500,9 @@ def list_files_app(use_panel_cli=False):
 
     # download buttons
     download_selection = pn.widgets.Button(
-        name="Download all the selected programs",
+        label="Download all the selected programs",
         icon="download",
-        button_type="primary",
+        color="primary",
         stylesheets=["""
             .bk-btn {
                 color: var(--success-text-color) !important;

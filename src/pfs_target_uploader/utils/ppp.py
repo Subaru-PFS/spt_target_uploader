@@ -1805,7 +1805,7 @@ def ppp_result(
 
     def ppp_plotFig(RESmode, cR, sub, obj_allo, uS):
         nppc = pn.widgets.EditableIntSlider(
-            name=(f"{RESmode.capitalize()}-resolution mode"),
+            label=(f"{RESmode.capitalize()}-resolution mode"),
             value=len(cR[0]),
             step=1,
             start=1,
@@ -2388,7 +2388,7 @@ def ppp_result_reproduce(
         legend_cols = 2 if len(sub) >= 6 else 1
 
         nppc = pn.widgets.EditableFloatSlider(
-            name=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
+            label=(f"{RESmode.capitalize()}-resolution mode (ROT / hour)"),
             format="1[.]000",
             value=nppc2rot(admin_slider_ini_value),
             step=nppc2rot(1),
