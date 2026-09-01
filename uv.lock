@@ -163,18 +163,6 @@ wheels = [
 ]
 
 [[package]]
-name = "bleach"
-version = "6.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "webencodings" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/48/3c/e12ac860709702bd5ebeb9b56a4fe334f1001246ee1b8f2b7ee28912df7d/bleach-6.4.0.tar.gz", hash = "sha256:4202482733d85cedd04e59fcb2f89f4e4c7c385a78d3c3c23c30446843a37452", size = 204857, upload-time = "2026-06-05T13:01:13.734Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/9d/40b6267367182187139a4000b82a3b287d84d745bccd808e75d916920e9d/bleach-6.4.0-py3-none-any.whl", hash = "sha256:4b6b6a54fff2e69a3dde9d21cc6301220bee3c3cb792187d11403fd795031081", size = 165109, upload-time = "2026-06-05T13:01:12.504Z" },
-]
-
-[[package]]
 name = "bokeh"
 version = "3.9.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1366,6 +1354,30 @@ wheels = [
 ]
 
 [[package]]
+name = "nh3"
+version = "0.3.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/2f/022b27146d52d24b1b353b003359134788ecbcd6fcdf6283adbd57c0fbc8/nh3-0.3.7.tar.gz", hash = "sha256:71860d01c16f4d8c72e334e0674beb2b0899dbd0bf760de18932ef4390303848", size = 25662, upload-time = "2026-08-23T14:26:30.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/0d/c257754bf57f829f307aa226bbe136d3a1356b5a0d08324c7b6bd2a8aacd/nh3-0.3.7-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:6c3aa50eb26e9228238271db9f983cbc3b006dfbfeca2d4dc34c33ddc6ac5ea5", size = 1493959, upload-time = "2026-08-23T14:26:09.025Z" },
+    { url = "https://files.pythonhosted.org/packages/07/42/a687e7091928806e514f89fa2666f25ec9bfe0a902fc4402b25e51ce408b/nh3-0.3.7-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f266d3f1b3647449923a8e406524632220dd5d8b647078dfe45b885d33d10479", size = 859615, upload-time = "2026-08-23T14:26:10.606Z" },
+    { url = "https://files.pythonhosted.org/packages/85/05/b0e6bef633549a23347d5462aa288fcc42381e7918482062ca3cb456242a/nh3-0.3.7-cp38-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:e8fd1ab205258b29254f72db377d99e2c96aa7653ef3b015ccab0420b094b506", size = 839872, upload-time = "2026-08-23T14:26:12.037Z" },
+    { url = "https://files.pythonhosted.org/packages/17/40/2a0921d45b20828708bcb56887e47dcf8cae13818de5bf9a01308d348712/nh3-0.3.7-cp38-abi3-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:19f288c938ec6eef1f5d2c6cab47838e71fef8097e1c1233802be5a6230ba086", size = 1091325, upload-time = "2026-08-23T14:26:13.34Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/d1/9d70e0e418a48280ec0ddc6c1b08b4b1136ebcc31a1625e57ff5c665fa51/nh3-0.3.7-cp38-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:de2b2aab32ea303405debefdcfc58043d3e635fa3f67b9eb140d2b0e0c0d2563", size = 1042482, upload-time = "2026-08-23T14:26:14.667Z" },
+    { url = "https://files.pythonhosted.org/packages/93/a7/02dd159d4e71f98607d8d4249cddb7561e77be1a8e4dec77d76e1b68fc99/nh3-0.3.7-cp38-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:9b7279d43323a25225df23576af6594a16693f61431170848b8b2ac21ad4f174", size = 946868, upload-time = "2026-08-23T14:26:16.094Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/ed/c5510c615dce55b6fcc364aa1838142f938beed64f5e4927490dfcaf4405/nh3-0.3.7-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:70f5ac8626e899a4bab0ef74ca2f5bd602f49c7b739e6e5026b4afc6d63dac42", size = 832161, upload-time = "2026-08-23T14:26:17.272Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/e3/3212c1a5b5745245d7f18885207bbddb34c56075f34dd682bd539aad55cc/nh3-0.3.7-cp38-abi3-manylinux_2_31_riscv64.whl", hash = "sha256:5ffdfcb9a686ffb12765376bcfb6b5b55728516d3c0ee317d29982381ded3df8", size = 849791, upload-time = "2026-08-23T14:26:18.498Z" },
+    { url = "https://files.pythonhosted.org/packages/20/64/9e36594efad6c290de4240d02cb2bd80c339a4ab1c4de66e599ffa6d9d81/nh3-0.3.7-cp38-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:bc42bb1193c1e28a1e74c2cabaca178e118a7103e8832699fef8a2b3e2496493", size = 875473, upload-time = "2026-08-23T14:26:19.908Z" },
+    { url = "https://files.pythonhosted.org/packages/00/0c/1a8985fd43fea5530c0ac890b6f0b423770ee72f111b70b7a77f2dec243a/nh3-0.3.7-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:d56e76bd3cadb09b6b0cef364850811663734b348a25f5f587a2819c495367bd", size = 1036463, upload-time = "2026-08-23T14:26:21.536Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/5d/891e533b716cf00df76ad0ba6485dcfd14d59a6430a3cc99057c4c04004e/nh3-0.3.7-cp38-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:fd4a70efb45d5372174f718878eb7a35c12677626a63b2f103b23b833457dcac", size = 1116029, upload-time = "2026-08-23T14:26:22.907Z" },
+    { url = "https://files.pythonhosted.org/packages/42/e5/ae8c0782fce74fb6fcf7234bb3d4017f37ce181b4f9d29369eab21c50a04/nh3-0.3.7-cp38-abi3-musllinux_1_2_i686.whl", hash = "sha256:15f5fbf090f5c88d61c820e1fc1fceecb6520cca9fe85649c06b57ef9dc9ff62", size = 1076589, upload-time = "2026-08-23T14:26:24.302Z" },
+    { url = "https://files.pythonhosted.org/packages/26/a4/c3423351e8d864ad756e85e15f0c01433361f14d34e4ed156482c0518f2a/nh3-0.3.7-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:6698a822132beedab80f131c08d8d0ac5a178ddeb488d02ca4b67716ecfac7af", size = 1058871, upload-time = "2026-08-23T14:26:25.674Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/6a/478f153f1d7c0baaa3d1e8bb5fdcee3a6235f90fe44ea969a9d4e2b8c47a/nh3-0.3.7-cp38-abi3-win32.whl", hash = "sha256:6e4280115d44c3b278eef712a86748c1a723105cd79feec46952383117ab4e59", size = 630729, upload-time = "2026-08-23T14:26:26.932Z" },
+    { url = "https://files.pythonhosted.org/packages/b4/b9/34433ccb1f0fe6968dabbb7d4bf5721c6221878ef07832748c06655a6a80/nh3-0.3.7-cp38-abi3-win_amd64.whl", hash = "sha256:618e3059caf41ccdf5dcccb3fa9df4cf6e4efe23d1382a8bbfca272a8a4f8bfc", size = 644462, upload-time = "2026-08-23T14:26:28.294Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/70/e140dffff6e808dc6343598df76e7e2407fd0f581de3524c75fba2e0cf24/nh3-0.3.7-cp38-abi3-win_arm64.whl", hash = "sha256:f04b7d333b27f13ca439da3cf1c75c2fba34f104969f6ce4ac8e7079699c2f4a", size = 621867, upload-time = "2026-08-23T14:26:29.547Z" },
+]
+
+[[package]]
 name = "numba"
 version = "0.67.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1484,27 +1496,42 @@ wheels = [
 
 [[package]]
 name = "panel"
-version = "1.8.10"
+version = "1.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "bleach" },
     { name = "bokeh" },
     { name = "linkify-it-py" },
     { name = "markdown" },
     { name = "markdown-it-py" },
     { name = "mdit-py-plugins" },
     { name = "narwhals" },
+    { name = "nh3" },
     { name = "packaging" },
     { name = "pandas" },
+    { name = "panel-material-ui" },
     { name = "param" },
     { name = "pyviz-comms" },
     { name = "requests" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/c6/9e0de5cab6eac1416a76bf94e0fcec229423526eeb25558e44ba7bdc506c/panel-1.8.10.tar.gz", hash = "sha256:762881b06efb99f3d201749a3634c6b5f18f46cfca520970c2c1bb31bed42c90", size = 32186528, upload-time = "2026-03-16T12:59:00.448Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/cf/146a8c9e2bd262580e0cb328ca9526698eb164788526622495fef5efe422/panel-1.9.4.tar.gz", hash = "sha256:373bdb124c1b33c3dd4c112f348f4cfb2a7f1634b36a51e6ab01a4b5b6ec833c", size = 32246159, upload-time = "2026-08-17T12:33:33.342Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/85/3290cc84bb35503293ea23d2a0b39a78cf02c560ae1455502b042975c951/panel-1.8.10-py3-none-any.whl", hash = "sha256:b1de9304e729b87fdeee59a5be5b0d3ce7786dc301626cb728f69fbc4c136693", size = 30270089, upload-time = "2026-03-16T12:58:57.03Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/f5/e7baaa238f7f5b8790a27d1174f38e50e77c2d4860207dffac32ef1c0409/panel-1.9.4-py3-none-any.whl", hash = "sha256:c89c4c1e728297daf0628ea5070fb0da8ad77781e2a3142d302479537c1de6a4", size = 30334484, upload-time = "2026-08-17T12:33:30.519Z" },
+]
+
+[[package]]
+name = "panel-material-ui"
+version = "0.14.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bokeh" },
+    { name = "packaging" },
+    { name = "panel" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/7d/7dbbda0e64527f87fae61561f87ef0d91cff7fd2f105ba5dc1d412ccddb4/panel_material_ui-0.14.2.tar.gz", hash = "sha256:4b4e9d6f771294d778b6c13ea77348a633d55e48264dfa803f4d8bbd9d5ebf6a", size = 3991585, upload-time = "2026-08-11T13:35:23.703Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8b/e3/524f051e605702b53d34560f6f5d79a7262589f750fdba14484e99b27548/panel_material_ui-0.14.2-py3-none-any.whl", hash = "sha256:726b9aecc675c03e2c0f823c03f9a20910052a9a0d2e10b0c4430bcacf824911", size = 1734158, upload-time = "2026-08-11T13:35:22.016Z" },
 ]
 
 [[package]]
@@ -1667,7 +1694,7 @@ requires-dist = [
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=2.0.0" },
     { name = "numpy", specifier = ">=2.4.0" },
     { name = "pandas", specifier = ">=2.0.3,<3.0.0" },
-    { name = "panel", specifier = ">=1.8.0,<1.9.0" },
+    { name = "panel", specifier = ">=1.9.0,<1.10.0" },
     { name = "pfs-instdata", git = "https://github.com/Subaru-PFS/pfs_instdata.git?rev=1.8.71" },
     { name = "pfs-utils", git = "https://github.com/Subaru-PFS/pfs_utils.git?rev=7.4.22" },
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=6.0.0" },

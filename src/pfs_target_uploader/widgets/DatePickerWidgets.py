@@ -19,10 +19,10 @@ class DatePickerWidgets(param.Parameterized):
         )
 
         self.date_begin = pn.widgets.DatePicker(
-            name="Date Begin (HST)", value=semester_begin.date()
+            label="Date Begin (HST)", value=semester_begin.date()
         )
         self.date_end = pn.widgets.DatePicker(
-            name="Date End (HST)", value=semester_end.date()
+            label="Date End (HST)", value=semester_end.date()
         )
 
         self.pane = pn.Column(

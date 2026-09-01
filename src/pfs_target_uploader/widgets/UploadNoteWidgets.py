@@ -36,13 +36,13 @@ class UploadNoteWidgets:
         """
 
             self.copy_source_button = pn.widgets.Button(
-                name=f"{secret_token}",
+                label=f"{secret_token}",
                 icon="copy",
                 # width=500,
                 height=96,
                 icon_size="1.5em",
-                # button_style="outline",
-                button_type="light",
+                # variant="outline",
+                color="light",
                 stylesheets=[stylesheet],
             )
 
@@ -102,13 +102,13 @@ class UploadNoteWidgets:
         """
 
             self.copy_source_button = pn.widgets.Button(
-                name=f"{secret_token}",
+                label=f"{secret_token}",
                 icon="copy",
                 # width=500,
                 height=96,
                 icon_size="1.5em",
-                # button_style="outline",
-                button_type="light",
+                # variant="outline",
+                color="light",
                 stylesheets=[stylesheet],
             )
 
