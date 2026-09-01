@@ -25,6 +25,17 @@ Rules:
 3. A release is a single PR from `dev-main` into `main`. Only target `main` when the user explicitly asks for a release PR.
 4. **Issues stay open until the work reaches `main`.** Keep writing `Closes #<n>` in the PR body, but do not close the issue by hand when the PR merges into `dev-main` — GitHub only auto-closes on merges into the default branch (`main`), so the keyword fires on the release PR. An issue closed early claims the fix has shipped while it is still only on `dev-main`.
 
+## Tagging Policy
+
+Tags are cut in small steps: one annotated tag per meaningful group of merged work, not one big tag per release train (see `git tag -n20` history — `v3.5.1` … `v3.10.0` were laid down retroactively this way).
+
+- **After finishing a commit or PR, consider whether it (possibly together with the last few merges) forms a coherent, taggable group, and if so *suggest* a tag** — the version number, the target commit, and a draft annotation. **Never create or push the tag automatically; wait for the user to approve.**
+- **Version bump** from the latest tag `vX.Y.Z`: for a user-visible feature or a framework migration, bump the minor and reset the patch (`v3.9.1` → `v3.10.0`); for fixes, tests, docs, or dependency chores, bump the patch (`v3.9.0` → `v3.9.1`).
+- **Placement**: annotated tag (`git tag -a`) on a `dev-main` first-parent merge commit where the tree is self-consistent. For a fix/revert/refix sequence, tag only the final state.
+- **Annotation style**: `Release vX.Y.Z` subject followed by grouped bullet sections (`New Features:`, `Bug Fixes:`, `Infrastructure:`, `Dependencies:`, `Documentation:`), matching the existing `v3.4.0` / `v3.5.0` tags. Reference PR numbers.
+- No workflow is tag-triggered, so pushing a tag rebuilds and deploys nothing.
+- These tags land on `dev-main`; the next `dev-main` → `main` release PR still gets its own tag.
+
 ## Setup and Commands
 
 `uv` is the primary tool (pip also works; scripts auto-detect uv > venv).
