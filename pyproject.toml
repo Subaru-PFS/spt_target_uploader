@@ -136,10 +136,10 @@ ignore = [
   "N802",  # function name should be lowercase
   "N803",  # argument name should be lowercase
   "N806",  # variable in function should be lowercase
-  "N815",  # variable in class should be lowercase
-  "N816",  # attribute in class should be lowercase
-  "EM101",  # use 'isinstance()' instead of comparing types directly
-  "TRY003",  # unnecessary except block
+  "N815",  # mixedCase variable in class scope
+  "N816",  # mixedCase variable in global scope
+  "EM101",  # raw string literal in a raise statement
+  "TRY003",  # long message passed to a vanilla exception
 ]
 
 [tool.ruff.lint.per-file-ignores]
