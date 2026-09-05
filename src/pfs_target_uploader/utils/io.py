@@ -588,11 +588,15 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     summarize each upload's target/pointing files into a single dataframe.
 
     For each matched directory, the last `n_uid` characters of its name are
-    taken as the upload ID, then `target_summary_<id>.<ext>` (or, if that is
-    missing, `target_<id>.<ext>` as a fallback), `psl_<id>.<ext>`, and the
+    used as the `<id>` in the per-upload filenames, then
+    `target_summary_<id>.<ext>` (or, if that is missing, `target_<id>.<ext>`
+    as a fallback), `psl_<id>.<ext>`, and the
     optional `TAC_psl_<id>.<ext>` are read to populate one row;
     `ppc_<id>.<ext>` and `TAC_ppc_<id>.<ext>` are not read here — only their
-    paths are stored, in the `fullpath_ppc`/`fullpath_ppc_tac` columns. A
+    paths are stored, in the `fullpath_ppc`/`fullpath_ppc_tac` columns. The
+    `Upload ID` column itself is filled from the `upload_id` entry of the
+    summary/target table metadata (`None` when that entry is absent), not
+    from the directory name. A
     single `try`/`except FileNotFoundError` wraps the summary/target and psl
     reads, so a directory is skipped (the reads simply stop) whenever both
     the summary and target files are missing, or whenever the psl file
@@ -612,8 +616,8 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
         File extension/format for the per-upload target, summary, psl, and
         TAC files. Only `"ecsv"` is implemented; see above.
     n_uid : int, default 16
-        Length of the upload ID suffix taken from each matched directory's
-        name (`dirname[-n_uid:]`).
+        Length of the `<id>` suffix at the end of each matched directory's
+        name (`dirname[-n_uid:]`), used to build the per-upload filenames.
 
     Returns
     -------
