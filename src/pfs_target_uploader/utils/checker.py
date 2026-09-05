@@ -974,9 +974,6 @@ def check_unique(df, logger=logger):
         logger.error(f"""Duplicates by flag:\n{df.loc[flag_duplicate,:]}""")
 
     # find unique elements for a pair of ('obj_id', 'resolution')
-    # unique_elements, unique_counts = np.unique(
-    #     df.loc[:, ["obj_id", "resolution"]].to_numpy(), return_counts=True
-    # )
     is_duplicated = df.duplicated(subset=["obj_id", "resolution"], keep="first")
 
     # If the number of duplicated elements is zero, 'success' status is returned.

@@ -51,25 +51,6 @@ target_datatype = {
     "tract": int,
     "patch": int,
     "reference_arm": str,
-    # # filter keys
-    # "filter_g": str,
-    # "filter_r": str,
-    # "filter_i": str,
-    # "filter_z": str,
-    # "filter_y": str,
-    # "filter_j": str,
-    # "flux_g": float,  # nJy
-    # "flux_r": float,  # nJy
-    # "flux_i": float,  # nJy
-    # "flux_z": float,  # nJy
-    # "flux_y": float,  # nJy
-    # "flux_j": float,  # nJy
-    # "flux_error_g": float,  # nJy
-    # "flux_error_r": float,  # nJy
-    # "flux_error_i": float,  # nJy
-    # "flux_error_z": float,  # nJy
-    # "flux_error_y": float,  # nJy
-    # "flux_error_j": float,  # nJy
 }
 
 ppc_datatype = {
@@ -123,30 +104,6 @@ def _check_bands_disjoint(categories: dict) -> None:
 
 
 _check_bands_disjoint(filter_category)
-
-
-# filter_names = [
-#     "g_hsc",
-#     "r_old_hsc",
-#     "r2_hsc",
-#     "i_old_hsc",
-#     "i2_hsc",
-#     "z_hsc",
-#     "y_hsc",
-#     "g_ps1",
-#     "r_ps1",
-#     "i_ps1",
-#     "z_ps1",
-#     "y_ps1",
-#     "bp_gaia",
-#     "rp_gaia",
-#     "g_gaia",
-#     "u_sdss",
-#     "g_sdss",
-#     "r_sdss",
-#     "i_sdss",
-#     "z_sdss",
-# ]
 
 
 filter_keys = [

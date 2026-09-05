@@ -106,9 +106,7 @@ def target_uploader_app(use_panel_cli=False):
     logger.info(f"\n{config.format_for_logging()}")
 
     template = pn.template.MaterialTemplate(
-        # template = pn.template.BootstrapTemplate(
         title="PFS Target Uploader",
-        # sidebar_width=400,
         sidebar_width=420,
         header_background="#3A7D7E",
         busy_indicator=None,
@@ -380,7 +378,6 @@ def target_uploader_app(use_panel_cli=False):
             margin=(10, 0, 0, 0),
         ),
         pn.Column(
-            # pn.Row("<font size=4>**Select an operation**</font>", panel_timer.pane),
             pn.Row(
                 "<font size=4><i class='fas fa-calculator'></i> **Execute an operation**</font>",
                 panel_timer.pane,
@@ -441,7 +438,6 @@ def target_uploader_app(use_panel_cli=False):
         ("Config", sidebar_configs),
         ("About", sidebar_about),
     )
-    # tab_sidebar.active = 1
 
     # bundle panel(s) in the main area
     tab_panels = pn.Tabs(
@@ -463,7 +459,6 @@ def target_uploader_app(use_panel_cli=False):
     )
 
     # put them into the template
-    # template.sidebar.append(panel_doc.pane)
     template.sidebar.append(sidepanel_column)
     template.main.append(main_column)
 
@@ -535,7 +530,6 @@ def target_uploader_app(use_panel_cli=False):
                 if observation_type in ["queue", "classical"]
                 else True
             )
-            # panel_submit_button.enable_button(panel_ppp.ppp_status)
             panel_submit_button.enable_button(ready_to_submit)
 
     # define on_click callback for the "PPP start" button

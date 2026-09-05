@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# import collections
 import glob
 import math
 import os
@@ -498,7 +497,6 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                     n_obj[i] = tb_target["ob_code"].size
                     t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
                 tb_psl = Table.read(f_psl)
-                # logger.info(f"{f_target} and {f_psl} are found")
             except FileNotFoundError as e:
                 logger.warning(
                     f"{e}: One or more of {f_summary}, {f_target}, and {f_psl} are not found. Skip them."
