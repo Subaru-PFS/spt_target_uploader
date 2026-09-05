@@ -258,7 +258,6 @@ class PppResultWidgets:
                     self.p_result_ppc.value,
                     self.p_result_fig,
                 ),
-                # filename="pfs_target.zip",
                 filename="",
                 variant="outline",
                 color="primary",

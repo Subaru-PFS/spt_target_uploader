@@ -13,12 +13,9 @@ class UploadNoteWidgets:
         if ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
-                # pn.pane.Markdown(message),
                 name="Info",
-                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
                 contained=False,
                 position="center",
-                # theme="none",
                 theme="#3A7D7E",
                 margin=20,
                 width=720,
@@ -38,10 +35,8 @@ class UploadNoteWidgets:
             self.copy_source_button = pn.widgets.Button(
                 label=f"{secret_token}",
                 icon="copy",
-                # width=500,
                 height=96,
                 icon_size="1.5em",
-                # variant="outline",
                 color="light",
                 stylesheets=[stylesheet],
             )
@@ -73,13 +68,9 @@ class UploadNoteWidgets:
         elif not ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
-                # pn.pane.Markdown(message),
                 name="Warning",
-                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
                 contained=False,
                 position="center",
-                # theme="none",
-                # theme="#FFF1C2",
                 theme="#98741E fillcolor #FFF3D0",
                 margin=20,
                 width=720,
@@ -104,10 +95,8 @@ class UploadNoteWidgets:
             self.copy_source_button = pn.widgets.Button(
                 label=f"{secret_token}",
                 icon="copy",
-                # width=500,
                 height=96,
                 icon_size="1.5em",
-                # variant="outline",
                 color="light",
                 stylesheets=[stylesheet],
             )

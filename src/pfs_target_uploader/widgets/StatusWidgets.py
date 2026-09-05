@@ -45,14 +45,9 @@ class StatusWidgets:
         self.summary_table = pn.widgets.Tabulator(
             self.df_summary_init,
             theme="bootstrap",
-            # theme_classes=["table-sm"],
-            # visible=False,
             layout="fit_data_stretch",
-            # layout="fit_data_table",
             hidden_columns=["index"],
             selectable=False,
-            # width=350,
-            # width=380,
             header_align="right",
             configuration={"columnDefaults": {"headerSort": False}},
             disabled=True,
@@ -64,7 +59,6 @@ class StatusWidgets:
                 "N (M)": "20%",
                 "Texp (M)": "20%",
             },
-            # min_width=480,
         )
 
         self.table_footnote = pn.pane.Markdown(
@@ -72,7 +66,6 @@ class StatusWidgets:
             "- <font size=2>`Texp` is the total fiberhours of `ob_code`s for each priority.</font>\n"
             "- <font size=2>`L` and `M` correspond to the low- and medium-resolution modes, respectively.</font>",
         )
-        # self.table_footnote.visible = False
 
         self.pane = pn.Column(self.status, self.summary_table, self.table_footnote)
 
@@ -86,20 +79,14 @@ class StatusWidgets:
             if validation_status["optional_keys"]["status"] and np.any(
                 validation_status["visibility"]["success"]
             ):
-                # self.status.object = self.success_object
                 self.status.object = self.success_text
                 self.status.alert_type = "success"
             else:
-                # self.status.object = "<i class='fa-regular fa-thumbs-up fa-2xl'></i><font size=5>  Success</font> <font size=3>with warnings</font>"
-                # self.status.object = "<i class='fa-solid fa-circle-exclamation fa-2xl'></i><font size=5>  Success</font> <font size=3>with warnings</font>"
                 self.status.object = self.warning_text
                 self.status.alert_type = "success"
-                # self.status.alert_type = "warning"
         elif not validation_status["status"]:
             self.status.object = self.error_text
             self.status.alert_type = "danger"
-
-        # self.status.visible = True
 
         try:
             unique_priority = np.arange(0, 10, 1, dtype=object)
@@ -151,8 +138,6 @@ class StatusWidgets:
             if self.summary_table.value is not None:
                 self.summary_table.value.iloc[0:0]
             self.summary_table.value = self.df_summary
-            # self.summary_table.visible = True
-            # self.table_footnote.visible = True
 
         except Exception as e:
             logger.warning(

@@ -14,8 +14,6 @@ from .TimerWidgets import TimerWidgets
 from .UploadNoteWidgets import UploadNoteWidgets
 from .ValidationResultWidgets import ValidationResultWidgets
 
-# from .ExpTimeWidgets import ExpTimeWidgets
-
 __all__ = [
     "RunPppButtonWidgets",
     "SubmitButtonWidgets",

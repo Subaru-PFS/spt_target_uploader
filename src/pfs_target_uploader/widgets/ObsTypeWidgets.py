@@ -42,7 +42,6 @@ class ObsTypeWidgets(param.Parameterized):
     def __init__(self):
         # single exposure time widget
         self.single_exptime = pn.widgets.IntInput(
-            # name="Individual Exposure Time (s) in [10, 7200]",
             value=900,
             step=10,
             start=10,
@@ -53,13 +52,6 @@ class ObsTypeWidgets(param.Parameterized):
         #
         # observation type widget
         #
-        # self.obs_type = pn.widgets.RadioButtonGroup(
-        #     options={"Queue": "queue", "Classical": "classical", "Filler": "filler"},
-        #     value="queue",
-        #     variant="outline",
-        #     color="primary",
-        #     stylesheets=[self.stylesheet],
-        # )
         self.obs_type = pn.widgets.RadioBoxGroup(
             options={"Queue": "queue", "Classical": "classical", "Filler": "filler"},
             value="queue",

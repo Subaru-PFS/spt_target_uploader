@@ -19,11 +19,8 @@ class AnnouncementNoteWidgets:
                 },
                 contained=False,
                 position="center",
-                # theme="danger",
                 # theme="#3A7D7E",
                 theme="#DB2955",
                 margin=20,
-                # margin=100,
                 width=720,
-                # height=350,
             )
