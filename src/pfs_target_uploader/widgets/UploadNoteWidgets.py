@@ -6,7 +6,6 @@ import panel as pn
 
 
 class UploadNoteWidgets:
-    # TODO: perhaps I can refactor to make it simple...
     def __init__(self, secret_token, uploaded_time, ppp_status, outdir, outfile_zip):
         href_zip = os.path.join(outdir, outfile_zip)
 

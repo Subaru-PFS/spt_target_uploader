@@ -3,13 +3,13 @@
 import numpy as np
 
 __all__ = [
-    "required_keys",
+    "filter_category",
+    "filter_keys",
     "optional_keys",
     "optional_keys_default",
-    "filter_keys",
-    "target_datatype",
     "ppc_datatype",
-    "filter_category",
+    "required_keys",
+    "target_datatype",
 ]
 
 
@@ -107,15 +107,14 @@ _check_bands_disjoint(filter_category)
 
 
 filter_keys = [
-    # TODO: filters must be in the filter_name table in targetDB
+    # Filter names must exist in targetDB's filter_name table.
     "filter_g",
     "filter_r",
     "filter_i",
     "filter_z",
     "filter_y",
     "filter_j",
-    # TODO: fluxes can be fiber, psf, total, etc.
-    # Let's assume it is total (still ambiguous, though)
+    # Fluxes are assumed to be total fluxes (fiber/PSF fluxes are not distinguished).
     "flux_g",
     "flux_r",
     "flux_i",

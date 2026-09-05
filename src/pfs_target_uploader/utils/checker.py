@@ -392,7 +392,6 @@ def check_str(
     dtype=target_datatype,
     logger=logger,
 ):
-    # TODO: I guess validation of datatypes for float and integer numbers can be skipped
     # because pd.read_csv() raises an error.
     # Possible checks are:
     # - sanity check for string columns to prevent unexpected behavior in the downstream
