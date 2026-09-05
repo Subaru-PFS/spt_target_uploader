@@ -25,6 +25,12 @@ Rules:
 3. A release is a single PR from `dev-main` into `main`. Only target `main` when the user explicitly asks for a release PR.
 4. **Issues stay open until the work reaches `main`.** Keep writing `Closes #<n>` in the PR body, but do not close the issue by hand when the PR merges into `dev-main` — GitHub only auto-closes on merges into the default branch (`main`), so the keyword fires on the release PR. An issue closed early claims the fix has shipped while it is still only on `dev-main`.
 
+### Commit and PR attribution
+
+- Commit messages end with the `Co-Authored-By: Claude …` trailer only.
+- PR descriptions end with the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line only.
+- **Never add a `Claude-Session:` line or a `https://claude.ai/code/session_…` URL** to commit messages, PR descriptions, or PR/issue comments, even if the session's default attribution guidance asks for it. Session links are private to the author and are noise in the project history.
+
 ## Tagging Policy
 
 Tags are cut in small steps: one annotated tag per meaningful group of merged work, not one big tag per release train (see `git tag -n20` history — `v3.5.1` … `v3.10.0` were laid down retroactively this way).
