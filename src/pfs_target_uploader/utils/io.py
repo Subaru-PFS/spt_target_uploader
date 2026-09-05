@@ -80,6 +80,44 @@ def _strip_full_line_comments(byte_string, encoding="utf8"):
 
 
 def load_input(byte_string, format="csv", dtype=None, logger=logger):
+    """
+    Parse an uploaded CSV or ECSV target list into a dataframe.
+
+    For `format="csv"`, full-line comments are stripped first via
+    `_strip_full_line_comments()` before `pandas.read_csv()`. For
+    `format="ecsv"`, the file is read directly with
+    `astropy.table.Table.read()` (whose own header parsing handles the
+    leading YAML comment block) and converted back to a dataframe. Both
+    branches then re-parse a subset of columns (`obj_id`, `priority`,
+    `resolution`, `tract`, `patch`, `equinox`, `comment`) through fixed
+    integer/string converters.
+
+    Parameters
+    ----------
+    byte_string : file-like object, str, or os.PathLike
+        Source of the file content, passed to `_strip_full_line_comments()`
+        (CSV) or `astropy.table.Table.read()` (ECSV).
+    format : str, default "csv"
+        Input format, either `"csv"` or `"ecsv"`. Any other value returns
+        immediately with `df_input=None` and
+        `dict_load={"status": False, "error": "No CSV or ECSV file selected"}`.
+    dtype : dict, optional
+        Column dtypes applied via `pandas.read_csv(dtype=...)` for columns
+        not already covered by the fixed converters above. Defaults to the
+        module-level `target_datatype` if `None`.
+    logger : loguru.Logger
+        Logger instance.
+
+    Returns
+    -------
+    df_input : pd.DataFrame or None
+        Parsed target list, or `None` if `format` is unsupported or parsing
+        raised a `ValueError`.
+    dict_load : dict
+        `status` (bool, whether parsing succeeded) and `error` (the raised
+        `ValueError` instance, the string `"No CSV or ECSV file selected"`
+        if `format` was unsupported, or `None` on success).
+    """
     if dtype is None:
         dtype = target_datatype
 
@@ -219,6 +257,81 @@ def upload_file(
     observation_type="queue",
     ppc_status="auto",
 ):
+    """
+    Bundle the validated target list, pointing simulation results, and
+    original uploads into an output directory (or an in-memory ZIP) and
+    write them out via `upload_write()`.
+
+    Parameters
+    ----------
+    df_target : pd.DataFrame
+        Validated target table, written as `target_<id>.ecsv`.
+    df_psl : pd.DataFrame or None
+        Pointing summary table, written as `psl_<id>.ecsv`. Used only if
+        `ppp_status` is True and both `df_psl` and `df_ppc` are not `None`;
+        otherwise a placeholder single-row table with null pointing values
+        is written instead.
+    df_ppc : pd.DataFrame or None
+        Pointing centers table, written as `ppc_<id>.ecsv`. Same fallback
+        condition as `df_psl`.
+    df_target_summary : pd.DataFrame
+        Target summary table, written as `target_summary_<id>.ecsv`.
+    ppp_fig : bokeh figure or None
+        Pointing simulation plot, written as `ppp_figure_<id>.html` via its
+        `.save()` method; skipped entirely if `None`.
+    outdir_prefix : str, default "."
+        Root directory under which the timestamped output directory is
+        created. Ignored when `export=True`.
+    origname : str, default "example.csv"
+        Filename of the originally uploaded target list; stored as metadata
+        on each table and used as the bundled copy's filename.
+    origname_ppc : str, optional
+        Filename of the originally uploaded PPC file, stored the same way.
+    origdata : bytes, optional
+        Raw bytes of the originally uploaded target list, bundled unmodified
+        under `origname`.
+    origdata_ppc : bytes, optional
+        Raw bytes of the originally uploaded PPC file, bundled unmodified
+        under `origname_ppc`.
+    secret_token : str, optional
+        Upload ID used in output filenames and the output directory name.
+        Auto-generated via `secrets.token_hex(8)` when `None` and
+        `export=False`; forced to the literal `"export"` when `export=True`.
+    upload_time : datetime, optional
+        Timestamp used to name the output directory/files and stored as
+        metadata. Defaults to `datetime.now(UTC)` when `None`.
+    ppp_status : bool, default True
+        Whether the pointing simulation completed; see `df_psl`/`df_ppc`.
+        Also recorded as metadata on each output table.
+    export : bool, default False
+        If True, bundle the outputs into an in-memory ZIP (see `sio` below)
+        under the fixed upload id `"export"` instead of writing to
+        `<outdir_prefix>/<year>/<month>/<timestamp>-<secret_token>/` on disk.
+    skip_subdirectories : bool, default False
+        If True (and `export=False`), the output directory is
+        `<outdir_prefix>/<timestamp>-<secret_token>` instead of nested under
+        `<year>/<month>/`.
+    single_exptime : float, default 900
+        Recorded as metadata (`single_exptime`) on each output table.
+    observation_type : str, default "queue"
+        Recorded as metadata (`observation_type`) on each output table.
+    ppc_status : str, default "auto"
+        Recorded as metadata (`ppc_status`) on each output table.
+
+    Returns
+    -------
+    outdir : str
+        Output directory the files were written under; empty string when
+        `export=True`.
+    outfile_zip : str
+        ZIP filename, `f"{outfile_zip_prefix}.zip"` where
+        `outfile_zip_prefix` is `pfs_target-<timestamp>[-<secret_token>]`.
+    sio : io.BytesIO or str
+        When `export=True`, an in-memory ZIP archive (`BytesIO`, seeked to
+        position 0) of the bundle. When `export=False`, the path on disk to
+        the written ZIP file — see `upload_write()`, which this function
+        delegates to for the actual write.
+    """
     # use the current UTC time and random hash string to construct an output filename
     if upload_time is None:
         upload_time = datetime.now(UTC)
@@ -366,6 +479,44 @@ def upload_file(
 
 
 def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
+    """
+    Serialize the per-file records in `outfiles_dict` into a single ZIP
+    archive. Called by `upload_file()`, which builds `outfiles_dict`.
+
+    Each record's `type` controls how it is written: `"table"` (an astropy
+    Table, via `Table.write(..., format="ascii.ecsv")`), `"figure"` (a Bokeh
+    figure written with `.save()`, skipped if the object is `None`),
+    `"original"`/`"original_ppc"` (the raw bytes of an originally uploaded
+    file, skipped if its filename is `None`), or `"readme"` (plain text).
+
+    Parameters
+    ----------
+    outfiles_dict : dict
+        Per-file records as parallel lists keyed by `filename`, `object`,
+        `type`, `absname`, and `arcname` (built by `upload_file()`).
+    outfile_zip_prefix : str
+        Basename, without extension, of the ZIP file to create.
+    outdir : str
+        Directory to write the ZIP file into; also where each member file
+        is written on disk before being archived, when `export=False`.
+    export : bool, default False
+        If True, write into an in-memory `io.BytesIO` instead of a file on
+        disk. If False, a record with `filename=None` is skipped entirely,
+        and each remaining member is also written to
+        `<outdir>/<filename>` before being added to the ZIP.
+
+    Returns
+    -------
+    outdir : str
+        The `outdir` argument, unchanged.
+    outfile_zip : str
+        The ZIP filename, `f"{outfile_zip_prefix}.zip"`.
+    zip_buffer : io.BytesIO or str
+        When `export=True`, the in-memory ZIP archive (seeked to position
+        0). When `export=False`, the path to the ZIP file written on disk
+        (`<outdir>/<outfile_zip_prefix>.zip`) — despite the name, a plain
+        path string rather than a buffer object in this case.
+    """
     if export:
         zip_buffer = BytesIO()
     else:
@@ -430,6 +581,48 @@ def upload_write(outfiles_dict, outfile_zip_prefix, outdir, export=False):
 
 
 def load_file_properties(datadir, ext="ecsv", n_uid=16):
+    """
+    Scan `<datadir>/????/??/*` for per-upload output directories and
+    summarize each upload's target/pointing files into a single dataframe.
+
+    For each matched directory, the last `n_uid` characters of its name are
+    taken as the upload ID, then `target_summary_<id>.<ext>` (or, if that is
+    missing, `target_<id>.<ext>`), `ppc_<id>.<ext>`, `psl_<id>.<ext>`, and
+    the optional TAC counterparts (`TAC_psl_<id>.<ext>`,
+    `TAC_ppc_<id>.<ext>`) are read to populate one row. Directories missing
+    both the summary/target and psl files are skipped. Only `ext="ecsv"` is
+    implemented; any other value leaves every row at its initialized
+    default (`None`/0/`False`) since the per-file read block is gated on
+    `ext == "ecsv"`.
+
+    Parameters
+    ----------
+    datadir : str
+        Root directory to scan, searched as `<datadir>/????/??/*` (one
+        matched directory per upload, nested under a year/month tree).
+    ext : str, default "ecsv"
+        File extension/format for the per-upload target, summary, psl, and
+        TAC files. Only `"ecsv"` is implemented; see above.
+    n_uid : int, default 16
+        Length of the upload ID suffix taken from each matched directory's
+        name (`dirname[-n_uid:]`).
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per matched upload directory, sorted by `timestamp`
+        descending, with columns `Upload ID`, `TAC_done`, `n_obj`,
+        `Exptime_tgt (FH)`, `Exptime_sci_L (h)`, `Exptime_sci_M (h)`,
+        `Exptime_sci_L (FH)`, `Exptime_sci_M (FH)`, `Time_tot_L (h)`,
+        `Time_tot_M (h)`, `TAC_FH_L`, `TAC_FH_M`, `TAC_nppc_L`,
+        `TAC_nppc_M`, `TAC_ROT_L`, `TAC_ROT_M`, `Filename`, `filesize`,
+        `timestamp`, `fullpath_tgt`, `fullpath_ppc`, `fullpath_ppc_tac`,
+        `fullpath_psl`, `single_exptime`, `observation_type`,
+        `pointing_status`, `Filename_pointing`, and `semester` (derived from
+        `timestamp` per the Subaru semester convention). If no directories
+        match, the empty, unsorted dataframe is returned instead (a warning
+        is logged).
+    """
 
     t1 = time.time()
 

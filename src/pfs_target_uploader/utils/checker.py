@@ -1079,6 +1079,77 @@ def validate_input(
     max_mag=None,
     logger=logger,
 ):
+    """
+    Run the full validation pipeline on an uploaded target list.
+
+    Runs, in order, the column, string, value-range, flux-column, flux-value,
+    optional flux-range, visibility, uniqueness, and internal-duplication
+    checks, stopping early (and returning immediately) if the column, string,
+    value-range, or "empty dataframe" check fails. At the end, columns not in
+    the required, optional, or filter keys are dropped from `df`.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Target dataframe to validate.
+    date_begin : datetime, optional
+        Observation period start date, passed to `check_visibility()`.
+        Defaults to the start of the next Subaru semester relative to now.
+    date_end : datetime, optional
+        Observation period end date, passed to `check_visibility()`.
+        Defaults to the end of the next Subaru semester relative to now.
+    single_exptime : float, default 900
+        Single exposure time in seconds, passed to `check_visibility()`.
+    nside : int, default 32
+        HEALPix nside parameter, passed to `check_visibility()`.
+    min_mag : float, optional
+        Faint AB magnitude limit passed to `check_fluxrange()`. If both
+        `min_mag` and `max_mag` are `None`, the flux-range check is skipped.
+    max_mag : float, optional
+        Bright AB magnitude limit passed to `check_fluxrange()`. If both
+        `min_mag` and `max_mag` are `None`, the flux-range check is skipped.
+    logger : loguru.Logger
+        Logger instance.
+
+    Returns
+    -------
+    validation_status : dict
+        Validation outcome, keyed by check name. Each value is itself a dict
+        with at least a `status` key (`None` if the check was not reached
+        because an earlier check failed, `True` on success, `False` on
+        failure) plus check-specific details. Keys:
+
+        - `status` : bool
+          Overall result: `True` only if `required_keys`, `str`, `values`,
+          `flux_columns`, `visibility`, and `unique` all succeeded.
+        - `required_keys`, `optional_keys` : dict
+          Result of `check_keys()`.
+        - `empty` : dict
+          Whether `df` has any rows.
+        - `str` : dict
+          Result of `check_str()`.
+        - `values` : dict
+          Result of `check_values()`.
+        - `flux_columns` : dict
+          Result of `check_fluxcolumns()`.
+        - `flux_values` : dict
+          Result of `check_fluxvalues()`.
+        - `flux_range` : dict
+          Result of `check_fluxrange()`, or a placeholder dict with
+          `status=None` and empty counts if both `min_mag` and `max_mag`
+          are `None`.
+        - `visibility` : dict
+          Result of `check_visibility()`.
+        - `unique` : dict
+          Result of `check_unique()`.
+        - `internal_duplication` : dict
+          Result of `check_internal_duplicate()`.
+    df : pd.DataFrame
+        The input dataframe, with flux columns normalized by
+        `check_fluxcolumns()` and any columns outside the required, optional,
+        and filter keys dropped. Unchanged from the input if an early check
+        failed before reaching that point.
+    """
     logger.info("Validation of the input list starts")
     t_validate_start = time.time()
 
