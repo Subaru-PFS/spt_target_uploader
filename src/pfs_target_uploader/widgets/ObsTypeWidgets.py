@@ -1,3 +1,5 @@
+"""Observation-type selector (queue / classical / filler) with the single-exposure-time input."""
+
 import panel as pn
 import param
 
