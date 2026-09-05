@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Validation tab: per-check result panes and the annotated target table."""
 
 from io import BytesIO
 

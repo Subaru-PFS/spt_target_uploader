@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Sidebar link to the user guide."""
 
 import panel as pn
 

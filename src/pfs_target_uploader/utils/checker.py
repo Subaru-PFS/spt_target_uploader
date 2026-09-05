@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Target-list validation: column names, value ranges, fluxes, HEALPix visibility, uniqueness and internal duplicates."""
 
 import re
 import time

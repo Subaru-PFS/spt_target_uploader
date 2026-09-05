@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Target table display and interaction."""
 
 import panel as pn
 

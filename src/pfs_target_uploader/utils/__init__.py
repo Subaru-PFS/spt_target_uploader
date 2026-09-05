@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Column definitions shared by the validator and the I/O layer: required/optional keys, dtypes, and the flux filter catalogue."""
 
 import numpy as np
 

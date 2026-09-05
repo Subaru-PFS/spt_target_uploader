@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Internal duplicate detection via coordinate clustering (1 arcsec fiber-diameter threshold)."""
 
 from collections import defaultdict, deque
 

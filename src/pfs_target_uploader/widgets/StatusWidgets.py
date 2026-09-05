@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Sidebar validation status banner and per-priority summary table."""
 
 import numpy as np
 import pandas as pd

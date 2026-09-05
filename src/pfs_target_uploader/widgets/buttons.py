@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Themed button widget."""
 
 import panel as pn
 

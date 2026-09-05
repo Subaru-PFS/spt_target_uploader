@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Configuration management for PFS Target Uploader.
 
 This module provides dataclass-based configuration loading from .env.shared files,

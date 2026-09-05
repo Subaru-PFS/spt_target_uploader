@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Main Panel web app: wires the upload, validation, PPP and submission widgets together."""
 
 import asyncio
 import sys

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Runs the pointing simulation in a subprocess and renders its figures, tables and download bundle."""
 
 import multiprocessing as mp
 import sys

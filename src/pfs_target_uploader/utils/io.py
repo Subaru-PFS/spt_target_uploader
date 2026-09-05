@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Target-list I/O: parsing uploaded CSVs, writing result bundles, and listing stored submissions."""
 
 import glob
 import math

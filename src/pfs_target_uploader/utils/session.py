@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Upload-ID (secret token) generation with a uniqueness check against the database or output directory."""
 
 import glob
 import os

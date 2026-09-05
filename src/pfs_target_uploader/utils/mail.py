@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Email notifications about target-list submissions."""
 
 import smtplib
 from email.message import EmailMessage

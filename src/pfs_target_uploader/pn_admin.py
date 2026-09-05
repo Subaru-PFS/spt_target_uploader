@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Admin Panel app: browse submitted target lists and record TAC allocations."""
 
 import glob
 import os

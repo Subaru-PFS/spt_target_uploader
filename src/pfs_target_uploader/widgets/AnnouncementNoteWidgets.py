@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-
+"""Floating panel that shows the operator's announcement text on start-up."""
 
 import panel as pn
 

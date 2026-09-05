@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Elapsed-time counter for validation and simulation operations."""
 
 import panel as pn
 import param

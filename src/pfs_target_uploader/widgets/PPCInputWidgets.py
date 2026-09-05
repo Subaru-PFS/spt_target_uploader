@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Optional user-defined pointing-center list input."""
 
 import os
 from io import BytesIO

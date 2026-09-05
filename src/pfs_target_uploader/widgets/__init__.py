@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Panel UI components, one class per module."""
 
 from .AnnouncementNoteWidgets import AnnouncementNoteWidgets
 from .buttons import RunPppButtonWidgets, SubmitButtonWidgets, ValidateButtonWidgets

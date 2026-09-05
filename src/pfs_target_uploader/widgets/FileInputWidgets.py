@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Target-list file input and the cached validation it triggers."""
 
 import copy
 import os

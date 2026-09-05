@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+"""Typer CLI: validate, simulate, serve the Panel apps, and manage the upload-ID database."""
+
 import glob
 import multiprocessing as mp
 import os

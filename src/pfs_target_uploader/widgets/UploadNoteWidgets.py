@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Floating panel shown after submission with the upload ID and download link."""
 
 import os
 
