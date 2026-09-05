@@ -295,8 +295,9 @@ def upload_file(
         under `origname_ppc`.
     secret_token : str, optional
         Upload ID used in output filenames and the output directory name.
-        Auto-generated via `secrets.token_hex(8)` when `None` and
-        `export=False`; forced to the literal `"export"` when `export=True`.
+        If `None`, it is auto-generated via `secrets.token_hex(8)` when
+        `export=False`, or set to the literal `"export"` when `export=True`.
+        A caller-supplied (non-`None`) token is used as-is in either case.
     upload_time : datetime, optional
         Timestamp used to name the output directory/files and stored as
         metadata. Defaults to `datetime.now(UTC)` when `None`.
@@ -305,7 +306,8 @@ def upload_file(
         Also recorded as metadata on each output table.
     export : bool, default False
         If True, bundle the outputs into an in-memory ZIP (see `sio` below)
-        under the fixed upload id `"export"` instead of writing to
+        under the fixed upload id `"export"` (unless `secret_token` is
+        explicitly given) instead of writing to
         `<outdir_prefix>/<year>/<month>/<timestamp>-<secret_token>/` on disk.
     skip_subdirectories : bool, default False
         If True (and `export=False`), the output directory is
@@ -587,13 +589,19 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
 
     For each matched directory, the last `n_uid` characters of its name are
     taken as the upload ID, then `target_summary_<id>.<ext>` (or, if that is
-    missing, `target_<id>.<ext>`), `ppc_<id>.<ext>`, `psl_<id>.<ext>`, and
-    the optional TAC counterparts (`TAC_psl_<id>.<ext>`,
-    `TAC_ppc_<id>.<ext>`) are read to populate one row. Directories missing
-    both the summary/target and psl files are skipped. Only `ext="ecsv"` is
-    implemented; any other value leaves every row at its initialized
-    default (`None`/0/`False`) since the per-file read block is gated on
-    `ext == "ecsv"`.
+    missing, `target_<id>.<ext>` as a fallback), `psl_<id>.<ext>`, and the
+    optional `TAC_psl_<id>.<ext>` are read to populate one row;
+    `ppc_<id>.<ext>` and `TAC_ppc_<id>.<ext>` are not read here — only their
+    paths are stored, in the `fullpath_ppc`/`fullpath_ppc_tac` columns. A
+    single `try`/`except FileNotFoundError` wraps the summary/target and psl
+    reads, so a directory is skipped (the reads simply stop) whenever both
+    the summary and target files are missing, or whenever the psl file
+    alone is missing. "Skipped" does not drop the row: every matched
+    directory has a row pre-allocated before the loop runs, so a skipped
+    directory's row is retained in the returned dataframe with its
+    initialized default values (`None`/0/`False`). Only `ext="ecsv"` is
+    implemented; any other value leaves every row at those same defaults
+    since the per-file read block is gated on `ext == "ecsv"`.
 
     Parameters
     ----------

@@ -1119,11 +1119,15 @@ def validate_input(
         because an earlier check failed, `True` on success, `False` on
         failure) plus check-specific details. Keys:
 
+        Keys are listed below in the order the function inserts them: the
+        top-level `status` bool comes first, then the per-check entries from
+        `empty` to `internal_duplication` are pre-populated as
+        `{"status": None}`, and `required_keys`/`optional_keys` are written
+        last even though they are the first checks to run.
+
         - `status` : bool
           Overall result: `True` only if `required_keys`, `str`, `values`,
           `flux_columns`, `visibility`, and `unique` all succeeded.
-        - `required_keys`, `optional_keys` : dict
-          Result of `check_keys()`.
         - `empty` : dict
           Whether `df` has any rows.
         - `str` : dict
@@ -1144,11 +1148,20 @@ def validate_input(
           Result of `check_unique()`.
         - `internal_duplication` : dict
           Result of `check_internal_duplicate()`.
+        - `required_keys`, `optional_keys` : dict
+          Result of `check_keys()`.
     df : pd.DataFrame
         The input dataframe, with flux columns normalized by
         `check_fluxcolumns()` and any columns outside the required, optional,
         and filter keys dropped. Unchanged from the input if an early check
         failed before reaching that point.
+
+    Raises
+    ------
+    ValueError
+        If `df` has duplicate column names; raised right after the
+        required-column check succeeds, before the empty-dataframe check
+        and all later checks run.
     """
     logger.info("Validation of the input list starts")
     t_validate_start = time.time()
