@@ -25,7 +25,7 @@ import pandas as pd
 import pytest
 
 from pfs_target_uploader.utils.checker import validate_input
-from tests.conftest import CHECKS, DATA, DATE_BEGIN, DATE_END
+from tests.conftest import CHECKS, DATE_BEGIN, DATE_END
 
 PUBLISHED = Path(__file__).resolve().parents[1] / "docs" / "docs" / "examples"
 

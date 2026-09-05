@@ -3,7 +3,7 @@
 import asyncio
 import sys
 import weakref
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pprint import pformat
 
 import gurobipy

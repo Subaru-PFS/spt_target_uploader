@@ -396,12 +396,12 @@ class PppResultWidgets:
 
         (
             uS_L2,
-            cR_L,
+            _cR_L,
             cR_L_,
             sub_l,
             obj_allo_L_fin,
             uS_M2,
-            cR_M,
+            _cR_M,
             cR_M_,
             sub_m,
             obj_allo_M_fin,
