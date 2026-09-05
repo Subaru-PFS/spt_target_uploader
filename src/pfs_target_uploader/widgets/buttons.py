@@ -1,4 +1,4 @@
-"""Themed button widget."""
+"""Validate, run-PPP and submit buttons with their shared styling."""
 
 import panel as pn
 
