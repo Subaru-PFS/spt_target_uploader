@@ -1,4 +1,4 @@
-"""Target table display and interaction."""
+"""Read-only table of the uploaded target list."""
 
 import panel as pn
 

@@ -1,3 +1,5 @@
+"""Context managers that silence noisy third-party output (stdout/stderr, logging) during PPP runs."""
+
 from __future__ import annotations
 
 import logging

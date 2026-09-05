@@ -1,3 +1,5 @@
+"""SQLite bookkeeping of issued upload IDs: create the database, insert and look up IDs, and remove duplicates."""
+
 import datetime
 import shutil
 import sqlite3
