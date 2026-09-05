@@ -330,7 +330,7 @@ def _find_duplicates_with_separation(
 
     # Set default max_cluster_diameter
     if max_cluster_diameter is None:
-        # Default: 2 * max_separation  # noqa: ERA001
+        # Defaults to twice max_separation.
         # For PFS: fiber diameter = 1.0 arcsec
         # max_separation = fiber diameter for nearest neighbor detection
         # max_cluster_diameter = 2 × fiber diameter for detecting spatial grouping

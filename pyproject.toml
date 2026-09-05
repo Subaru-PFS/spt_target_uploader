@@ -125,6 +125,10 @@ target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]
+# ruff's default rule set is broad (bugbear, comprehensions, tryceratops, ...), so
+# most entries here silence rules that would otherwise fire. The N8xx and EM101
+# entries only matter if pep8-naming / flake8-errmsg are ever selected; they are
+# kept so that enabling those does not immediately flood the output.
 ignore = [
   "E501",  # line too long, handled by black
   "B008",  # do not perform function calls in argument defaults

@@ -392,6 +392,7 @@ def check_str(
     dtype=target_datatype,
     logger=logger,
 ):
+    # Numeric dtypes are not validated here: pd.read_csv() already raises on them.
     # Possible checks are:
     # - sanity check for string columns to prevent unexpected behavior in the downstream
     #   such as SQL injection. Maybe limit the string to [A-Za-z0-9_+-.]?

@@ -328,7 +328,6 @@ def list_files_app(use_panel_cli=False):
 
                 def tab_ppc_save(event):
                     # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
-
                     Table.from_pandas(p_result_ppc_fin.value).write(
                         f"{path_t_server}/TAC_ppc_{u_id}.ecsv",
                         format="ascii.ecsv",
@@ -410,8 +409,6 @@ def list_files_app(use_panel_cli=False):
                         "TAC allocation is made for the program and a new PPC list is saved.",
                         duration=5000,  # 5sec
                     )
-
-                    # move to "Program info" tab
 
                 if nppc_fin is not None:
                     output_status = pn.pane.Markdown(

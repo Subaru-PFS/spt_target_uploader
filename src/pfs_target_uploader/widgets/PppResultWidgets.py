@@ -149,7 +149,6 @@ class PppResultWidgets:
             if rot > self.max_reqtime_normal:
                 c = "crimson"
             else:
-                # c = "#007b43"
                 c = "#3A7D7E"
             return {"value": rot, "default_color": c}
 
