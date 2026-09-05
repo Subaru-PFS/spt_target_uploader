@@ -24,7 +24,6 @@ class UploadNoteWidgets:
 
             # JS on-click actions
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-            # so far not working...
             stylesheet = """
         .bk-btn-light {
             font-size: 2.5em !important;
@@ -74,12 +73,10 @@ class UploadNoteWidgets:
                 theme="#98741E fillcolor #FFF3D0",
                 margin=20,
                 width=720,
-                # config={"theme": {"colorContent": "#866208"}},
             )
 
             # JS on-click actions
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-            # so far not working...
             stylesheet = """
         .bk-btn-light {
             font-size: 2.5em !important;
