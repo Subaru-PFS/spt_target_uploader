@@ -7,11 +7,9 @@ description: Use when modifying or debugging visibility checking (HEALPix), inte
 
 ## HEALPix Visibility Checking (`utils/checker.py`)
 
-Three implementations; use `check_visibility()` wrapper which defaults to HEALPix.
+Single implementation, called through the `check_visibility()` wrapper.
 
-- **`visibility_checker_healpix()`** (RECOMMENDED, default): Groups targets by HEALPix pixels (nside=32, ~110 arcmin). Uses the first target's coordinates as representative per pixel (conservative approximation), computes total observable time per pixel over the observation period, and compares each target's exptime against it. 5–50x faster than legacy; reduces N-target calculations to N_pixels << N. 15-minute ephemeris resolution, tuned for 6-month periods. Correctness for small-exptime targets in partially-observable pixels was fixed in PR #411 — don't regress this.
-- **`visibility_checker()`** (LEGACY): per-target sequential, exact but slowest. Keep for verification only.
-- **`visibility_checker_vec()`** (LEGACY): `np.vectorize` + period splitting with early exit. Keep for verification only.
+- **`visibility_checker_healpix()`**: Groups targets by HEALPix pixels (nside=32, ~110 arcmin). Uses the first target's coordinates as representative per pixel (conservative approximation), computes total observable time per pixel over the observation period, and compares each target's exptime against it. Reduces N-target calculations to N_pixels << N. 15-minute ephemeris resolution, tuned for 6-month periods. Correctness for small-exptime targets in partially-observable pixels was fixed in PR #411 — don't regress this. The per-target and vectorized checkers were removed for #363; `git show v3.10.0:src/pfs_target_uploader/utils/checker.py` has them if ever needed for verification.
 
 ## Internal Duplication Detection (`utils/internal_duplication.py`)
 
