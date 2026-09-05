@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Observation-period date pickers shown in the Config tab."""
 
 from datetime import datetime
 from zoneinfo import ZoneInfo

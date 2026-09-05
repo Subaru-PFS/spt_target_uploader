@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Admin Panel app: browse submitted target lists and record TAC allocations."""
 
 import glob
 import os
@@ -35,13 +35,9 @@ def list_files_app(use_panel_cli=False):
 
     template = pn.template.VanillaTemplate(
         title="PFS Target & Proposal Lists",
-        # collapsed_sidebar=True,
-        # header_background="#3A7D7E",
-        # header_background="#C71585",  # mediumvioletred
         header_background="#dc143c",  # crimson
         busy_indicator=None,
         favicon="doc/assets/images/favicon.png",
-        # sidebar_width=400,
     )
 
     df_files_tgt_psl = load_file_properties(
@@ -202,7 +198,6 @@ def list_files_app(use_panel_cli=False):
             _df_files_tgt_psl,
             page_size=500,
             theme="bootstrap",
-            # theme_classes=["table-striped", "table-sm"],
             theme_classes=["table-striped"],
             frozen_columns=["index"],
             pagination="remote",
@@ -333,8 +328,6 @@ def list_files_app(use_panel_cli=False):
 
                 def tab_ppc_save(event):
                     # save tac allocation (TAC_psl/ppc_uploadid.ecsv)
-                    # dirs = glob.glob(os.path.join(config.output_dir, "????/??/*"))
-
                     Table.from_pandas(p_result_ppc_fin.value).write(
                         f"{path_t_server}/TAC_ppc_{u_id}.ecsv",
                         format="ascii.ecsv",
@@ -416,9 +409,6 @@ def list_files_app(use_panel_cli=False):
                         "TAC allocation is made for the program and a new PPC list is saved.",
                         duration=5000,  # 5sec
                     )
-
-                    # move to "Program info" tab
-                    # tab_panels.active = 0
 
                 if nppc_fin is not None:
                     output_status = pn.pane.Markdown(

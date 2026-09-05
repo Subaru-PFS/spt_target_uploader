@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Validation tab: per-check result panes and the annotated target table."""
 
 from io import BytesIO
 
@@ -75,8 +75,6 @@ class ValidationResultWidgets:
     tabulator_kwargs = dict(
         page_size=50,
         theme="bootstrap",
-        # theme="simple",
-        # theme_classes=["table-striped", "table-sm"],
         frozen_columns=[],
         pagination="remote",
         header_filters=True,

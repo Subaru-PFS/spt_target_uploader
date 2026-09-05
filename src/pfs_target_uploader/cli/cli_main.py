@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+"""Typer CLI: validate, simulate, serve the Panel apps, and manage the upload-ID database."""
+
 import glob
 import multiprocessing as mp
 import os
@@ -133,8 +134,6 @@ def validate(
     _status_widget.show_results(df_validated, validation_status)
 
     df_summary = _status_widget.df_summary
-
-    # logger.info(f"Summary of the objects:\n{df_summary}")
 
     if save:
         logger.info("Saving the results")
@@ -403,7 +402,6 @@ def start_app(
     basic_auth: Annotated[
         str | None, typer.Option(help="Basic authentication config (.json).")
     ] = None,
-    # cookie_secret: Annotated[str, typer.Option(help="Cookie secret.")] = None,
     basic_login_template: Annotated[
         str | None, typer.Option(help="Basic login template.")
     ] = None,
@@ -420,23 +418,16 @@ def start_app(
         "tabulator",
         notifications=True,
         loading_spinner="dots",
-        # loading_color="#6A589D",
         sizing_mode="stretch_width",
-        # sizing_mode="scale_width",
         js_files={
             "font-awesome": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js",
-            # "bootstrap": "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css",
         },
         css_files=[
             "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css",
-            # "https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js",
-            # "https://fonts.googleapis.com/css?family=Lato&subset=latin,latin-ext",
         ],
         layout_compatibility="error",
         disconnect_notification="Connection lost, try reloading the page.",
     )
-
-    # pn.state.notifications.position = "bottom-left"
 
     if app == "uploader":
         from ..pn_app import (
@@ -453,8 +444,6 @@ def start_app(
 
     if allow_websocket_origin is None:
         allow_websocket_origin = ["localhost"]
-    # else:
-    #     allow_websocket_origin = [f"{a}:{port}" for a in allow_websocket_origin]
 
     logger.info(f"{allow_websocket_origin=}")
 
@@ -484,12 +473,11 @@ def start_app(
             return
         admin_options: dict[str, Any] = dict(
             basic_auth=basic_auth,
-            # cookie_secret=cookie_secret,
             basic_login_template=basic_login_template,
         )
         kwargs = admin_options
     else:
-        kwargs: dict[str, Any] = {}  # dict(cookie_secret=cookie_secret)
+        kwargs: dict[str, Any] = {}
 
     # Ref: https://panel.holoviz.org/reference/widgets/FileInput.html#limits-defined
     try:
@@ -509,7 +497,6 @@ def start_app(
             # Increase the maximum buffer size allowed by Tornado
             http_server_kwargs={
                 "max_buffer_size": max_upload_size * 1024 * 1024,
-                # "user_xheaders": use_xheaders,
             },
             **kwargs,
         )

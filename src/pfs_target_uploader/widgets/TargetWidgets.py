@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
+"""Target table display and interaction."""
 
-import pandas as pd
 import panel as pn
 
 

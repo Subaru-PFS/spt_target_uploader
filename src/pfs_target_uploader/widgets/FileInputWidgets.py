@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
+"""Target-list file input and the cached validation it triggers."""
 
 import copy
 import os
-import secrets
 import time
 from io import BytesIO
 
@@ -50,24 +49,14 @@ class FileInputWidgets(param.Parameterized):
                 pn.pane.Markdown(
                     "<font size=4><i class='fas fa-list-ul'></i>  **Target list**</font> "
                     "<font size=4>(CSV; <a href='doc/examples/example_perseus_cluster_r60arcmin.csv' target='_blank'>example</a>)</font>",
-                    # styles={"margin-bottom": "-10px"},
-                    # styles={
-                    #     "border-left": "10px solid #3A7D7E",
-                    #     "border-bottom": "1px solid #3A7D7E",
-                    #     "padding-left": "0.5em",
-                    # },
                     width=400,
-                    # width=370,
                 ),
                 pn.widgets.TooltipIcon(
                     value="(Optional) Configure the **observation period** in the **Config** tab.",
-                    # width=50,
                     margin=(0, 0, 0, -165),
-                    # align=("start", "center"),
                 ),
             ),
             self.file_input,
-            # margin=(10, 0, -10, 0),
         )
 
     def reset(self):

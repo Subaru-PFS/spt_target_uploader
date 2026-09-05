@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Runs the pointing simulation in a subprocess and renders its figures, tables and download bundle."""
 
 import multiprocessing as mp
 import sys
@@ -149,7 +149,6 @@ class PppResultWidgets:
             if rot > self.max_reqtime_normal:
                 c = "crimson"
             else:
-                # c = "#007b43"
                 c = "#3A7D7E"
             return {"value": rot, "default_color": c}
 
@@ -258,7 +257,6 @@ class PppResultWidgets:
                     self.p_result_ppc.value,
                     self.p_result_fig,
                 ),
-                # filename="pfs_target.zip",
                 filename="",
                 variant="outline",
                 color="primary",
@@ -396,12 +394,12 @@ class PppResultWidgets:
 
         (
             uS_L2,
-            cR_L,
+            _cR_L,
             cR_L_,
             sub_l,
             obj_allo_L_fin,
             uS_M2,
-            cR_M,
+            _cR_M,
             cR_M_,
             sub_m,
             obj_allo_M_fin,

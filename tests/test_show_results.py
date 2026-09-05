@@ -17,7 +17,6 @@ does, show_results() has to cope with any check coming back None.
 """
 
 from copy import deepcopy
-from pathlib import Path
 
 import pandas as pd
 import pytest

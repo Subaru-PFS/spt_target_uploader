@@ -1,23 +1,20 @@
-#!/usr/bin/env python3
+"""Target-list I/O: parsing uploaded CSVs, writing result bundles, and listing stored submissions."""
 
-# import collections
 import glob
 import math
 import os
 import secrets
-import sys
 import time
 import warnings
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from io import BytesIO, StringIO
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
 from astropy import units as u
 from astropy.table import Table
 from bokeh.resources import INLINE
-from dotenv import dotenv_values
 from loguru import logger
 
 from . import target_datatype
@@ -448,7 +445,6 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
     filesizes = np.zeros(n_files, dtype=float)
     n_obj = np.zeros(n_files, dtype=int)
     t_exp = np.zeros(n_files, dtype=float)
-    links = np.full(n_files, None, dtype=object)
 
     fullpath_target = np.full(n_files, None, dtype=object)
     fullpath_ppc = np.full(n_files, None, dtype=object)
@@ -501,7 +497,6 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                     n_obj[i] = tb_target["ob_code"].size
                     t_exp[i] = np.sum(tb_target["exptime"]) / 3600.0
                 tb_psl = Table.read(f_psl)
-                # logger.info(f"{f_target} and {f_psl} are found")
             except FileNotFoundError as e:
                 logger.warning(
                     f"{e}: One or more of {f_summary}, {f_target}, and {f_psl} are not found. Skip them."
@@ -518,7 +513,6 @@ def load_file_properties(datadir, ext="ecsv", n_uid=16):
                 fullpath_ppc_tac[i] = f_tac_ppc
 
             filesizes[i] = (os.path.getsize(f_target) * u.byte).to(u.kbyte).value
-            # links[i] = f"<a href='{f_target}'><i class='fa-solid fa-download'></i></a>"
 
             fullpath_target[i] = f_target
             fullpath_ppc[i] = f_ppc

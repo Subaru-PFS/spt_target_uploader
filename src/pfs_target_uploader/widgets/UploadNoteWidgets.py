@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Floating panel shown after submission with the upload ID and download link."""
 
 import os
 
@@ -6,19 +6,15 @@ import panel as pn
 
 
 class UploadNoteWidgets:
-    # TODO: perhaps I can refactor to make it simple...
     def __init__(self, secret_token, uploaded_time, ppp_status, outdir, outfile_zip):
         href_zip = os.path.join(outdir, outfile_zip)
 
         if ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
-                # pn.pane.Markdown(message),
                 name="Info",
-                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
                 contained=False,
                 position="center",
-                # theme="none",
                 theme="#3A7D7E",
                 margin=20,
                 width=720,
@@ -27,7 +23,6 @@ class UploadNoteWidgets:
 
             # JS on-click actions
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-            # so far not working...
             stylesheet = """
         .bk-btn-light {
             font-size: 2.5em !important;
@@ -38,10 +33,8 @@ class UploadNoteWidgets:
             self.copy_source_button = pn.widgets.Button(
                 label=f"{secret_token}",
                 icon="copy",
-                # width=500,
                 height=96,
                 icon_size="1.5em",
-                # variant="outline",
                 color="light",
                 stylesheets=[stylesheet],
             )
@@ -73,22 +66,16 @@ class UploadNoteWidgets:
         elif not ppp_status:
             self.floatpanel = pn.layout.FloatPanel(
                 None,
-                # pn.pane.Markdown(message),
                 name="Warning",
-                # config={"headerLogo": "<i class='fa-regular fa-thumbs-up fa-lg'></i>"},
                 contained=False,
                 position="center",
-                # theme="none",
-                # theme="#FFF1C2",
                 theme="#98741E fillcolor #FFF3D0",
                 margin=20,
                 width=720,
-                # config={"theme": {"colorContent": "#866208"}},
             )
 
             # JS on-click actions
             # https://github.com/awesome-panel/awesome-panel/blob/master/examples/js_actions.py
-            # so far not working...
             stylesheet = """
         .bk-btn-light {
             font-size: 2.5em !important;
@@ -104,10 +91,8 @@ class UploadNoteWidgets:
             self.copy_source_button = pn.widgets.Button(
                 label=f"{secret_token}",
                 icon="copy",
-                # width=500,
                 height=96,
                 icon_size="1.5em",
-                # variant="outline",
                 color="light",
                 stylesheets=[stylesheet],
             )

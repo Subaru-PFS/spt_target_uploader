@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Email notifications about target-list submissions."""
 
 import smtplib
 from email.message import EmailMessage
@@ -52,7 +52,7 @@ Upload File: {outfile}
 Upload URL: {url}
 """
 
-    logger.info(f"Seinding an email:\n{message_text}")
+    logger.info(f"Sending an email:\n{message_text}")
 
     msg = EmailMessage()
     msg["Subject"] = f"New submission {upload_id} on the PFS Target Uploader"

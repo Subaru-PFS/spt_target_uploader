@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Validate, run-PPP and submit buttons with their shared styling."""
 
 import panel as pn
 

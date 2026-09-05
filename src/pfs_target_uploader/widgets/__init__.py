@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Panel UI components, one class per module."""
 
 from .AnnouncementNoteWidgets import AnnouncementNoteWidgets
 from .buttons import RunPppButtonWidgets, SubmitButtonWidgets, ValidateButtonWidgets
@@ -13,8 +13,6 @@ from .TargetWidgets import TargetWidgets
 from .TimerWidgets import TimerWidgets
 from .UploadNoteWidgets import UploadNoteWidgets
 from .ValidationResultWidgets import ValidationResultWidgets
-
-# from .ExpTimeWidgets import ExpTimeWidgets
 
 __all__ = [
     "RunPppButtonWidgets",

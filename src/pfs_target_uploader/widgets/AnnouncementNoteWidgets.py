@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-import os
+"""Floating panel that shows the operator's announcement text on start-up."""
 
 import panel as pn
 
@@ -20,11 +18,7 @@ class AnnouncementNoteWidgets:
                 },
                 contained=False,
                 position="center",
-                # theme="danger",
-                # theme="#3A7D7E",
                 theme="#DB2955",
                 margin=20,
-                # margin=100,
                 width=720,
-                # height=350,
             )

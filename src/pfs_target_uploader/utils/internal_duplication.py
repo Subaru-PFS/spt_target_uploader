@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Internal duplicate detection via coordinate clustering (1 arcsec fiber-diameter threshold)."""
 
 from collections import defaultdict, deque
 
@@ -330,7 +330,7 @@ def _find_duplicates_with_separation(
 
     # Set default max_cluster_diameter
     if max_cluster_diameter is None:
-        # Default: 2 * max_separation
+        # Defaults to twice max_separation.
         # For PFS: fiber diameter = 1.0 arcsec
         # max_separation = fiber diameter for nearest neighbor detection
         # max_cluster_diameter = 2 × fiber diameter for detecting spatial grouping
