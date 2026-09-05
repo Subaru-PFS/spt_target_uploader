@@ -16,8 +16,8 @@ from loguru import logger
 # below for qplan
 # isort: split
 from qplan.entity import StaticTarget
-from spot.util.eph_cache import EphemerisCache
 from qplan.util.site import site_subaru as observer
+from spot.util.eph_cache import EphemerisCache
 
 from . import (
     arm_values,
@@ -67,255 +67,6 @@ def get_semester_daterange(dt, current=False, next=True):
     return semester_begin, semester_end
 
 
-def visibility_checker(uS, date_begin=None, date_end=None):
-    """
-    LEGACY: Original per-target visibility checker (slowest, but exact).
-
-    Kept for testing and validation purposes. For production use, prefer
-    visibility_checker_healpix() which is 5-50x faster for clustered targets.
-    """
-    if len(uS) == 0:
-        return np.array([])
-
-    tz_HST = tz.gettz("US/Hawaii")
-
-    eph_cache = EphemerisCache(logger, precision_minutes=15)
-
-    # set next semester if there is no range is defined.
-    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
-
-    if date_begin is None:
-        date_begin = tmp_begin
-    if date_end is None:
-        date_end = tmp_end
-
-    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
-    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
-
-    daterange = pd.date_range(date_begin, date_end + timedelta(days=1))
-
-    ob_code, RA, DEC, exptime = uS["ob_code"], uS["ra"], uS["dec"], uS["exptime"]
-
-    min_el = 30.0
-    max_el = 85.0
-
-    tgt_obs_ok = []
-
-    for i_t in range(len(RA)):
-        target = StaticTarget(
-            name=ob_code[i_t], ra=RA[i_t], dec=DEC[i_t], equinox=2000.0
-        )
-        total_time = exptime[i_t]  # SEC
-
-        t_obs_ok = 0
-
-        for dd in range(len(daterange) - 1):
-            night_begin = parser.parse(
-                daterange[dd].strftime("%Y-%m-%d") + " 18:30:00"
-            ).replace(tzinfo=tz_HST)
-            night_end = parser.parse(
-                daterange[dd + 1].strftime("%Y-%m-%d") + " 05:30:00"
-            ).replace(tzinfo=tz_HST)
-
-            # observer.set_date(night_begin)
-
-            eph_key = target
-
-            obs_ok, t_start, t_stop = eph_cache.observable(
-                eph_key,
-                target,
-                observer,
-                night_begin,
-                night_end,
-                min_el,
-                max_el,
-                total_time,
-            )
-
-            if t_start is None or t_stop is None:
-                t_obs_ok += 0
-                continue
-
-            if t_stop > t_start:
-                t_obs_ok += (t_stop - t_start).seconds  # SEC
-            else:
-                t_obs_ok += 0
-
-        if t_obs_ok >= exptime[i_t]:
-            tgt_obs_ok.append(True)
-        else:
-            tgt_obs_ok.append(False)
-
-    return np.array(tgt_obs_ok, dtype=bool)
-
-
-def visibility_checker_vec(
-    df: pd.DataFrame,
-    date_begin: datetime | None = None,
-    date_end: datetime | None = None,
-    min_el: float = 30.0,
-    max_el: float = 85.0,
-) -> np.ndarray:
-    """
-    LEGACY: Vectorized visibility checker (faster than original, but slower than HEALPix).
-
-    Uses np.vectorize and observation period splitting for early exit optimization.
-    Kept for testing and validation purposes. For production use, prefer
-    visibility_checker_healpix() which provides better performance for clustered targets.
-    """
-    if df.index.size == 0:
-        return np.array([], dtype=bool)
-
-    # set timezone to HST
-    tz_HST = tz.gettz("US/Hawaii")
-
-    # set next semester if there is no range is defined.
-    tmp_begin, tmp_end = get_semester_daterange(datetime.now(tz=tz_HST), next=True)
-
-    if date_begin is None:
-        date_begin = tmp_begin
-    if date_end is None:
-        date_end = tmp_end
-
-    logger.info(f"Observation period start on {date_begin:%Y-%m-%d}")
-    logger.info(f"Observation period end on {date_end:%Y-%m-%d}")
-
-    # include the last date instead of removing it
-    date_middle = date_begin + (date_end - date_begin) / 2
-    logger.info(f"Observation period is divided into two at {date_middle}")
-
-    daterange_1 = pd.date_range(
-        date_begin,
-        date_middle,
-        tz=tz_HST,
-    )
-    daterange_2 = pd.date_range(
-        date_middle + timedelta(days=1),
-        date_end + timedelta(days=1),
-        tz=tz_HST,
-    )
-
-    logger.debug(
-        f"Observation period is divided into two: {daterange_1} and {daterange_2}"
-    )
-
-    logger.debug(f"{len(daterange_1)} and {len(daterange_2)}")
-
-    dates_begin_1, dates_end_1 = daterange_1[:-1], daterange_1[1:]
-    dates_begin_2, dates_end_2 = daterange_2[:-1], daterange_2[1:]
-
-    nights_begin_1 = [
-        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
-        for d in dates_begin_1
-    ]
-    nights_end_1 = [
-        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
-        for d in dates_end_1
-    ]
-
-    # reverse order for the second half
-    nights_begin_2 = [
-        parser.parse(d.strftime("%Y-%m-%d") + " 18:30:00").replace(tzinfo=tz_HST)
-        for d in dates_begin_2[::-1]
-    ]
-    nights_end_2 = [
-        parser.parse(d.strftime("%Y-%m-%d") + " 05:30:00").replace(tzinfo=tz_HST)
-        for d in dates_end_2[::-1]
-    ]
-
-    n_dates = max(len(dates_begin_1), len(dates_begin_2))
-
-    logger.debug(
-        f"Observation period is divided into two: {nights_begin_1} and {nights_end_1}"
-    )
-    logger.debug(
-        f"Observation period is divided into two: {nights_begin_2} and {nights_end_2}"
-    )
-
-    # # one can set start/stop times with sunset/sunrise
-    # datetime_sunset = [observer.sunset(d) for d in dates_begin]
-    # datetime_sunrise = [observer.sunrise(d) for d in dates_end]
-
-    # define targets
-    targets = [
-        StaticTarget(name=df["ob_code"][i], ra=df["ra"][i], dec=df["dec"][i])
-        for i in range(df.index.size)
-    ]
-
-    # create ephemeris cache
-    eph_cache = EphemerisCache(logger, precision_minutes=15)
-
-    def process_single_target(target: StaticTarget, exptime: float) -> bool:
-        t_obs_ok_single = 0
-        for dd in range(n_dates):
-            try:
-                # observer.set_date(nights_begin_1[dd])
-                eph_key = target
-                _, t_start, t_stop = eph_cache.observable(
-                    eph_key,
-                    target,
-                    observer,
-                    nights_begin_1[dd],
-                    nights_end_1[dd],
-                    # datetime_sunset[dd],
-                    # datetime_sunrise[dd],
-                    min_el,  # [deg]
-                    max_el,  # [deg]
-                    exptime,  # [s] TODO: This has to be a total time including overheads
-                    # airmass=None,
-                    # moon_sep=None,
-                )
-                try:
-                    if t_stop > t_start:
-                        t_obs_ok_single += (t_stop - t_start).seconds
-                except TypeError:
-                    continue
-            except IndexError:
-                pass
-
-            try:
-                # observer.set_date(nights_begin_2[dd])
-                eph_key = target
-                _, t_start, t_stop = eph_cache.observable(
-                    eph_key,
-                    target,
-                    observer,
-                    nights_begin_2[dd],
-                    nights_end_2[dd],
-                    # datetime_sunset[dd],
-                    # datetime_sunrise[dd],
-                    min_el,  # [deg]
-                    max_el,  # [deg]
-                    exptime,  # [s] TODO: This has to be a total time including overheads
-                    # airmass=None,
-                    # moon_sep=None,
-                )
-                try:
-                    if t_stop > t_start:
-                        t_obs_ok_single += (t_stop - t_start).seconds
-                except TypeError:
-                    continue
-            except IndexError:
-                pass
-
-            # Once t_obs_ok_single exceeds the required exptime, you can exit the function
-            if t_obs_ok_single >= exptime:
-                return True
-        # If it not ever returned before, it means that the object cannot be observed in the input period
-        return False
-
-    # make the object loop vectorized
-    vec_func = np.vectorize(process_single_target, otypes=["bool"])
-    # TODO: Exposure time should be the total time required to make an exposure (i.e., incl. overheads)
-    is_observable = vec_func(targets, df["exptime"])
-
-    # clear the ephemeris cache
-    logger.debug("Clearing the ephemeris cache")
-    eph_cache.clear_all()
-
-    return is_observable
-
-
 def visibility_checker_healpix(
     df: pd.DataFrame,
     date_begin: datetime | None = None,
@@ -327,14 +78,14 @@ def visibility_checker_healpix(
     precision_minutes: int = 15,
 ) -> np.ndarray:
     """
-    HEALPix-based visibility checker optimized for clustered targets (RECOMMENDED).
+    HEALPix-based visibility checker optimized for clustered targets.
 
-    This is the default and recommended implementation for production use.
+    This is the visibility checker used by validate_input().
     Groups targets by HEALPix pixels and uses the maximum exptime in each pixel
     for visibility calculations, significantly reducing computation time for
     spatially clustered target lists.
 
-    Performance: 5-50x faster than legacy implementations for typical PFS target lists.
+    Performance: reduces N per-target ephemeris calculations to one per occupied HEALPix pixel.
 
     Algorithm Details
     -----------------
@@ -1135,13 +886,11 @@ def check_visibility(
     date_begin=None,
     date_end=None,
     single_exptime=900,
-    vectorized=False,
-    healpix=True,
     nside=32,
     logger=logger,
 ):
     """
-    Check target visibility during observation period (wrapper function).
+    Check target visibility during the observation period.
 
     Parameters
     ----------
@@ -1152,14 +901,10 @@ def check_visibility(
     date_end : datetime, optional
         Observation period end date
     single_exptime : float, default 900
-        Single exposure time in seconds (only used by HEALPix implementation).
-        Controls time resolution for observability window checks.
-    vectorized : bool, default False
-        Use legacy vectorized implementation (not recommended)
-    healpix : bool, default True
-        Use HEALPix-optimized implementation (RECOMMENDED for production)
+        Single exposure time in seconds. Controls the time resolution of the
+        observability-window checks.
     nside : int, default 32
-        HEALPix nside parameter (only used when healpix=True)
+        HEALPix nside parameter
     logger : loguru.Logger
         Logger instance
 
@@ -1170,24 +915,13 @@ def check_visibility(
     """
     dict_visibility = {}
 
-    if healpix:
-        logger.info("Using HEALPix-optimized visibility checker (RECOMMENDED)")
-        is_visible = visibility_checker_healpix(
-            df,
-            date_begin=date_begin,
-            date_end=date_end,
-            single_exptime=single_exptime,
-            nside=nside,
-        )
-    elif vectorized:
-        logger.warning("Using legacy vectorized visibility checker (not recommended)")
-        is_visible = visibility_checker_vec(
-            df, date_begin=date_begin, date_end=date_end
-        )
-    else:
-        logger.warning("Using legacy per-target visibility checker (slowest)")
-        is_visible = visibility_checker(df, date_begin=date_begin, date_end=date_end)
-        # print(is_visible)
+    is_visible = visibility_checker_healpix(
+        df,
+        date_begin=date_begin,
+        date_end=date_end,
+        single_exptime=single_exptime,
+        nside=nside,
+    )
 
     if np.all(is_visible):
         logger.info("All objects are visible in the input period")
@@ -1344,7 +1078,6 @@ def validate_input(
     date_begin=None,
     date_end=None,
     single_exptime=900,
-    healpix=True,
     nside=32,
     min_mag=None,
     max_mag=None,
@@ -1483,8 +1216,6 @@ def validate_input(
         date_begin=date_begin,
         date_end=date_end,
         single_exptime=single_exptime,
-        vectorized=False,
-        healpix=healpix,
         nside=nside,
     )
     logger.info(f"[Visibility] status: {dict_visibility['status']} (Success if True)")

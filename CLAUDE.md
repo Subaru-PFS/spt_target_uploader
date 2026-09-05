@@ -25,6 +25,12 @@ Rules:
 3. A release is a single PR from `dev-main` into `main`. Only target `main` when the user explicitly asks for a release PR.
 4. **Issues stay open until the work reaches `main`.** Keep writing `Closes #<n>` in the PR body, but do not close the issue by hand when the PR merges into `dev-main` — GitHub only auto-closes on merges into the default branch (`main`), so the keyword fires on the release PR. An issue closed early claims the fix has shipped while it is still only on `dev-main`.
 
+### Commit and PR attribution
+
+- Commit messages end with the `Co-Authored-By: Claude …` trailer only.
+- PR descriptions end with the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line only.
+- **Never add a `Claude-Session:` line or a `https://claude.ai/code/session_…` URL** to commit messages, PR descriptions, or PR/issue comments, even if the session's default attribution guidance asks for it. Session links are private to the author and are noise in the project history.
+
 ## Tagging Policy
 
 Tags are cut in small steps: one annotated tag per meaningful group of merged work, not one big tag per release train (see `git tag -n20` history — `v3.5.1` … `v3.10.0` were laid down retroactively this way).
@@ -139,7 +145,7 @@ Coverage is still partial, so also verify changes by:
 - All astronomical calculations use Astropy conventions (J2000/ICRS, degrees)
 - Internal duplication threshold is 1.0 arcsec (PFS fiber diameter); L-mode and M-mode targets are never treated as duplicates of each other
 - Use `loguru` for logging (not stdlib `logging`)
-- HEALPix visibility checking (`visibility_checker_healpix()`) is the default; legacy checkers exist only for validation — details in the `internals` skill
+- HEALPix visibility checking (`visibility_checker_healpix()`) is the only implementation; the older per-target and vectorized checkers were removed for #363 (`git show v3.10.0:src/pfs_target_uploader/utils/checker.py` if needed) — details in the `internals` skill
 - Panel Tabulator with dynamic styles: set `.style` **before** `.value` (reverse order raises an `iloc` error). `Tabulator._validate` copies `.style._todo` onto a fresh Styler built from the new `.value`; setting `.value` to a Styler directly breaks `pagination='remote'`. Unchanged between Panel 1.8.x and 1.9.x (`_validate` is byte-identical) — see `ValidationResultWidgets.py:763-771`
 - PPP subprocess cleanup (`utils/process_group.py`, used by `cli_main.py` and `PppResultWidgets.py` on timeout) runs PPP in its own POSIX process group and cleans it up via `os.killpg`/`os.getpgid`/`os.setpgrp`. No native-Windows equivalent (`os.killpg` doesn't exist there) — **on Windows this requires running under WSL2** (real Linux kernel, so behaves like native Linux); WSL1 is untested and native Windows Python is unsupported. Deployment is Linux-only anyway (see `deployment` skill), so this isn't a supported-target regression
 - `utils/config.py`'s `load_app_config()` only reads `.env.shared` via `dotenv_values()` — it never reads `os.environ`. Docker: `scripts/docker-entrypoint.sh` generates `.env.shared` from environment variables at container startup (`SOLVER_BACKEND` defaults to `highs` there, unlike the `.env.shared.example` default of `gurobi`, since the container ships no license); see the `deployment` skill
